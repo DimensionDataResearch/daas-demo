@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
@@ -117,39 +118,40 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Name
             );
 
-            V1ReplicationController existingController = await FindReplicationController(server);
-            if (existingController == null)
+            switch (server.Action)
             {
-                Log.Info("Replication controller for server {ServerId} does not exist; deploying...", server.Id);
-
-                _dataAccess.Tell(
-                    new ServerProvisioning(_serverId)
-                );
-
-                try
+                case ProvisioningAction.Provision:
                 {
-                    await DeployServer(server);
-                }
-                catch (Exception provisioningFailed)
-                {
-                    Log.Error(provisioningFailed, "Failed to deploy server {ServerId}.",
-                        GetBaseResourceName(server),
-                        server.Id
-                    );
+                    Log.Info("Replication controller for server {ServerId} does not exist; deploying...", server.Id);
 
                     _dataAccess.Tell(
-                        new ServerProvisioningFailed(_serverId)
+                        new ServerProvisioning(_serverId)
                     );
 
-                    return;
+                    try
+                    {
+                        await DeployServer(server);
+                    }
+                    catch (Exception provisioningFailed)
+                    {
+                        Log.Error(provisioningFailed, "Failed to deploy server {ServerId}.",
+                            GetBaseResourceName(server),
+                            server.Id
+                        );
+
+                        _dataAccess.Tell(
+                            new ServerProvisioningFailed(_serverId)
+                        );
+
+                        return;
+                    }
+
+                    break;
                 }
-            }
-            else
-            {
-                Log.Info("Found replication controller {ReplicationControllerName} for server {ServerId}.",
-                    existingController.Metadata.Name,
-                    server.Id
-                );
+                default:
+                {
+                    break;
+                }
             }
 
             string ingressIP = await GetIngressHostIP(server);
@@ -197,6 +199,259 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     Deploy an instance of SQL Server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> describing the server.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task DeployServer(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = GetBaseResourceName(server);
+
+            // ReplicationController
+
+            V1ReplicationController existingController = await FindReplicationController(server);
+            if (existingController == null)
+            {
+                Log.Info("Creating replication controller for server {ServerId}...",
+                    server.Id
+                );
+                V1ReplicationController newController = new V1ReplicationController
+                {
+                    ApiVersion = "v1",
+                    Kind = "ReplicationController",
+                    Metadata = new V1ObjectMeta
+                    {
+                        Name = baseName
+                    },
+                    Spec = new V1ReplicationControllerSpec
+                    {
+                        Replicas = 1,
+                        Selector = new Dictionary<string, string>
+                        {
+                            ["k8s-app"] = baseName
+                        },
+                        Template = new V1PodTemplateSpec
+                        {
+                            Metadata = new V1ObjectMeta
+                            {
+                                Labels = new Dictionary<string, string>
+                                {
+                                    ["k8s-app"] = baseName,
+                                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString() // TODO: Use tenant Id instead
+                                }
+                            },
+                            Spec = new V1PodSpec
+                            {
+                                TerminationGracePeriodSeconds = 60,
+                                Containers = new List<V1Container>
+                                {
+                                    new V1Container
+                                    {
+                                        Name = baseName,
+                                        Image = "microsoft/mssql-server-linux:2017-GA",
+                                        Env = new List<V1EnvVar>
+                                        {
+                                            new V1EnvVar
+                                            {
+                                                Name = "ACCEPT_EULA",
+                                                Value = "Y"
+                                            },
+                                            new V1EnvVar
+                                            {
+                                                Name = "SA_PASSWORD",
+                                                Value = server.AdminPassword
+                                            }
+                                        },
+                                        Ports = new List<V1ContainerPort>
+                                        {
+                                            new V1ContainerPort
+                                            {
+                                                ContainerPort = 1433
+                                            }
+                                        },
+                                        VolumeMounts = new List<V1VolumeMount>
+                                        {
+                                            new V1VolumeMountWithSubPath
+                                            {
+                                                Name = "sql-data",
+                                                SubPath = baseName,
+                                                MountPath = "/var/opt/mssql"
+                                            }
+                                        }
+                                    }
+                                },
+                                Volumes = new List<V1Volume>
+                                {
+                                    new V1Volume
+                                    {
+                                        Name = "sql-data",
+                                        PersistentVolumeClaim = new V1PersistentVolumeClaimVolumeSource
+                                        {
+                                            ClaimName = Context.System.Settings.Config.GetString("daas.kube.volume-claim-name") // TODO: Make this dynamically-configurable.
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                V1ReplicationController createdController =
+                    await _client.PostAsJsonAsync(
+                        request: HttpRequest.Factory.Json("/api/v1/namespaces/default/replicationcontrollers"),
+                        postBody: newController
+                    )
+                    .ReadAsAsync<V1ReplicationController, UnversionedStatus>();
+
+                Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
+                    createdController.Metadata.Name,
+                    server.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing replication controller {ReplicationControllerName} for server {ServerId}.",
+                    existingController.Metadata.Name,
+                    server.Id
+                );
+            }
+
+            // Service
+
+            V1Service existingService = await FindService(server);
+            if (existingService == null)
+            {
+                Log.Info("Creating service for server {ServerId}...",
+                    server.Id
+                );
+                V1Service newService = new V1Service
+                {
+                    ApiVersion = "v1",
+                    Kind = "Service",
+                    Metadata = new V1ObjectMeta
+                    {
+                        Name = $"{baseName}-service",
+                        Labels = new Dictionary<string, string>
+                        {
+                            ["k8s-app"] = baseName,
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                        }
+                    },
+                    Spec = new V1ServiceSpec
+                    {
+                        Ports = new List<V1ServicePort>
+                        {
+                            new V1ServicePort
+                            {
+                                Name = "sql-server",
+                                Port = 1433,
+                                Protocol = "TCP"
+                            }
+                        },
+                        Selector = new Dictionary<string, string>
+                        {
+                            ["k8s-app"] = baseName
+                        }
+                    }
+                };
+
+                V1Service createdService =
+                    await _client.PostAsJsonAsync(
+                        request: HttpRequest.Factory.Json("/api/v1/namespaces/default/services"),
+                        postBody: newService
+                    )
+                    .ReadAsAsync<V1Service, UnversionedStatus>();
+
+                Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
+                    createdService.Metadata.Name,
+                    server.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing service {ServiceName} for server {ServerId}.",
+                    existingService.Metadata.Name,
+                    server.Id
+                );
+            }
+
+            // Ingress
+
+            // TODO: Define data contract for Voyager API's Ingress model (change DoesIngresExist to FindIngress).
+            bool ingressExists = await DoesIngressExist(server);
+            if (!ingressExists)
+            {
+                Log.Info("Creating ingress for server {ServerId}...",
+                    server.Id
+                );
+                JObject newIngress = JObject.FromObject(new
+                {
+                    apiVersion = "voyager.appscode.com/v1beta1",
+                    kind = "Ingress",
+                    metadata = new
+                    {
+                        name = $"{baseName}-ingress",
+                        labels = new Dictionary<string, string>
+                        {
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                        },
+                        annotations = new Dictionary<string, string>
+                        {
+                            ["ingress.appscode.com/type"] = "HostPort",
+                            ["kubernetes.io/ingress.class"] = "voyager"
+                        }
+                    },
+                    spec = new
+                    {
+                        rules = new[]
+                        {
+                            new
+                            {
+                                host = $"{server.Name}.local",
+                                tcp = new
+                                {
+                                    port = (11433 + server.Id).ToString(), // Cheaty!
+                                    backend = new
+                                    {
+                                        serviceName = $"{baseName}-service",
+                                        servicePort = "1433"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                JObject createdIngress =
+                    await _client.PostAsJsonAsync(
+                        request: HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses"),
+                        postBody: newIngress
+                    )
+                    .ReadAsAsync<JObject, UnversionedStatus>();
+
+                string ingressName = createdIngress.SelectToken("metadata.name")?.Value<string>();
+                Log.Info("Successfully created ingress {IngressName} for server {ServerId}.",
+                    ingressName,
+                    server.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing ingress {IngressName} for server {ServerId}.",
+                    $"{GetBaseResourceName(server)}-ingress",
+                    server.Id
+                );
+            }
+        }
+
+        /// <summary>
         ///     Find the server's associated ReplicationController (if it exists).
         /// </summary>
         /// <param name="server">
@@ -209,13 +464,13 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
-            
+
             V1ReplicationControllerList matchingControllers =
                 await _client.GetAsync(
                     HttpRequest.Factory.Json("/api/v1/namespaces/default/replicationcontrollers")
                         .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
                 )
-                .ReadAsAsync<V1ReplicationControllerList>();
+                .ReadAsAsync<V1ReplicationControllerList, UnversionedStatus>();
 
             if (matchingControllers.Items.Count == 0)
                 return null;
@@ -224,224 +479,74 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Deploy an instance of SQL Server.
+        ///     Find the server's associated Service (if it exists).
         /// </summary>
         /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> describing the server.
+        ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the Kubernetes ReplicationController for the server instance.
+        ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1ReplicationController> DeployServer(DatabaseServer server)
+        async Task<V1Service> FindService(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            V1ServiceList matchingServices =
+                await _client.GetAsync(
+                    HttpRequest.Factory.Json("/api/v1/namespaces/default/services")
+                        .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
+                )
+                .ReadAsAsync<V1ServiceList, UnversionedStatus>();
+
+            if (matchingServices.Items.Count == 0)
+                return null;
+
+            return matchingServices.Items[matchingServices.Items.Count - 1];
+        }
+
+        /// <summary>
+        ///     Determine whether the server's associated Ingress exists.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the Ingress exists; otherwise, <c>false</c>.
+        /// </returns>
+        async Task<bool> DoesIngressExist(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
             string baseName = GetBaseResourceName(server);
 
-            // ReplicationController
-            
-            Log.Info("Creating replication controller for server {ServerId}...",
-                server.Id
+            HttpResponseMessage response = await _client.GetAsync(
+                HttpRequest.Factory.Json("/apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
+                    .WithTemplateParameter("IngressName", 
+                        value: $"{baseName}-ingress"
+                    )
             );
-            V1ReplicationController newController = new V1ReplicationController
+            using (response)
             {
-                ApiVersion = "v1",
-                Kind = "ReplicationController",
-                Metadata = new V1ObjectMeta
+                switch (response.StatusCode)
                 {
-                    Name = baseName
-                },
-                Spec = new V1ReplicationControllerSpec
-                {
-                    Replicas = 1,
-                    Selector = new Dictionary<string, string>
+                    case HttpStatusCode.OK:
                     {
-                        ["k8s-app"] = baseName
-                    },
-                    Template = new V1PodTemplateSpec
+                        return true;
+                    }
+                    case HttpStatusCode.NotFound:
                     {
-                        Metadata = new V1ObjectMeta
-                        {
-                            Labels = new Dictionary<string, string>
-                            {
-                                ["k8s-app"] = baseName,
-                                ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString() // TODO: Use tenant Id instead
-                            }
-                        },
-                        Spec = new V1PodSpec
-                        {
-                            TerminationGracePeriodSeconds = 60,
-                            Containers = new List<V1Container>
-                            {
-                                new V1Container
-                                {
-                                    Name = baseName,
-                                    Image = "microsoft/mssql-server-linux:2017-GA",
-                                    Env = new List<V1EnvVar>
-                                    {
-                                        new V1EnvVar
-                                        {
-                                            Name = "ACCEPT_EULA",
-                                            Value = "Y"
-                                        },
-                                        new V1EnvVar
-                                        {
-                                            Name = "SA_PASSWORD",
-                                            Value = server.AdminPassword
-                                        }
-                                    },
-                                    Ports = new List<V1ContainerPort>
-                                    {
-                                        new V1ContainerPort
-                                        {
-                                            ContainerPort = 1433
-                                        }
-                                    },
-                                    VolumeMounts = new List<V1VolumeMount>
-                                    {
-                                        new V1VolumeMountWithSubPath
-                                        {
-                                            Name = "sql-data",
-                                            SubPath = baseName,
-                                            MountPath = "/var/opt/mssql"
-                                        }
-                                    }
-                                }
-                            },
-                            Volumes = new List<V1Volume>
-                            {
-                                new V1Volume
-                                {
-                                    Name = "sql-data",
-                                    PersistentVolumeClaim = new V1PersistentVolumeClaimVolumeSource
-                                    {
-                                        ClaimName = Context.System.Settings.Config.GetString("daas.kube.volume-claim-name") // TODO: Make this dynamically-configurable.
-                                    }
-                                }
-                            }
-                        }
+                        return false;
+                    }
+                    default:
+                    {
+                        response.EnsureSuccessStatusCode();
+
+                        return false;
                     }
                 }
-            };
-
-            V1ReplicationController createdController =
-                await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("/api/v1/namespaces/default/replicationcontrollers"),
-                    postBody: newController
-                )
-                .ReadAsAsync<V1ReplicationController>();
-
-            Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
-                createdController.Metadata.Name,
-                server.Id
-            );
-
-            // Service
-
-            Log.Info("Creating service for server {ServerId}...",
-                server.Id
-            );
-            V1Service newService = new V1Service
-            {
-                ApiVersion = "v1",
-                Kind = "Service",
-                Metadata = new V1ObjectMeta
-                {
-                    Name = $"{baseName}-service",
-                    Labels = new Dictionary<string, string>
-                    {
-                        ["k8s-app"] = baseName,
-                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
-                    }
-                },
-                Spec = new V1ServiceSpec
-                {
-                    Ports = new List<V1ServicePort>
-                    {
-                        new V1ServicePort
-                        {
-                            Name = "sql-server",
-                            Port = 1433,
-                            Protocol = "TCP"
-                        }
-                    },
-                    Selector = new Dictionary<string, string>
-                    {
-                        ["k8s-app"] = baseName
-                    }
-                }
-            };
-
-            V1Service createdService =
-                await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("/api/v1/namespaces/default/services"),
-                    postBody: newService
-                )
-                .ReadAsAsync<V1Service>();
-
-            Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
-                createdService.Metadata.Name,
-                server.Id
-            );
-
-            // Ingress
-
-            Log.Info("Creating ingress for server {ServerId}...",
-                server.Id
-            );
-            JObject newIngress = JObject.FromObject(new
-            {
-                apiVersion = "voyager.appscode.com/v1beta1",
-                kind = "Ingress",
-                metadata = new
-                {
-                    name = $"{baseName}-ingress",
-                    labels = new Dictionary<string, string>
-                    {
-                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
-                    },
-                    annotations = new Dictionary<string, string>
-                    {
-                        ["ingress.appscode.com/type"] = "HostPort",
-                        ["kubernetes.io/ingress.class"] = "voyager"
-                    }
-                },
-                spec = new
-                {
-                    rules = new[]
-                    {
-                        new
-                        {
-                            host = $"{server.Name}.local",
-                            tcp = new
-                            {
-                                port = (11433 + server.Id).ToString(), // Cheaty!
-                                backend = new
-                                {
-                                    serviceName = $"{baseName}-service",
-                                    servicePort = "1433"
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            JObject createdIngress =
-                await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses"),
-                    postBody: newIngress
-                )
-                .ReadAsAsync<JObject>();
-            
-            string ingressName = createdIngress.SelectToken("metadata.name")?.Value<string>();
-            Log.Info("Successfully created ingress {IngressName} for server {ServerId}.",
-                ingressName,
-                server.Id
-            );
-
-            return createdController;
+            }
         }
 
         /// <summary>
@@ -458,14 +563,15 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string entityName = $"sql-server-{server.Id}-ingress";
+            string ingressResourceName = $"sql-server-{server.Id}-ingress";
 
+            // Find the Pod that implements the ingress (the origin-name label will point back to the ingress resource).
             V1PodList matchingPods =
                 await _client.GetAsync(
                     HttpRequest.Factory.Json("/api/v1/namespaces/default/pods")
-                        .WithQueryParameter("labelSelector", $"origin-name = {entityName}")
+                        .WithQueryParameter("labelSelector", $"origin-name = {ingressResourceName}")
                 )
-                .ReadAsAsync<V1PodList>();
+                .ReadAsAsync<V1PodList, UnversionedStatus>();
 
             V1Pod ingressPod = matchingPods.Items.FirstOrDefault(item => item.Status.Phase == "Running");
             if (ingressPod == null)
@@ -551,7 +657,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     The volume sub-path (if any).
         /// </summary>
-        [DataMember(Name="subPath", EmitDefaultValue=false)]
+        [DataMember(Name = "subPath", EmitDefaultValue = false)]
         public string SubPath { get; set; }
     }
 }
