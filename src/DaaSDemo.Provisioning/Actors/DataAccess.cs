@@ -190,7 +190,9 @@ namespace DaaSDemo.Provisioning.Actors
             
             using (Entities entities = CreateEntityContext())
             {
-                DatabaseServer server = await entities.DatabaseServers.FindAsync(serverIngressChanged.ServerId);
+                DatabaseServer server = await entities.DatabaseServers.FirstOrDefaultAsync(
+                    matchServer => matchServer.Id == serverIngressChanged.ServerId
+                );
                 if (server == null)
                 {
                     Log.Warning("Received ServerIngressChanged notification for non-existent server (Id:{ServerId}).",
