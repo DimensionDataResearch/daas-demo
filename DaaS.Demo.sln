@@ -1,0 +1,69 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26124.0
+MinimumVisualStudioVersion = 15.0.26124.0
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9978953E-CFCA-43CF-9586-19B9B1E7B8C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Api", "src\DaaSDemo.Api\DaaSDemo.Api.csproj", "{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Provisioning", "src\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj", "{BF04ED23-547A-47EB-80E8-6B117EB52A48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Data", "src\DaaSDemo.Data\DaaSDemo.Data.csproj", "{F80544EE-ABD5-411A-93D8-12E001F02574}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|x64.ActiveCfg = Debug|x64
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|x64.Build.0 = Debug|x64
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|x86.ActiveCfg = Debug|x86
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Debug|x86.Build.0 = Debug|x86
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|x64.ActiveCfg = Release|x64
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|x64.Build.0 = Release|x64
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|x86.ActiveCfg = Release|x86
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2}.Release|x86.Build.0 = Release|x86
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|x64.ActiveCfg = Debug|x64
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|x64.Build.0 = Debug|x64
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|x86.ActiveCfg = Debug|x86
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Debug|x86.Build.0 = Debug|x86
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|x64.ActiveCfg = Release|x64
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|x64.Build.0 = Release|x64
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|x86.ActiveCfg = Release|x86
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48}.Release|x86.Build.0 = Release|x86
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|x64.ActiveCfg = Debug|x64
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|x64.Build.0 = Debug|x64
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|x86.ActiveCfg = Debug|x86
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Debug|x86.Build.0 = Debug|x86
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|x64.ActiveCfg = Release|x64
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|x64.Build.0 = Release|x64
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|x86.ActiveCfg = Release|x86
+		{F80544EE-ABD5-411A-93D8-12E001F02574}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D5C611AF-14D1-4D72-B81B-CDC65FB0E8D2} = {9978953E-CFCA-43CF-9586-19B9B1E7B8C3}
+		{BF04ED23-547A-47EB-80E8-6B117EB52A48} = {9978953E-CFCA-43CF-9586-19B9B1E7B8C3}
+		{F80544EE-ABD5-411A-93D8-12E001F02574} = {9978953E-CFCA-43CF-9586-19B9B1E7B8C3}
+	EndGlobalSection
+EndGlobal

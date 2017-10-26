@@ -1,0 +1,3 @@
+[submodule "lib/KubeNET"]
+	path = lib/KubeNET
+	url = https://github.com/paralin/KubeNET.git
