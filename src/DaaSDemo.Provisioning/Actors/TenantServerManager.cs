@@ -204,7 +204,7 @@ namespace DaaSDemo.Provisioning.Actors
                         server.IngressPort = ingressPort;
                     }
 
-                    if (server.Status != ProvisioningStatus.Ready)
+                    if (server.Status == ProvisioningStatus.Provisioning)
                     {
                         // TODO: Connect to the server and perform initial configuration (e.g. max memory usage).
 

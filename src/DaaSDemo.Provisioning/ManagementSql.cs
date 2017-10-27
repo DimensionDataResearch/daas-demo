@@ -52,6 +52,10 @@ namespace DaaSDemo.Provisioning
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
             
             return $@"
+                Use [master]
+                
+                Go
+
                 Create Database [{databaseName}]
                 On Primary
                 (
@@ -106,6 +110,10 @@ namespace DaaSDemo.Provisioning
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
             
             return $@"
+                Use [master]
+                
+                Go
+
                 Alter Database
                     [{databaseName}]
                 Set

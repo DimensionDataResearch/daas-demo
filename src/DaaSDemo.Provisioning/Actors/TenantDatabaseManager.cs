@@ -69,7 +69,7 @@ namespace DaaSDemo.Provisioning.Actors
                             new DatabaseProvisioning(database.Id)
                         );
 
-                        if (DoesDatabaseExist())
+                        if (DatabaseExists())
                         {
                             Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
                                 database.Id,
@@ -91,7 +91,7 @@ namespace DaaSDemo.Provisioning.Actors
                             new DatabaseDeprovisioning(database.Id)
                         );
 
-                        if (!DoesDatabaseExist())
+                        if (!DatabaseExists())
                         {
                             Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
                                 database.Id,
@@ -149,7 +149,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     <c>true</c>, if the database exists; otherwise, <c>false</c>.
         /// </returns>
-        bool DoesDatabaseExist()
+        bool DatabaseExists()
         {
             EnsureConnection();
 
@@ -187,9 +187,9 @@ namespace DaaSDemo.Provisioning.Actors
 
             EnsureConnection();
 
-            using (SqlCommand command = new SqlCommand(ManagementSql.CreateDatabase(database.Name), _connection))
+            using (SqlCommand createDatabase = new SqlCommand(ManagementSql.CreateDatabase(database.Name), _connection))
             {
-                await command.ExecuteNonQueryAsync();
+                await createDatabase.ExecuteNonQueryAsync();
             }
 
             Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
@@ -223,9 +223,9 @@ namespace DaaSDemo.Provisioning.Actors
 
             EnsureConnection();
 
-            using (SqlCommand command = new SqlCommand(ManagementSql.DropDatabase(database.Name), _connection))
+            using (SqlCommand dropDatabase = new SqlCommand(ManagementSql.DropDatabase(database.Name), _connection))
             {
-                await command.ExecuteNonQueryAsync();
+                await dropDatabase.ExecuteNonQueryAsync();
             }
 
             Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
