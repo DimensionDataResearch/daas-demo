@@ -37,9 +37,15 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 switch (command)
                 {
-                    case Command.ScanDatabase:
+                    case Command.ScanTenants:
                     {
                         await ScanDatabase();
+
+                        break;
+                    }
+                    case Command.ScanIPAddressMappings:
+                    {
+                        // TODO: Scan IP address mappings and, if they've changed, publish them to all TenantServerManager actors.
 
                         break;
                     }
@@ -80,7 +86,7 @@ namespace DaaSDemo.Provisioning.Actors
                 initialDelay: TimeSpan.Zero,
                 interval: TimeSpan.FromSeconds(5),
                 receiver: Self,
-                message: Command.ScanDatabase,
+                message: Command.ScanTenants,
                 sender: Self
             );
         }
@@ -231,9 +237,14 @@ namespace DaaSDemo.Provisioning.Actors
         public enum Command
         {
             /// <summary>
-            ///     Scan the database for changes.
+            ///     Scan the database for changes to tenants (their servers and databases).
             /// </summary>
-            ScanDatabase
+            ScanTenants,
+
+            /// <summary>
+            ///     Scan the database for changes to IP address mappings (for Kubernetes nodes).
+            /// </summary>
+            ScanIPAddressMappings
         }
     }
 }
