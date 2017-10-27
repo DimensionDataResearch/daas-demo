@@ -204,7 +204,7 @@ namespace DaaSDemo.Provisioning.Actors
                 else
                 {
                     Log.Info("Cannot determine host port for server {ServerName}.", server.Name);
-                    
+
                     if (server.IngressIP != null)
                     {
                         _dataAccess.Tell(
@@ -216,7 +216,7 @@ namespace DaaSDemo.Provisioning.Actors
             else
             {
                 Log.Info("Cannot determine host IP for server {ServerName}.", server.Name);
-                
+
                 if (server.IngressIP != null)
                 {
                     _dataAccess.Tell(
@@ -523,13 +523,13 @@ namespace DaaSDemo.Provisioning.Actors
                     server.Id
                 );
 
-                return  existingService;
+                return existingService;
             }
 
             Log.Info("Creating service for server {ServerId}...",
                 server.Id
             );
-            
+
             string baseName = GetBaseResourceName(server);
 
             V1Service newService = new V1Service
@@ -602,7 +602,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                 return existingIngress;
             }
-            
+
             Log.Info("Creating ingress for server {ServerId}...",
                 server.Id
             );
