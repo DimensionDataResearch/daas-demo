@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using System.Collections.Immutable;
     using Data;
     using Data.Models;
     using Messages;
@@ -33,19 +34,6 @@ namespace DaaSDemo.Provisioning.Actors
     public class TenantServerManager
         : ReceiveActorEx
     {
-        /// <summary>
-        ///     External IP addresses for Kubernetes nodes, keyed by the node's internal IP.
-        /// </summary>
-        /// <remarks>
-        ///     AF: Hard-coded for demo (still need to modify the DataAccess actor to pass these to us from the IPAddressMapping table).
-        /// </remarks>
-        readonly Dictionary<string, string> _nodeExternalIPs = new Dictionary<string, string>
-        {
-            ["192.168.5.20"] = "168.128.36.207",
-            ["192.168.5.21"] = "168.128.36.94",
-            ["192.168.5.22"] = " 168.128.36.206"
-        };
-
         /// <summary>
         ///     References to <see cref="TenantDatabaseManager"/> actors, keyed by database Id.
         /// </summary>
@@ -72,6 +60,17 @@ namespace DaaSDemo.Provisioning.Actors
         DatabaseServer _previousState;
 
         /// <summary>
+        ///     External IP addresses for Kubernetes nodes, keyed by the node's internal IP.
+        /// </summary>
+        ImmutableDictionary<string, string> _nodeExternalIPs = ImmutableDictionary<string, string>.Empty;
+
+        /*
+            ["192.168.5.20"] = "168.128.36.207",
+            ["192.168.5.21"] = "168.128.36.94",
+            ["192.168.5.22"] = " 168.128.36.206"
+         */
+
+        /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
         /// </summary>
         /// <param name="serverId">
@@ -91,6 +90,12 @@ namespace DaaSDemo.Provisioning.Actors
             _client = CreateKubeClient();
 
             ReceiveAsync<DatabaseServer>(UpdateServerState);
+            Receive<IPAddressMappingsChanged>(mappingsChanged =>
+            {
+                _nodeExternalIPs = mappingsChanged.Mappings;
+
+                // TODO: Work out how / when to invalidate ingress IP (if required).
+            });
             Receive<Terminated>(terminated =>
             {
                 int? databaseId =
@@ -188,16 +193,23 @@ namespace DaaSDemo.Provisioning.Actors
                         ingressPort.Value
                     );
 
-                    if (server.Status != ProvisioningStatus.Ready)
-                    {
-                        _dataAccess.Tell(
-                            new ServerProvisioned(_serverId)
-                        );
-                    }
-                    else if (ingressIP != server.IngressIP || ingressPort != server.IngressPort)
+                    if (ingressIP != server.IngressIP || ingressPort != server.IngressPort)
                     {
                         _dataAccess.Tell(
                             new ServerIngressChanged(_serverId, ingressIP, ingressPort)
+                        );
+
+                        // Capture current ingress details to enable subsequent provisioning actions.
+                        server.IngressIP = ingressIP;
+                        server.IngressPort = ingressPort;
+                    }
+
+                    if (server.Status != ProvisioningStatus.Ready)
+                    {
+                        // TODO: Connect to the server and perform initial configuration (e.g. max memory usage).
+
+                        _dataAccess.Tell(
+                            new ServerProvisioned(_serverId)
                         );
                     }
                 }

@@ -30,6 +30,20 @@ namespace DaaSDemo.Provisioning.Messages
         }
 
         /// <summary>
+        ///     Create a new <see cref="IPAddressMappingsChanged"/> message.
+        /// </summary>
+        /// <param name="mappings">
+        ///     The mappings from internal IP addresses to external IP addresses.
+        /// </param>
+        public IPAddressMappingsChanged(ImmutableDictionary<string, string> mappings)
+        {
+            if (mappings == null)
+                throw new ArgumentNullException(nameof(mappings));
+            
+            Mappings = mappings;
+        }
+
+        /// <summary>
         ///     The mappings from internal IP addresses to external IP addresses.
         /// </summary>
         public ImmutableDictionary<string, string> Mappings { get; }

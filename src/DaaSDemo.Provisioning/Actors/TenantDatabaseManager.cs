@@ -16,6 +16,7 @@ namespace DaaSDemo.Provisioning.Actors
 {
     using Data;
     using Data.Models;
+    using Messages;
 
     /// <summary>
     ///     Actor that manages a specific tenant database.
@@ -64,7 +65,9 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     case ProvisioningAction.Provision:
                     {
-                        // TODO: Tell DataAccess actor that database is being provisioned.
+                        _dataAccess.Tell(
+                            new DatabaseProvisioning(database.Id)
+                        );
 
                         if (!DoesDatabaseExist())
                         {
@@ -78,13 +81,17 @@ namespace DaaSDemo.Provisioning.Actors
                             );
                         }
 
-                        // TODO: Tell DataAccess actor that database has been provisioned.
+                        _dataAccess.Tell(
+                            new DatabaseProvisioned(database.Id)
+                        );
 
                         break;
                     }
                     case ProvisioningAction.Deprovision:
                     {
-                        // TODO: Tell DataAccess actor that database is being de-provisioned.
+                        _dataAccess.Tell(
+                            new DatabaseDeprovisioning(database.Id)
+                        );
 
                         if (DoesDatabaseExist())
                         {
@@ -98,7 +105,9 @@ namespace DaaSDemo.Provisioning.Actors
                             );
                         }
 
-                        // TODO: Tell DataAccess actor that database has been de-provisioned.
+                        _dataAccess.Tell(
+                            new DatabaseDeprovisioned(database.Id)
+                        );
 
                         Context.Stop(Self);
 
@@ -130,7 +139,7 @@ namespace DaaSDemo.Provisioning.Actors
             if (_connection == null)
             {
                 _connection = new SqlConnection(
-                    connectionString: $"Data Source={_currentState.DatabaseServer.IngressIP},{_currentState.DatabaseServer.IngressPort};Initial Catalog=master;User=sa;Password={_currentState.DatabaseServer.AdminPassword}"
+                    _currentState.GetConnectionString()
                 );
             }
 

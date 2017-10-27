@@ -3,6 +3,7 @@ using Akka.Actor;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,6 +30,11 @@ namespace DaaSDemo.Provisioning.Actors
         readonly Dictionary<int, IActorRef> _serverManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
+        ///     Mappings from node internal IP addresses to external IP addresses.
+        /// </summary>
+        ImmutableDictionary<string, string> _nodeIPAddressMappings = ImmutableDictionary<string, string>.Empty;
+
+        /// <summary>
         ///     Create a new <see cref="DataAccess"/>.
         /// </summary>
         public DataAccess()
@@ -39,13 +45,13 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     case Command.ScanTenants:
                     {
-                        await ScanDatabase();
+                        await ScanTenants();
 
                         break;
                     }
                     case Command.ScanIPAddressMappings:
                     {
-                        // TODO: Scan IP address mappings and, if they've changed, publish them to all TenantServerManager actors.
+                        await ScanIPAddressMappings();
 
                         break;
                     }
@@ -84,6 +90,14 @@ namespace DaaSDemo.Provisioning.Actors
         {
             Context.System.Scheduler.ScheduleTellRepeatedly(
                 initialDelay: TimeSpan.Zero,
+                interval: TimeSpan.FromMinutes(5),
+                receiver: Self,
+                message: Command.ScanIPAddressMappings,
+                sender: Self
+            );
+
+            Context.System.Scheduler.ScheduleTellRepeatedly(
+                initialDelay: TimeSpan.Zero,
                 interval: TimeSpan.FromSeconds(5),
                 receiver: Self,
                 message: Command.ScanTenants,
@@ -92,14 +106,14 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Scan the database for changes.
+        ///     Scan the database for changes to tenants (their servers and / or databases).
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task ScanDatabase()
+        async Task ScanTenants()
         {
-            Log.Info("Scanning database...");
+            Log.Info("Scanning tenants...");
 
             DatabaseServer[] servers;
             using (Entities entities = CreateEntityContext())
@@ -135,7 +149,66 @@ namespace DaaSDemo.Provisioning.Actors
                 serverManager.Tell(server);
             }
 
-            Log.Info("Database scan complete.");
+            Log.Info("Tenant scan complete.");
+        }
+
+        /// <summary>
+        ///     Scan the database for changes to IP address mappings for Kubernetes nodes.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task ScanIPAddressMappings()
+        {
+            Log.Info("Scanning IP address mappings...");
+
+            IPAddressMapping[] mappings;
+            using (Entities entities = CreateEntityContext())
+            {
+                mappings = await entities.IPAddressMappings.ToArrayAsync();
+            }
+
+            ImmutableDictionary<string, string> previousMappings = _nodeIPAddressMappings;
+            ImmutableDictionary<string, string> currentMappings = mappings.ToImmutableDictionary(
+                mapping => mapping.InternalIP,
+                mapping => mapping.ExternalIP
+            );
+
+            HashSet<string> internalIPs = new HashSet<string>(previousMappings.Keys);
+            internalIPs.UnionWith(currentMappings.Keys);
+
+            bool haveMappingsChanged = false;
+            foreach (string internalIP in internalIPs)
+            {
+                string previousExternalIP;
+                previousMappings.TryGetValue(internalIP, out previousExternalIP);
+
+                string externalIP;
+                currentMappings.TryGetValue(internalIP, out externalIP);
+                
+                if (!String.Equals(externalIP, previousExternalIP, StringComparison.OrdinalIgnoreCase))
+                {
+                    haveMappingsChanged = true;
+
+                    break;
+                }
+            }
+
+            if (haveMappingsChanged)
+            {
+                Log.Info("One or more node IP address mappings have changed; publishing changes...");
+
+                foreach (IActorRef serverManager in _serverManagers.Values)
+                {
+                    serverManager.Tell(
+                        new IPAddressMappingsChanged(currentMappings)
+                    );
+                }
+
+                Log.Info("Published changes to node IP address mappings.");
+            }
+
+            Log.Info("IP address mapping scan complete.");
         }
 
         /// <summary>

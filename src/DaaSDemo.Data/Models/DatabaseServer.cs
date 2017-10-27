@@ -75,5 +75,13 @@ namespace DaaSDemo.Data.Models
         [JsonIgnore]
         [InverseProperty("DatabaseServer")]
         public ICollection<DatabaseInstance> Databases { get; set; } = new HashSet<DatabaseInstance>();
+
+        /// <summary>
+        ///     Get the connection string for the server's master database.
+        /// </summary>
+        /// <returns>
+        ///     The connection string.
+        /// </returns>
+        public string GetMasterConnectionString() => $"Data Source={IngressIP},{IngressPort};Initial Catalog=master;User=sa;Password={AdminPassword}";
     }
 }

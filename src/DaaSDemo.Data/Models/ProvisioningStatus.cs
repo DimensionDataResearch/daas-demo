@@ -33,6 +33,11 @@ namespace DaaSDemo.Data.Models
         /// <summary>
         ///     Resource state is invalid.
         /// </summary>
-        Error = 5
+        Error = 5,
+
+        /// <summary>
+        ///     Resource has been de-provisioned.
+        /// </summary>
+        Deprovisioned = 6
     }
 }

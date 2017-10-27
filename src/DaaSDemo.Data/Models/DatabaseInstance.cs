@@ -65,5 +65,21 @@ namespace DaaSDemo.Data.Models
         /// </summary>
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public DatabaseServer DatabaseServer { get; set; }
+
+        /// <summary>
+        ///     Does the database's server have ingress details available?
+        /// </summary>
+        /// <returns>
+        ///     <c>true</c>, if <see cref="DatabaseServer"/> is not <c>null</c>, and has both <see cref="DatabaseServer.IngressIP"/> and <see cref="DatabaseServer.IngressPort"/>; otherwise, <c>false</c>.
+        /// </returns>
+        public bool DoesServerHaveIngress() => DatabaseServer?.IngressIP != null && DatabaseServer?.IngressPort != null;
+
+        /// <summary>
+        ///     Get the connection string for the database.
+        /// </summary>
+        /// <returns>
+        ///     The connection string.
+        /// </returns>
+        public string GetConnectionString() => $"Data Source={DatabaseServer?.IngressIP},{DatabaseServer?.IngressPort};Initial Catalog={Name};User=sa;Password={DatabaseServer?.AdminPassword}";
     }
 }
