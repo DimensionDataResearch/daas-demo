@@ -24,9 +24,14 @@ namespace DaaSDemo.Provisioning.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     A reference to the <see cref="DataAccess"/> actor.
+        /// </summary>
+        readonly IActorRef _dataAccess;
+
+        /// <summary>
         ///     The connection to the tenant's SQL Server instance.
         /// </summary>
-        readonly SqlConnection _connection;
+        SqlConnection _connection;
 
         /// <summary>
         ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
@@ -36,43 +41,113 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="TenantDatabaseManager"/>.
         /// </summary>
-        /// <param name="currentState">
-        ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
+        /// <param name="dataAccess">
+        ///     A reference to the <see cref="DataAccess"/> actor.
         /// </param>
-        public TenantDatabaseManager(DatabaseInstance currentState)
+        public TenantDatabaseManager(IActorRef dataAccess)
         {
-            if (currentState == null)
-                throw new ArgumentNullException(nameof(currentState));
-            
-            _connection = new SqlConnection(
-                connectionString: $"Data Source={currentState.DatabaseServer.IngressIP},{currentState.DatabaseServer.IngressPort};Initial Catalog=master;User=sa;Password={currentState.DatabaseServer.AdminPassword}"
-            );
-            _currentState = currentState;
+            if (dataAccess == null)
+                throw new ArgumentNullException(nameof(dataAccess));
+
+            _dataAccess = dataAccess;
 
             Receive<DatabaseInstance>(database =>
             {
                 _currentState = database;
 
-                if (DoesDatabaseExist())
-                    return; // Nothing to do.
+                Log.Info("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
+                    database.Id,
+                    database.Name
+                );
 
-                // TODO: Create database.
+                switch (database.Action)
+                {
+                    case ProvisioningAction.Provision:
+                    {
+                        // TODO: Tell DataAccess actor that database is being provisioned.
+
+                        if (!DoesDatabaseExist())
+                        {
+                            // TODO: Create database.
+                        }
+                        else
+                        {
+                            Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
+                                database.Id,
+                                database.Name
+                            );
+                        }
+
+                        // TODO: Tell DataAccess actor that database has been provisioned.
+
+                        break;
+                    }
+                    case ProvisioningAction.Deprovision:
+                    {
+                        // TODO: Tell DataAccess actor that database is being de-provisioned.
+
+                        if (DoesDatabaseExist())
+                        {
+                            // TODO: Drop database.
+                        }
+                        else
+                        {
+                            Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
+                                database.Id,
+                                database.Name
+                            );
+                        }
+
+                        // TODO: Tell DataAccess actor that database has been de-provisioned.
+
+                        Context.Stop(Self);
+
+                        break;
+                    }
+                }
             });
         }
 
-        protected override void PreStart()
-        {
-            _connection.Open();
-        }
-
+        /// <summary>
+        ///     Called when the actor is stopped.
+        /// </summary>
         protected override void PostStop()
         {
-            _connection.Close();
-            _connection.Dispose();
+            if (_connection != null)
+            {
+                _connection.Close();
+                _connection.Dispose();
+
+                _connection = null;
+            }
         }
 
+        /// <summary>
+        ///     Ensure that the database connection is open.
+        /// </summary>
+        void EnsureConnection()
+        {
+            if (_connection == null)
+            {
+                _connection = new SqlConnection(
+                    connectionString: $"Data Source={_currentState.DatabaseServer.IngressIP},{_currentState.DatabaseServer.IngressPort};Initial Catalog=master;User=sa;Password={_currentState.DatabaseServer.AdminPassword}"
+                );
+            }
+
+            if (_connection.State == ConnectionState.Closed)
+                _connection.Open();
+        }
+
+        /// <summary>
+        ///     Check if the target database exists.
+        /// </summary>
+        /// <returns>
+        ///     <c>true</c>, if the database exists; otherwise, <c>false</c>.
+        /// </returns>
         bool DoesDatabaseExist()
         {
+            EnsureConnection();
+
             using (SqlCommand command = new SqlCommand("Select name from sys.databases Where name = @DatabaseName", _connection))
             {
                 command.Parameters.Add("DatabaseName", SqlDbType.NVarChar, size: 100).Value = _currentState.Name;
@@ -83,5 +158,16 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             }
         }
+
+        /// <summary>
+        ///     Get the name of the <see cref="TenantServerManager"/> actor for the specified tenant.
+        /// </summary>
+        /// <param name="tenantId">
+        ///     The tenant Id.
+        /// </param>
+        /// <returns>
+        ///     The actor name.
+        /// </returns>
+        public static string ActorName(int tenantId) => $"database-manager.{tenantId}";
     }
 }

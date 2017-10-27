@@ -114,18 +114,18 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     serverManager = Context.ActorOf(
                         Props.Create(() => new TenantServerManager(server.Id, Self)),
-                        name: $"server-manager.{server.TenantId}"
+                        name: TenantServerManager.ActorName(server.TenantId)
                     );
                     _serverManagers.Add(server.TenantId, serverManager);
 
-                    Log.Info("Created ServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
+                    Log.Info("Created TenantServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
                         serverManager.Path.Name,
                         server.Id,
                         server.TenantId
                     );
                 }
 
-                Log.Info("Notifying ServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
+                Log.Info("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
                 serverManager.Tell(server);
             }
 

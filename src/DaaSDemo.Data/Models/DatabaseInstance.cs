@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -37,6 +38,20 @@ namespace DaaSDemo.Data.Models
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
         public string DatabasePassword { get; set; }
+
+        /// <summary>
+        ///     The desired action for the server.
+        /// </summary>
+        [Required]
+        [DefaultValue(ProvisioningAction.None)]
+        public ProvisioningAction Action { get; set; }
+
+        /// <summary>
+        ///     The current status of the server.
+        /// </summary>
+        [Required]
+        [DefaultValue(ProvisioningStatus.Pending)]
+        public ProvisioningStatus Status { get; set; }
 
         /// <summary>
         ///     The Id of the tenant's database server (if any).

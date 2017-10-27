@@ -47,6 +47,11 @@ namespace DaaSDemo.Provisioning.Actors
         };
 
         /// <summary>
+        ///     References to <see cref="TenantDatabaseManager"/> actors, keyed by database Id.
+        /// </summary>
+        readonly Dictionary<int, IActorRef> _databaseManagers = new Dictionary<int, IActorRef>();
+
+        /// <summary>
         ///     The Id of the target server.
         /// </summary>
         readonly int _serverId;
@@ -86,6 +91,22 @@ namespace DaaSDemo.Provisioning.Actors
             _client = CreateKubeClient();
 
             ReceiveAsync<DatabaseServer>(UpdateServerState);
+            Receive<Terminated>(terminated =>
+            {
+                int? databaseId =
+                    _databaseManagers.Where(
+                        entry => Equals(entry.Value, terminated.ActorRef)
+                    )
+                    .Select(
+                        entry => (int?)entry.Key
+                    )
+                    .FirstOrDefault();
+
+                if (databaseId.HasValue)
+                    _databaseManagers.Remove(databaseId.Value); // Database manager terminated.
+                else
+                    Unhandled(terminated);
+            });
         }
 
         /// <summary>
@@ -210,6 +231,27 @@ namespace DaaSDemo.Provisioning.Actors
                     database.Name,
                     database.Id
                 );
+
+                IActorRef databaseManager;
+                if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
+                {
+                    databaseManager = Context.ActorOf(
+                        Props.Create(() => new TenantDatabaseManager(_dataAccess)),
+                        name: TenantDatabaseManager.ActorName(database.Id)
+                    );
+                    _databaseManagers.Add(database.Id, databaseManager);
+
+                    Log.Info("Created TenantDatabaseManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
+                        databaseManager.Path.Name,
+                        server.Id,
+                        server.TenantId
+                    );
+                }
+
+                // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
+                database.DatabaseServer = server;
+
+                databaseManager.Tell(database);
             }
 
             _previousState = server;
@@ -717,6 +759,17 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The base resource name.
         /// </returns>
         static string GetBaseResourceName(DatabaseServer server) => $"sql-server-{server.Id}";
+
+        /// <summary>
+        ///     Get the name of the <see cref="TenantServerManager"/> actor for the specified tenant.
+        /// </summary>
+        /// <param name="tenantId">
+        ///     The tenant Id.
+        /// </param>
+        /// <returns>
+        ///     The actor name.
+        /// </returns>
+        public static string ActorName(int tenantId) => $"server-manager.{tenantId}";
     }
 
     /// <summary>
