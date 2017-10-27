@@ -52,7 +52,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             _dataAccess = dataAccess;
 
-            Receive<DatabaseInstance>(database =>
+            ReceiveAsync<DatabaseInstance>(async database =>
             {
                 _currentState = database;
 
@@ -69,17 +69,15 @@ namespace DaaSDemo.Provisioning.Actors
                             new DatabaseProvisioning(database.Id)
                         );
 
-                        if (!DoesDatabaseExist())
-                        {
-                            // TODO: Create database.
-                        }
-                        else
+                        if (DoesDatabaseExist())
                         {
                             Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
                                 database.Id,
                                 database.Name
                             );
                         }
+                        else
+                            await CreateDatabase(database);
 
                         _dataAccess.Tell(
                             new DatabaseProvisioned(database.Id)
@@ -93,17 +91,15 @@ namespace DaaSDemo.Provisioning.Actors
                             new DatabaseDeprovisioning(database.Id)
                         );
 
-                        if (DoesDatabaseExist())
-                        {
-                            // TODO: Drop database.
-                        }
-                        else
+                        if (!DoesDatabaseExist())
                         {
                             Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
                                 database.Id,
                                 database.Name
                             );
                         }
+                        else
+                            await DropDatabase(database);
 
                         _dataAccess.Tell(
                             new DatabaseDeprovisioned(database.Id)
@@ -166,6 +162,78 @@ namespace DaaSDemo.Provisioning.Actors
                     return reader.Read();
                 }
             }
+        }
+
+        /// <summary>
+        ///     Create the database.
+        /// </summary>
+        /// <param name="database">
+        ///     A <see cref="DatabaseInstance"/> representing the target database.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task CreateDatabase(DatabaseInstance database)
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+            
+            Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
+                database.Name,
+                database.Id,
+                database.DatabaseServer.Name,
+                database.DatabaseServer.Id
+            );
+
+            EnsureConnection();
+
+            using (SqlCommand command = new SqlCommand(ManagementSql.CreateDatabase(database.Name), _connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+
+            Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+                database.Name,
+                database.Id,
+                database.DatabaseServer.Name,
+                database.DatabaseServer.Id
+            );
+        }
+
+        /// <summary>
+        ///     Drop the database.
+        /// </summary>
+        /// <param name="database">
+        ///     A <see cref="DatabaseInstance"/> representing the target database.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task DropDatabase(DatabaseInstance database)
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+            
+            Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
+                database.Name,
+                database.Id,
+                database.DatabaseServer.Name,
+                database.DatabaseServer.Id
+            );
+
+            EnsureConnection();
+
+            using (SqlCommand command = new SqlCommand(ManagementSql.DropDatabase(database.Name), _connection))
+            {
+                await command.ExecuteNonQueryAsync();
+            }
+
+            Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+                database.Name,
+                database.Id,
+                database.DatabaseServer.Name,
+                database.DatabaseServer.Id
+            );
         }
 
         /// <summary>

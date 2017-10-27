@@ -64,6 +64,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             });
             ReceiveAsync<ServerStatusChanged>(UpdateServerProvisioningStatus);
+            ReceiveAsync<DatabaseStatusChanged>(UpdateDatabaseProvisioningStatus);
             ReceiveAsync<ServerIngressChanged>(UpdateServerIngress);
             Receive<Terminated>(terminated =>
             {
@@ -230,7 +231,7 @@ namespace DaaSDemo.Provisioning.Actors
                 DatabaseServer server = await entities.DatabaseServers.FindAsync(serverProvisioningNotification.ServerId);
                 if (server == null)
                 {
-                    Log.Warning("Received ServerIngressChanged notification for non-existent server (Id:{ServerId}).",
+                    Log.Warning("Received ServerStatusChanged notification for non-existent server (Id:{ServerId}).",
                         serverProvisioningNotification.ServerId
                     );
 
@@ -244,6 +245,48 @@ namespace DaaSDemo.Provisioning.Actors
                     case ProvisioningStatus.Error:
                     {
                         server.Action = ProvisioningAction.None;
+
+                        break;
+                    }
+                }
+
+                await entities.SaveChangesAsync();
+            }
+        }
+
+        /// <summary>
+        ///     Update database provisioning status.
+        /// </summary>
+        /// <param name="databaseIngressChanged">
+        ///     A <see cref="DatabaseStatusChanged"/> message describing the change.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task UpdateDatabaseProvisioningStatus(DatabaseStatusChanged databaseProvisioningNotification)
+        {
+            if (databaseProvisioningNotification == null)
+                throw new ArgumentNullException(nameof(databaseProvisioningNotification));
+            
+            using (Entities entities = CreateEntityContext())
+            {
+                DatabaseInstance database = await entities.DatabaseInstances.FindAsync(databaseProvisioningNotification.DatabaseId);
+                if (database == null)
+                {
+                    Log.Warning("Received DatabaseStatusChanged notification for non-existent database (Id:{DatabaseId}).",
+                        databaseProvisioningNotification.DatabaseId
+                    );
+
+                    return;
+                }
+
+                database.Status = databaseProvisioningNotification.Status;
+                switch (database.Status)
+                {
+                    case ProvisioningStatus.Ready:
+                    case ProvisioningStatus.Error:
+                    {
+                        database.Action = ProvisioningAction.None;
 
                         break;
                     }
