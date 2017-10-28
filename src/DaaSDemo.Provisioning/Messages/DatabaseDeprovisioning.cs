@@ -9,7 +9,7 @@ namespace DaaSDemo.Provisioning.Messages
             : DatabaseStatusChanged
     {
         /// <summary>
-        ///     Create a new <see cref="DatabaseDeprovisioned"/> message.
+        ///     Create a new <see cref="DatabaseDeprovisioning"/> message.
         /// </summary>
         /// <param name="databaseId">
         ///     The Id of the database that is being de-provisioned.

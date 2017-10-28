@@ -65,47 +65,14 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     case ProvisioningAction.Provision:
                     {
-                        _dataAccess.Tell(
-                            new DatabaseProvisioning(database.Id)
-                        );
-
-                        if (DatabaseExists())
-                        {
-                            Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
-                                database.Id,
-                                database.Name
-                            );
-                        }
-                        else
-                            await CreateDatabase(database);
-
-                        _dataAccess.Tell(
-                            new DatabaseProvisioned(database.Id)
-                        );
+                        await Provision(database);
 
                         break;
                     }
                     case ProvisioningAction.Deprovision:
                     {
-                        _dataAccess.Tell(
-                            new DatabaseDeprovisioning(database.Id)
-                        );
-
-                        if (!DatabaseExists())
-                        {
-                            Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
-                                database.Id,
-                                database.Name
-                            );
-                        }
-                        else
-                            await DropDatabase(database);
-
-                        _dataAccess.Tell(
-                            new DatabaseDeprovisioned(database.Id)
-                        );
-
-                        Context.Stop(Self);
+                        if (await Deprovision(database))
+                            Context.Stop(Self);
 
                         break;
                     }
@@ -125,6 +92,110 @@ namespace DaaSDemo.Provisioning.Actors
 
                 _connection = null;
             }
+        }
+
+        /// <summary>
+        ///     Provision the database.
+        /// </summary>
+        /// <param name="database">
+        ///     A <see cref="DatabaseInstance"/> representing the target database.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task Provision(DatabaseInstance database)
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+
+            _dataAccess.Tell(
+                new DatabaseProvisioning(database.Id)
+            );
+
+            if (!DatabaseExists())
+            {
+                try
+                {
+                    await CreateDatabase(database);
+                }
+                catch (Exception createDatabaseFailed)
+                {
+                    Log.Error(createDatabaseFailed, "Unexpected error creating database {DatabaseName} (Id:{DatabaseId}).",
+                        database.Name,
+                        database.Id
+                    );
+
+                    _dataAccess.Tell(
+                        new DatabaseProvisioningFailed(database.Id)
+                    );
+
+                    return;
+                }
+            }
+            else
+            {
+                Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
+                    database.Id,
+                    database.Name
+                );
+            }
+
+            _dataAccess.Tell(
+                new DatabaseProvisioned(database.Id)
+            );
+        }
+
+        /// <summary>
+        ///     De-rovision the database.
+        /// </summary>
+        /// <param name="database">
+        ///     A <see cref="DatabaseInstance"/> representing the target database.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the database was successfully de-provisioned; otherwise, <c>false<c/>.
+        /// </returns>
+        async Task<bool> Deprovision(DatabaseInstance database)
+        {
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+
+            _dataAccess.Tell(
+                new DatabaseDeprovisioning(database.Id)
+            );
+
+            if (!DatabaseExists())
+            {
+                try
+                {
+                    await DropDatabase(database);
+                }
+                catch (Exception dropDatabaseFailed)
+                {
+                    Log.Error(dropDatabaseFailed, "Unexpected error dropping database {DatabaseName} (Id:{DatabaseId}).",
+                        database.Name,
+                        database.Id
+                    );
+
+                    _dataAccess.Tell(
+                        new DatabaseDeprovisioningFailed(database.Id)
+                    );
+
+                    return false;
+                }
+            }
+            else
+            {
+                Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
+                    database.Id,
+                    database.Name
+                );
+            }
+
+            _dataAccess.Tell(
+                new DatabaseDeprovisioned(database.Id)
+            );
+
+            return true;
         }
 
         /// <summary>
@@ -177,8 +248,8 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
-            
-            Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
+
+            Log.Info("Creating database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
                 database.Name,
                 database.Id,
                 database.DatabaseServer.Name,
@@ -213,7 +284,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
-            
+
             Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
                 database.Name,
                 database.Id,
@@ -240,11 +311,11 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Get the name of the <see cref="TenantServerManager"/> actor for the specified tenant.
         /// </summary>
         /// <param name="tenantId">
-        ///     The tenant Id.
+        ///     The database Id.
         /// </param>
         /// <returns>
         ///     The actor name.
         /// </returns>
-        public static string ActorName(int tenantId) => $"database-manager.{tenantId}";
+        public static string ActorName(int databaseId) => $"database-manager.{databaseId}";
     }
 }
