@@ -148,7 +148,7 @@ namespace DaaSDemo.Api.Controllers
                 {
                     Id = tenantId,
                     EntityType = "Tenant",
-                    Message = $"No tenant found with Id {tenantId}"
+                    Message = $"No tenant found with Id {tenantId}."
                 });
             }
 
@@ -166,7 +166,74 @@ namespace DaaSDemo.Api.Controllers
             _entities.DatabaseServers.Add(newDatabaseServer);
             _entities.SaveChanges();
 
+            Response.StatusCode = StatusCodes.Status202Accepted;
+
             return Json(newDatabaseServer);
+        }
+
+        /// <summary>
+        ///     Deprovision a tenant's database server.
+        /// </summary>
+        /// <param name="tenantId">
+        ///     The tenant Id.
+        /// </param>
+        [HttpDelete("{tenantId:int}/server")]
+        public IActionResult DestroyServer(int tenantId)
+        {
+            DatabaseServer targetServer = _entities.DatabaseServers.FirstOrDefault(
+                server => server.TenantId == tenantId
+            );
+
+            if (targetServer == null)
+            {
+                return NotFound(new
+                {
+                    Id = (string)null,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    Message = $"No database server found for tenant {tenantId}."
+                });
+            }
+
+            if (_entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    RequestedAction = ProvisioningAction.Deprovision,
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot de-provision database server {targetServer.Id} because it still hosts one or more databases. First de-provision these databases and then retry the operation."
+                });
+            }
+
+            if (targetServer.Action != ProvisioningAction.None)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    RequestedAction = ProvisioningAction.Deprovision,
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot de-provision database server {targetServer.Id} because an action is already in progress for this server."
+                });
+            }
+
+            targetServer.Action = ProvisioningAction.Deprovision;
+            _entities.SaveChanges();
+
+            Response.StatusCode = StatusCodes.Status202Accepted;
+
+            return Json(new
+            {
+                Id = tenantId,
+                Message = $"Database server {targetServer.Id} queued for deletion.",
+                EntityType = "DatabaseServer"
+            });
         }
 
         /// <summary>

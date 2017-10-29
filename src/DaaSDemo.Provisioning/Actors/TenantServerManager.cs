@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -16,7 +17,6 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Actors
 {
-    using System.Collections.Immutable;
     using Data;
     using Data.Models;
     using Messages;
@@ -30,6 +30,8 @@ namespace DaaSDemo.Provisioning.Actors
     ///     TODO: Connect to server as part of deployment and perform post-deploy configuration (e.g. limit memory usage).
     ///     TODO: Store server's current deployment phase in the master database (but do not expose it to API clients).
     ///           This will allow us to pick up where we left off if we crash while deploying.
+    /// 
+    ///     AF: Ingress is no longer needed - just use a NodePort-type service.
     /// </remarks>
     public class TenantServerManager
         : ReceiveActorEx
@@ -63,12 +65,6 @@ namespace DaaSDemo.Provisioning.Actors
         ///     External IP addresses for Kubernetes nodes, keyed by the node's internal IP.
         /// </summary>
         ImmutableDictionary<string, string> _nodeExternalIPs = ImmutableDictionary<string, string>.Empty;
-
-        /*
-            ["192.168.5.20"] = "168.128.36.207",
-            ["192.168.5.21"] = "168.128.36.94",
-            ["192.168.5.22"] = " 168.128.36.206"
-         */
 
         /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
@@ -461,7 +457,7 @@ namespace DaaSDemo.Provisioning.Actors
                                         new V1EnvVar
                                         {
                                             Name = "SA_PASSWORD",
-                                            Value = server.AdminPassword
+                                            Value = server.AdminPassword // TODO: Use Secret resource instead.
                                         }
                                     },
                                     Ports = new List<V1ContainerPort>
