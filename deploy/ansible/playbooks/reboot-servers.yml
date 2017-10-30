@@ -1,0 +1,22 @@
+---
+- hosts: all
+  gather_facts: no
+  tasks:
+    - name: restart server
+      shell: sleep 2 && shutdown -r now "Installed Ansible updates"
+      sudo: true
+
+      async: 1
+      poll: 0
+
+      ignore_errors: true
+
+    - name: wait for server to restart
+      local_action:
+        module: wait_for
+        host: "{{ ansible_ssh_host }}"
+        port: 22
+        search_regex: OpenSSH
+        delay: 10
+        timeout: 300
+        state: started

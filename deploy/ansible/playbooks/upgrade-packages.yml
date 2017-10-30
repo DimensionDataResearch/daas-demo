@@ -1,0 +1,44 @@
+---
+- hosts:  "{{ dc | default('all') }}"
+  gather_facts: no
+  tasks:
+
+  - name: clean apt
+    sudo: yes
+    command: apt-get clean
+
+  - name: apt-get update
+    apt:
+      update_cache: yes
+
+  - name: detect kernel version
+    command: uname -r
+    register: uname_kernel_version
+
+  - name: upgrade kernel package
+    sudo: yes
+    apt:
+      name: "linux-image-{{uname_kernel_version.stdout}}"
+      state: latest
+    register: kernel
+
+  - name: upgrade all packages
+    sudo: yes
+    apt:
+      upgrade: safe
+
+  - name: reboot host
+    sudo: yes
+    shell: nohup bash -c "sleep 2s && reboot" &
+    register: reboot
+    when: kernel.changed
+
+  - name: wait for host boot
+    local_action:
+      module: wait_for
+      host: "{{ ansible_ssh_host }}"
+      port: 22
+      delay: "{{ boot_wait | default(60) }}"
+      timeout: 120
+      state: started
+    when: reboot.changed

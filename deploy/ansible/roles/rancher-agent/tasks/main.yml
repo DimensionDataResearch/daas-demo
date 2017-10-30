@@ -1,0 +1,5 @@
+---
+# TODO: Work out if Ranger agent is already running.
+- name: Install rancher agent
+  sudo: yes
+  command: 'docker run -e CATTLE_AGENT_IP="{{private_ipv4}}" --rm --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/rancher:/var/lib/rancher rancher/agent:v{{agent_version}} {{agent_target_url}}'

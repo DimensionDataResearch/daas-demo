@@ -306,8 +306,25 @@ __pycache__/
 OpenCover/
 
 ## VS Code
+
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+## Terraform
+
+#  Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# .tfvars files
+*.tfvars
+
+## Ansible
+
+*.retry

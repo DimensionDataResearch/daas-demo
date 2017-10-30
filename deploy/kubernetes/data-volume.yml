@@ -9,5 +9,5 @@ spec:
     - ReadWriteMany
   nfs:
     # Update this to point to your NFS server
-    server: 192.168.5.30
+    server: 1.2.3.4
     path: "/"

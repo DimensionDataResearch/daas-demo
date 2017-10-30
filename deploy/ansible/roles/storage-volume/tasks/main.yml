@@ -1,0 +1,31 @@
+---
+- name: data volume group
+  lvg:
+    vg: data
+    pvs: "{{ initial_nfs_volume }}"
+    state: present
+
+- name: nfs volume
+  lvol:
+    lv: nfs
+    vg: data
+    size: "{{ nfs_volume_size }}"
+    state: present
+
+- name: nfs filesystem
+  filesystem:
+    dev: /dev/data/nfs
+    fstype: ext4
+
+- name: nfs mount-point
+  file:
+    dest: /data/nfs
+    mode: 0777 # Dodgy - FIXME!
+    state: directory
+
+- name: nfs mount
+  mount:
+    name: /data/nfs
+    src: /dev/data/nfs
+    fstype: ext4
+    state: mounted

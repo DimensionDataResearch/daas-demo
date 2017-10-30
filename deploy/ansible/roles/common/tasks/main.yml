@@ -1,0 +1,29 @@
+---
+- name: set host name
+  sudo: yes
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: persist host name
+  sudo: yes
+  template:
+    src: hostname.j2
+    dest: /etc/hostname
+
+- name: ensure host name can be resolved
+  sudo: yes
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ private_ipv4 }} {{ inventory_hostname }}"
+    state: present
+
+- name: apt-get update
+  sudo: yes
+  apt:
+    update_cache: true
+
+- name: install pip
+  sudo: yes
+  apt:
+    name: python-pip
+    state: present

@@ -1,0 +1,7 @@
+---
+
+# The initial physical volume used to create the data volume group. 
+initial_nfs_volume: "/dev/sdb"
+
+# The size of the data/nfs logical volume.
+nfs_volume_size: "100g"
