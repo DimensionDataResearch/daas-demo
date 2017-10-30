@@ -239,12 +239,19 @@ namespace DaaSDemo.Provisioning.Actors
                 }
 
                 server.Status = serverProvisioningNotification.Status;
+
                 switch (server.Status)
                 {
                     case ProvisioningStatus.Ready:
                     case ProvisioningStatus.Error:
                     {
                         server.Action = ProvisioningAction.None;
+
+                        break;
+                    }
+                    case ProvisioningStatus.Deprovisioned:
+                    {
+                        entities.DatabaseServers.Remove(server);
 
                         break;
                     }

@@ -28,10 +28,10 @@ namespace DaaSDemo.Provisioning.Actors
     ///     Management of the server's databases is delegated to a child <see cref="TenantDatabaseManager"/> actor.
     /// 
     ///     TODO: Connect to server as part of deployment and perform post-deploy configuration (e.g. limit memory usage).
-    ///     TODO: Store server's current deployment phase in the master database (but do not expose it to API clients).
+    ///     TODO: Handle database status indicating an in-progress deployment.
     ///           This will allow us to pick up where we left off if we crash while deploying.
-    /// 
-    ///     AF: Ingress is no longer needed - just use a NodePort-type service.
+    ///     TODO: Create a Job after deploying the ReplicationController and Service that runs SQLCMD to configure the database server.
+    ///           Mount the script into the job's pod as a Secret volume.
     /// </remarks>
     public class TenantServerManager
         : ReceiveActorEx
@@ -144,7 +144,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ProvisioningAction.Provision:
                 {
-                    Log.Info("Replication controller for server {ServerId} does not exist; deploying...", server.Id);
+                    Log.Info("Provisioning server {ServerId}...", server.Id);
 
                     _dataAccess.Tell(
                         new ServerProvisioning(_serverId)
@@ -156,7 +156,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     catch (Exception provisioningFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to deploy server {ServerId}.",
+                        Log.Error(provisioningFailed, "Failed to provision server {ServerId}.",
                             GetBaseResourceName(server),
                             server.Id
                         );
@@ -170,7 +170,40 @@ namespace DaaSDemo.Provisioning.Actors
 
                     break;
                 }
-                // TODO: ProvisioningAction.Deprovision.
+                case ProvisioningAction.Deprovision:
+                {
+                    Log.Info("De-provisioning server {ServerId}...", server.Id);
+
+                    _dataAccess.Tell(
+                        new ServerDeprovisioning(_serverId)
+                    );
+
+                    try
+                    {
+                        await DestroyServer(server);
+                    }
+                    catch (Exception provisioningFailed)
+                    {
+                        Log.Error(provisioningFailed, "Failed to de-provision server {ServerId}.",
+                            GetBaseResourceName(server),
+                            server.Id
+                        );
+
+                        _dataAccess.Tell(
+                            new ServerDeprovisioningFailed(_serverId)
+                        );
+
+                        return;
+                    }
+
+                    _dataAccess.Tell(
+                        new ServerDeprovisioned(_serverId)
+                    );
+
+                    Context.Stop(Self);
+
+                    return;
+                }
                 default:
                 {
                     break;
@@ -203,6 +236,7 @@ namespace DaaSDemo.Provisioning.Actors
                     if (server.Status == ProvisioningStatus.Provisioning)
                     {
                         // TODO: Connect to the server and perform initial configuration (e.g. max memory usage).
+                        // TODO: Alternatively, consider using a Job and Secret to just run SQLCMD inside the cluster with a generated provisioning script (so we don't need the ingress).
 
                         _dataAccess.Tell(
                             new ServerProvisioned(_serverId)
@@ -279,9 +313,28 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            await EnsureReplicationController(server);
-            await EnsureService(server);
-            await EnsureIngress(server);
+            await EnsureReplicationControllerPresent(server);
+            await EnsureServicePresent(server);
+            await EnsureIngressPresent(server);
+        }
+
+        /// <summary>
+        ///     Destroy an instance of SQL Server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> describing the server.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task DestroyServer(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            await EnsureIngressAbsent(server);
+            await EnsureServiceAbsent(server);
+            await EnsureReplicationControllerAbsent(server);
         }
 
         /// <summary>
@@ -300,7 +353,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1ReplicationControllerList matchingControllers =
                 await _client.GetAsync(
-                    HttpRequest.Factory.Json("/api/v1/namespaces/default/replicationcontrollers")
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers")
                         .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
                 )
                 .ReadContentAsAsync<V1ReplicationControllerList, UnversionedStatus>();
@@ -327,7 +380,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1ServiceList matchingServices =
                 await _client.GetAsync(
-                    HttpRequest.Factory.Json("/api/v1/namespaces/default/services")
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/services")
                         .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
                 )
                 .ReadContentAsAsync<V1ServiceList, UnversionedStatus>();
@@ -355,7 +408,7 @@ namespace DaaSDemo.Provisioning.Actors
             string baseName = GetBaseResourceName(server);
 
             HttpResponseMessage response = await _client.GetAsync(
-                HttpRequest.Factory.Json("/apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
+                HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
                     .WithTemplateParameter("IngressName",
                         value: $"{baseName}-ingress"
                     )
@@ -391,7 +444,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The ReplicationController resource, as a <see cref="V1ReplicationController"/>.
         /// </returns>
-        async Task<V1ReplicationController> EnsureReplicationController(DatabaseServer server)
+        async Task<V1ReplicationController> EnsureReplicationControllerPresent(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -496,7 +549,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1ReplicationController createdController =
                 await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("/api/v1/namespaces/default/replicationcontrollers"),
+                    request: HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers"),
                     postBody: newController
                 )
                 .ReadContentAsAsync<V1ReplicationController, UnversionedStatus>();
@@ -510,6 +563,66 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     Ensure that a ReplicationController resource does not exist for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
+        /// </returns>
+        async Task<bool> EnsureReplicationControllerAbsent(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            V1ReplicationController controller = await FindReplicationController(server);
+            if (controller == null)
+                return true;
+
+            Log.Info("Deleting replication controller {ControllerName} for server {ServerId}...",
+                controller.Metadata.Name,
+                server.Id
+            );
+
+            try
+            {
+                await _client.DeleteAsJsonAsync(
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers/{ControllerName}")
+                        .WithTemplateParameter("ControllerName", controller.Metadata.Name),
+                    deleteBody: new
+                    {
+                        apiVersion = "v1",
+                        kind = "DeleteOptions",
+                        propagationPolicy = "Background"
+                    }
+                )
+                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>();
+            }
+            catch (HttpRequestException<UnversionedStatus> deleteFailed)
+            {
+                if (deleteFailed.Response.Reason != "NotFound")
+                {
+                    Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                        controller.Metadata.Name,
+                        server.Id,
+                        deleteFailed.Response.Message,
+                        deleteFailed.Response.Reason
+                    );
+
+                    return false;
+                }
+            }
+
+            Log.Info("Deleted replication controller {ControllerName} for server {ServerId}.",
+                controller.Metadata.Name,
+                server.Id
+            );
+
+            return true;
+        }
+
+        /// <summary>
         ///     Ensure that a Service resource exists for the specified database server.
         /// </summary>
         /// <param name="server">
@@ -518,7 +631,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The Service resource, as a <see cref="V1Service"/>.
         /// </returns>
-        async Task<V1Service> EnsureService(DatabaseServer server)
+        async Task<V1Service> EnsureServicePresent(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -573,7 +686,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1Service createdService =
                 await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("/api/v1/namespaces/default/services"),
+                    request: HttpRequest.Factory.Json("api/v1/namespaces/default/services"),
                     postBody: newService
                 )
                 .ReadContentAsAsync<V1Service, UnversionedStatus>();
@@ -587,6 +700,58 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     Ensure that a Service resource does not exist for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the service is now absent; otherwise, <c>false</c>.
+        /// </returns>
+        async Task<bool> EnsureServiceAbsent(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            V1Service service = await FindService(server);
+            if (service == null)
+                return true;
+
+            Log.Info("Deleting service {ServiceName} for server {ServerId}...",
+                service.Metadata.Name,
+                server.Id
+            );
+
+            UnversionedStatus result =
+                await _client.DeleteAsync(
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/services/{ServiceName}")
+                        .WithTemplateParameter("ServiceName",
+                            value: service.Metadata.Name
+                        )
+                )
+                .ReadContentAsAsync<UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+
+            if (result.Status != "Success" && result.Reason != "NotFound")
+            {
+                Log.Error("Failed to delete service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    service.Metadata.Name,
+                    server.Id,
+                    result.Message,
+                    result.Reason
+                );
+
+                return false;
+            }
+
+            Log.Info("Deleted service {ServiceName} for server {ServerId}.",
+                service.Metadata.Name,
+                server.Id
+            );
+
+            return true;
+        }
+
+        /// <summary>
         ///     Ensure that an Ingress resource exists for the specified database server.
         /// </summary>
         /// <param name="server">
@@ -595,20 +760,20 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The Ingress resource, as a <see cref="V1Beta1VoyagerIngress"/>.
         /// </returns>
-        async Task<V1Beta1VoyagerIngress> EnsureIngress(DatabaseServer server)
+        async Task<V1Beta1VoyagerIngress> EnsureIngressPresent(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            V1Beta1VoyagerIngress existingIngress = await FindIngress(server);
-            if (existingIngress != null)
+            V1Beta1VoyagerIngress ingress = await FindIngress(server);
+            if (ingress != null)
             {
                 Log.Info("Found existing ingress {IngressName} for server {ServerId}.",
-                    existingIngress.Metadata.Name,
+                    ingress.Metadata.Name,
                     server.Id
                 );
 
-                return existingIngress;
+                return ingress;
             }
 
             Log.Info("Creating ingress for server {ServerId}...",
@@ -671,6 +836,62 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     Ensure that an Ingress resource does not exist for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     <c>true</c>, if the ingress is now absent; otherwise, <c>false</c>.
+        /// </returns>
+        async Task<bool> EnsureIngressAbsent(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            V1Beta1VoyagerIngress ingress = await FindIngress(server);
+            if (ingress == null)
+                return true;
+
+            Log.Info("Deleting ingress {IngressName} for server {ServerId}...",
+                ingress.Metadata.Name,
+                server.Id
+            );
+
+            try
+            {
+                await _client.DeleteAsync(
+                    HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
+                        .WithTemplateParameter("IngressName",
+                            value: ingress.Metadata.Name
+                        )
+                )
+                .ReadContentAsAsync<V1Beta1VoyagerIngress, UnversionedStatus>();
+            }
+            catch (HttpRequestException<UnversionedStatus> deleteFailed)
+            {
+                if (deleteFailed.Response.Reason != "NotFound")
+                {
+                    Log.Error("Failed to delete replication service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                        ingress.Metadata.Name,
+                        server.Id,
+                        deleteFailed.Response.Message,
+                        deleteFailed.Response.Reason
+                    );
+
+                    return false;
+                }
+            }
+
+            Log.Info("Deleted ingress {IngressName} for server {ServerId}.",
+                ingress.Metadata.Name,
+                server.Id
+            );
+
+            return true;
+        }
+
+        /// <summary>
         ///     Get the (external) IP on which the database server is accessible.
         /// </summary>
         /// <param name="server">
@@ -689,7 +910,7 @@ namespace DaaSDemo.Provisioning.Actors
             // Find the Pod that implements the ingress (the origin-name label will point back to the ingress resource).
             V1PodList matchingPods =
                 await _client.GetAsync(
-                    HttpRequest.Factory.Json("/api/v1/namespaces/default/pods")
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
                         .WithQueryParameter("labelSelector", $"origin-name = {ingressResourceName}")
                 )
                 .ReadContentAsAsync<V1PodList, UnversionedStatus>();
@@ -722,7 +943,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1PodList matchingPods =
                 await _client.GetAsync(
-                    HttpRequest.Factory.Json("/api/v1/namespaces/default/pods")
+                    HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
                         .WithQueryParameter("labelSelector", $"origin-name = {entityName}")
                 )
                 .ReadContentAsAsync<V1PodList, UnversionedStatus>();
