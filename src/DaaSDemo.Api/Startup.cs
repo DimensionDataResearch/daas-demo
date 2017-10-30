@@ -85,7 +85,7 @@ namespace DaaSDemo.Api
         /// </param>
         public void Configure(IApplicationBuilder app, ProvisioningEngine provisioningEngine)
         {
-            provisioningEngine.Start();
+            provisioningEngine.Start(); // TODO: Await provisioning engine shut-down before app pipeline terminates.
 
             app.UseDeveloperExceptionPage();
             app.UseMvc();   
