@@ -8,5 +8,8 @@ charset = utf-8
 trim_trailing_whitespace = false
 insert_final_newline = false
 
+[*.sh]
+end_of_line = lf
+
 [*.{csproj,yml}]
 indent_size = 2

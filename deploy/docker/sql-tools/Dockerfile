@@ -2,7 +2,7 @@ FROM ubuntu:xenial
 
 # Prerequisites
 RUN apt-get update && \
-    apt-get install -y curl apt-transport-https apt-utils locales && \
+    apt-get install -y curl apt-transport-https apt-utils locales iputils-ping && \
     locale-gen "en_US.UTF-8"
 
 ENV LANG="en_US.UTC-8" ACCEPT_EULA="Y"
@@ -22,9 +22,10 @@ RUN apt-get remove -y curl apt-transport-https && \
 
 # T-SQL scripts to run
 RUN mkdir -p /sql-scripts
-VOLUME /sql-scripts
 WORKDIR /sql-scripts
 
-# TODO: Copy and use entrypoint.sh
+COPY entrypoint.sh /usr/bin/entrypoint.sh
 
-ENTRYPOINT [ "/bin/bash" ]
+ENV SQL_DATABASE="master"
+
+ENTRYPOINT [ "/bin/bash", "/usr/bin/entrypoint.sh" ]
