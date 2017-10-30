@@ -71,7 +71,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet]
         public IActionResult List()
         {
-            Tenant[] tenants = _entities.Tenants.ToArray();
+            Tenant[] tenants = _entities.Tenants.OrderBy(tenant => tenant.Name).ToArray();
 
             return Json(tenants);
         }
@@ -79,16 +79,20 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Create a tenant.
         /// </summary>
-        /// <param name="tenant">
+        /// <param name="newTenant">
         ///     The request body as a <see cref="Tenant"/>.
         /// </param>
         [HttpPost]
-        public IActionResult Create([FromBody, Bind(nameof(Tenant.Name))] Tenant tenant)
+        public IActionResult Create([FromBody] NewTenant newTenant)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var entry = _entities.Tenants.Add(tenant);
+            var tenant = new Tenant
+            {
+                Name = newTenant.Name
+            };
+            _entities.Tenants.Add(tenant);
             _entities.SaveChanges();
 
             return Json(tenant);
@@ -123,11 +127,11 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        /// <param name="databaseServer">
+        /// <param name="newDatabaseServer">
         ///     The request body as a <see cref="NewDatabaseServer"/>.
         /// </param>
         [HttpPost("{tenantId:int}/server")]
-        public IActionResult CreateServer(int tenantId, [FromBody] NewDatabaseServer databaseServer)
+        public IActionResult CreateServer(int tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
         {
             DatabaseServer existingServer = _entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
             if (existingServer != null)
@@ -155,20 +159,23 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var newDatabaseServer = new DatabaseServer
+            var databaseServer = new DatabaseServer
             {
-                Name = databaseServer.Name,
-                AdminPassword = databaseServer.AdminPassword,
+                Name = newDatabaseServer.Name,
+                AdminPassword = newDatabaseServer.AdminPassword,
                 TenantId = tenantId,
                 Action = ProvisioningAction.Provision,
                 Status = ProvisioningStatus.Pending
             };
-            _entities.DatabaseServers.Add(newDatabaseServer);
+            _entities.DatabaseServers.Add(databaseServer);
             _entities.SaveChanges();
 
-            Response.StatusCode = StatusCodes.Status202Accepted;
-
-            return Json(newDatabaseServer);
+            return StatusCode(StatusCodes.Status202Accepted, new
+            {
+                Id = databaseServer.Id,
+                Name = databaseServer.Name,
+                Message = $"Database server {databaseServer.Id} queued for creation."
+            });
         }
 
         /// <summary>
@@ -226,9 +233,7 @@ namespace DaaSDemo.Api.Controllers
             targetServer.Action = ProvisioningAction.Deprovision;
             _entities.SaveChanges();
 
-            Response.StatusCode = StatusCodes.Status202Accepted;
-
-            return Json(new
+            return StatusCode(StatusCodes.Status202Accepted, new
             {
                 Id = tenantId,
                 Message = $"Database server {targetServer.Id} queued for deletion.",
@@ -284,11 +289,11 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        /// <param name="database">
+        /// <param name="newDatabase">
         ///     The request body as a <see cref="Database"/>.
         /// </param>
         [HttpPost("{tenantId:int}/databases")]
-        public IActionResult CreateDatabase(int tenantId, [FromBody] DatabaseInstance database) // TODO: Define NewDatabaseInstance model.
+        public IActionResult CreateDatabase(int tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
             Tenant ownerTenant = _entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
             if (ownerTenant == null)
@@ -312,17 +317,41 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            database.DatabaseServerId = databaseServer.Id;
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // TODO: Check for unique database name.
+            DatabaseInstance existingDatabase = _entities.DatabaseInstances.FirstOrDefault(
+                databaseInstance => databaseInstance.DatabaseServerId == databaseServer.Id && databaseInstance.Name == newDatabase.Name
+            );
+            if (existingDatabase != null)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = existingDatabase.Id,
+                    Name = existingDatabase.Name,
+                    EntityType = "Database",
+                    Message = $"Database '{existingDatabase.Name}' already exists on server '{databaseServer.Name}'."
+                });
+            }
+
+            var database = new DatabaseInstance
+            {
+                Name = newDatabase.Name,
+                DatabaseUser = newDatabase.DatabaseUser,
+                DatabasePassword = newDatabase.DatabasePassword,
+                DatabaseServerId = databaseServer.Id,
+                Action = ProvisioningAction.Provision
+            };
 
             _entities.DatabaseInstances.Add(database);
             _entities.SaveChanges();
 
-            return Json(database);
+            return StatusCode(StatusCodes.Status202Accepted, new
+            {
+                Id = database.Id,
+                Name = database.Name,
+                Message = $"Database '{database.Name}' queued for creation on server '{databaseServer.Name}'."
+            });
         }
     }
 }

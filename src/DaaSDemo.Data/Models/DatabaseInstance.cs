@@ -26,7 +26,7 @@ namespace DaaSDemo.Data.Models
         public string Name { get; set; }
 
         /// <summary>
-        ///     The name of database-level user.
+        ///     The name of the database-level user.
         /// </summary>
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
