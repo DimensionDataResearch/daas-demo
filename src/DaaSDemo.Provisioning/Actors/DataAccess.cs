@@ -90,8 +90,8 @@ namespace DaaSDemo.Provisioning.Actors
         protected override void PreStart()
         {
             Context.System.Scheduler.ScheduleTellRepeatedly(
-                initialDelay: TimeSpan.Zero,
-                interval: TimeSpan.FromMinutes(5),
+                initialDelay: TimeSpan.FromSeconds(10),
+                interval: TimeSpan.FromSeconds(30),
                 receiver: Self,
                 message: Command.ScanIPAddressMappings,
                 sender: Self
@@ -168,6 +168,9 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 mappings = await entities.IPAddressMappings.ToArrayAsync();
             }
+
+            if (mappings.Length == 0)
+                Log.Warning("No IP address mappings have been registered for the cluster's nodes.");
 
             ImmutableDictionary<string, string> previousMappings = _nodeIPAddressMappings;
             ImmutableDictionary<string, string> currentMappings = mappings.ToImmutableDictionary(
@@ -362,12 +365,12 @@ namespace DaaSDemo.Provisioning.Actors
             /// <summary>
             ///     Scan the database for changes to tenants (their servers and databases).
             /// </summary>
-            ScanTenants,
+            ScanTenants = 1,
 
             /// <summary>
             ///     Scan the database for changes to IP address mappings (for Kubernetes nodes).
             /// </summary>
-            ScanIPAddressMappings
+            ScanIPAddressMappings = 2
         }
     }
 }

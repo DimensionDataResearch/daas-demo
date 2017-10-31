@@ -91,8 +91,6 @@ namespace DaaSDemo.Provisioning.Actors
             Receive<IPAddressMappingsChanged>(mappingsChanged =>
             {
                 _nodeExternalIPs = mappingsChanged.Mappings;
-
-                // TODO: Work out how / when to invalidate ingress IP (if required).
             });
             Receive<Terminated>(terminated =>
             {
@@ -212,10 +210,9 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             }
 
-            string ingressIP = await GetIngressHostIP(server);
+            (string ingressIP, int? ingressPort) = await GetServerIngress(server);
             if (!String.IsNullOrWhiteSpace(ingressIP))
             {
-                int? ingressPort = await GetIngressHostPort(server);
                 if (ingressPort != null)
                 {
                     Log.Info("Server {ServerName} is accessible at {HostIP}:{HostPort}",
@@ -863,15 +860,15 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Get the (external) IP on which the database server is accessible.
+        ///     Get the (external) IP and port on which the database server is accessible.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> describing the server.
         /// </param>
         /// <returns>
-        ///     The IP, or <c>null</c> if the ingress for the server cannot be found.
+        ///     The IP and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
         /// </returns>
-        async Task<string> GetIngressHostIP(DatabaseServer server)
+        async Task<(string hostIP, int? hostPort)> GetServerIngress(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -879,51 +876,23 @@ namespace DaaSDemo.Provisioning.Actors
             string ingressResourceName = $"sql-server-{server.Id}-ingress";
 
             // Find the Pod that implements the ingress (the origin-name label will point back to the ingress resource).
-            V1PodList matchingPods =
-                await _kubeClient.Http.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
-                        .WithQueryParameter("labelSelector", $"origin-name = {ingressResourceName}")
-                )
-                .ReadContentAsAsync<V1PodList, UnversionedStatus>();
+            List<V1Pod> matchingPods = await _kubeClient.PodsV1.List(
+                labelSelector: $"origin-name = {ingressResourceName}"
+            );
 
-            V1Pod ingressPod = matchingPods.Items.FirstOrDefault(item => item.Status.Phase == "Running");
+            V1Pod ingressPod = matchingPods.FirstOrDefault(item => item.Status.Phase == "Running");
             if (ingressPod == null)
-                return null;
+                return (hostIP: null, hostPort: null);
 
             if (_nodeExternalIPs.TryGetValue(ingressPod.Status.HostIP, out string hostExternalIP))
-                return hostExternalIP;
+            {
+                return (
+                    hostIP: hostExternalIP,
+                    hostPort: ingressPod.Spec.Containers[0].Ports[0].HostPort
+                );
+            }
 
-            return ingressPod.Status.HostIP;
-        }
-
-        /// <summary>
-        ///     Get the (external) port on which the database server is accessible.
-        /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> describing the server.
-        /// </param>
-        /// <returns>
-        ///     The port, or <c>null</c> if the ingress for the server cannot be found.
-        /// </returns>
-        async Task<int?> GetIngressHostPort(DatabaseServer server)
-        {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
-            string entityName = $"sql-server-{server.Id}-ingress";
-
-            V1PodList matchingPods =
-                await _kubeClient.Http.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
-                        .WithQueryParameter("labelSelector", $"origin-name = {entityName}")
-                )
-                .ReadContentAsAsync<V1PodList, UnversionedStatus>();
-
-            V1Pod ingressPod = matchingPods.Items.FirstOrDefault(item => item.Status.Phase == "Running");
-            if (ingressPod == null)
-                return null;
-
-            return ingressPod.Spec.Containers[0].Ports[0].HostPort;
+            return (hostIP: null, hostPort: null); // If we can't map to the corresponding external IP address, don't bother.
         }
 
         /// <summary>
