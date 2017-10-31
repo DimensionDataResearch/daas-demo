@@ -155,12 +155,12 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level Secret (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets?labelSelector={LabelSelector?}");
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Secret (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets/{Name}");
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets/{Name}", SerializerSettings);
         }
     }
 }

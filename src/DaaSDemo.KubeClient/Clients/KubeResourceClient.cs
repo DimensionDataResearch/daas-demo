@@ -1,5 +1,7 @@
 using HTTPlease;
 using KubeNET.Swagger.Model;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -13,6 +15,19 @@ namespace DaaSDemo.KubeClient.Clients
     /// </summary>
     public abstract class KubeResourceClient
     {
+        /// <summary>
+        ///     JSON serialisation settings.
+        /// </summary>
+        protected internal static JsonSerializerSettings SerializerSettings => new JsonSerializerSettings
+        {
+            Converters =
+            {
+                new StringEnumConverter()
+            }
+        };
+
+        // TODO: Declare base request definitions (that include the serialiser settings).
+
         /// <summary>
         ///     Create a new <see cref="KubeResourceClient"/>.
         /// </summary>

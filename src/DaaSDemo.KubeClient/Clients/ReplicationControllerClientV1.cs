@@ -138,8 +138,8 @@ namespace DaaSDemo.KubeClient.Clients
         /// </returns>
         public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await Http
-                .DeleteAsJsonAsync(
+            return
+                await Http.DeleteAsJsonAsync(
                     Requests.ByName.WithTemplateParameters(new
                     {
                         Name = name,
@@ -164,12 +164,12 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level ReplicationController (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers?labelSelector={LabelSelector?}");
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name ReplicationController (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers/{Name}");
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers/{Name}", SerializerSettings);
         }
     }
 }

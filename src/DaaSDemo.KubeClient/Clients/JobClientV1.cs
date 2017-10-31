@@ -155,12 +155,12 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level Job (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs?labelSelector={LabelSelector?}");
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Job (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs/{Name}");
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs/{Name}", SerializerSettings);
         }
     }
 }
