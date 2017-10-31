@@ -10,12 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\lib\KubeNet\KubeNET\Fixes\*.cs" />
-    <Compile Include="..\..\lib\KubeNet\KubeNET\Swagger\Model\*.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
+    <ProjectReference Include="..\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>

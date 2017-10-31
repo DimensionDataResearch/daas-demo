@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
+    <ProjectReference Include="..\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
     <ProjectReference Include="..\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj" />
   </ItemGroup>
 
