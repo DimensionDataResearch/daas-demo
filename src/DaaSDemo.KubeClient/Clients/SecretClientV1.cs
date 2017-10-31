@@ -12,27 +12,27 @@ namespace DaaSDemo.KubeClient.Clients
     using Models;
 
     /// <summary>
-    ///     A client for the Kubernetes ReplicationControllers (v1) API.
+    ///     A client for the Kubernetes Secrets (v1) API.
     /// </summary>
-    public class ReplicationControllerClientV1
+    public class SecretClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="ReplicationControllerClientV1"/>.
+        ///     Create a new <see cref="SecretClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public ReplicationControllerClientV1(KubeApiClient client)
+        public SecretClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all ReplicationControllers in the specified namespace, optionally matching a label selector.
+        ///     Get all Secrets in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the ReplicationControllers.
+        ///     An optional Kubernetes label selector expression used to filter the Secrets.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -41,11 +41,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ReplicationControllers, as a list of <see cref="V1ReplicationController"/>s.
+        ///     The Secrets, as a list of <see cref="V1Secret"/>s.
         /// </returns>
-        public async Task<List<V1ReplicationController>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1Secret>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            V1ReplicationControllerList matchingControllers =
+            V1SecretList matchingSecrets =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,16 +54,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationControllerList, UnversionedStatus>();
+                .ReadContentAsAsync<V1SecretList, UnversionedStatus>();
 
-            return matchingControllers.Items;
+            return matchingSecrets.Items;
         }
 
         /// <summary>
-        ///     Get the ReplicationController with the specified name.
+        ///     Get the Secret with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ReplicationController to retrieve.
+        ///     The name of the Secret to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -72,14 +72,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
+        ///     A <see cref="V1Secret"/> representing the current state for the Secret, or <c>null</c> if no Secret was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ReplicationController> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Secret> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
-
-            return await GetSingleResource<V1ReplicationController>(
+            
+            return await GetSingleResource<V1Secret>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Name = name,
@@ -90,45 +90,42 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="ReplicationController"/>.
+        ///     Request creation of a <see cref="Secret"/>.
         /// </summary>
-        /// <param name="newController">
-        ///     A <see cref="V1ReplicationController"/> representing the ReplicationController to create.
+        /// <param name="newSecret">
+        ///     A <see cref="V1Secret"/> representing the Secret to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the newly-created ReplicationController.
+        ///     A <see cref="V1Secret"/> representing the current state for the newly-created Secret.
         /// </returns>
-        public async Task<V1ReplicationController> Create(V1ReplicationController newController, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Secret> Create(V1Secret newSecret, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (newController == null)
-                throw new ArgumentNullException(nameof(newController));
+            if (newSecret == null)
+                throw new ArgumentNullException(nameof(newSecret));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newController?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newSecret?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newController,
+                    postBody: newSecret,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationController, UnversionedStatus>();
+                .ReadContentAsAsync<V1Secret, UnversionedStatus>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified ReplicationController.
+        ///     Request deletion of the specified Secret.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ReplicationController to delete.
+        ///     The name of the Secret to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
-        /// </param>
-        /// <param name="propagationPolicy">
-        ///     A <see cref="DeletePropagationPolicy"/> indicating how child resources should be deleted (if at all).
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
@@ -136,40 +133,34 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await Http
-                .DeleteAsJsonAsync(
+                .DeleteAsync(
                     Requests.ByName.WithTemplateParameters(new
                     {
                         Name = name,
                         Namespace = kubeNamespace ?? Client.DefaultNamespace
                     }),
-                    deleteBody: new
-                    {
-                        apiVersion = "v1",
-                        kind = "DeleteOptions",
-                        propagationPolicy = propagationPolicy
-                    },
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>
-        ///     Request templates for the ReplicationController (v1) API.
+        ///     Request templates for the Secret (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level ReplicationController (v1) request.
+            ///     A collection-level Secret (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers?labelSelector={LabelSelector?}");
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets?labelSelector={LabelSelector?}");
 
             /// <summary>
-            ///     A get-by-name ReplicationController (v1) request.
+            ///     A get-by-name Secret (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers/{Name}");
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets/{Name}");
         }
     }
 }

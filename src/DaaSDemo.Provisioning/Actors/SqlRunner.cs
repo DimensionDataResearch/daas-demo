@@ -18,6 +18,7 @@ namespace DaaSDemo.Provisioning.Actors
 {
     using Data;
     using Data.Models;
+    using KubeClient;
     using Messages;
 
     /// <summary>
@@ -27,9 +28,9 @@ namespace DaaSDemo.Provisioning.Actors
         : ReceiveActorEx
     {
         /// <summary>
-        ///     The <see cref="HttpClient"/> used to communicate with the Kubernetes API.
+        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
         /// </summary>
-        readonly HttpClient _client;
+        readonly KubeApiClient _kubeClient;
 
         /// <summary>
         ///     A reference to the actor that owns the <see cref="SqlRunner"/>.
@@ -73,7 +74,7 @@ namespace DaaSDemo.Provisioning.Actors
             _secretName = $"sql-exec-{server.Id}-secret";
             _configMapName = $"sql-exec-{server.Id}-config";
 
-            _client = CreateKubeClient();
+            _kubeClient = CreateKubeApiClient();
 
             ReceiveAsync<ExecuteSql>(Execute);
         }
@@ -130,8 +131,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         protected override void PostStop()
         {
-            _client.CancelPendingRequests();
-            _client.Dispose();
+            _kubeClient.Dispose();
 
             base.PostStop();
         }
@@ -265,17 +265,15 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Job> FindJob()
         {
-            V1JobList matchingJobs =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("apis/batch/v1/namespaces/default/jobs")
-                        .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.action = exec-sql")
-                )
-                .ReadContentAsAsync<V1JobList, UnversionedStatus>();
+            List<V1Job> matchingJobs =
+                await _kubeClient.JobsV1.List(
+                    labelSelector: $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.action = exec-sql"
+                );
 
-            if (matchingJobs.Items.Count == 0)
+            if (matchingJobs.Count == 0)
                 return null;
 
-            return matchingJobs.Items[matchingJobs.Items.Count - 1];
+            return matchingJobs[matchingJobs.Count - 1];
         }
 
         /// <summary>
@@ -294,17 +292,15 @@ namespace DaaSDemo.Provisioning.Actors
 
             string labelSelector = $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.database = {databaseName}, cloud.dimensiondata.daas.action = exec-sql";
 
-            V1SecretList matchingSecrets =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/secrets")
-                        .WithQueryParameter("labelSelector", labelSelector)
-                )
-                .ReadContentAsAsync<V1SecretList, UnversionedStatus>();
+            List<V1Secret> matchingSecrets =
+                await _kubeClient.SecretsV1.List(
+                    labelSelector: $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.database = {databaseName}, cloud.dimensiondata.daas.action = exec-sql"
+                );
 
-            if (matchingSecrets.Items.Count == 0)
+            if (matchingSecrets.Count == 0)
                 return null;
 
-            return matchingSecrets.Items[matchingSecrets.Items.Count - 1]; // Most recent.
+            return matchingSecrets[matchingSecrets.Count - 1]; // Most recent.
         }
 
         /// <summary>
@@ -369,12 +365,7 @@ namespace DaaSDemo.Provisioning.Actors
                 :setvar DatabasePassword '{databasePassword}'
             ");
 
-            V1Secret createdSecret =
-                await _client.PostAsJsonAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/secrets"),
-                    postBody: newSecret
-                )
-                .ReadContentAsAsync<V1Secret, UnversionedStatus>();
+            V1Secret createdSecret = await _kubeClient.SecretsV1.Create(newSecret);
 
             Log.Info("Successfully created secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 createdSecret.Metadata.Name,
@@ -408,26 +399,21 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _client.DeleteAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/secrets/{SecretName}")
-                        .WithTemplateParameter("SecretName", secret.Metadata.Name)
-                )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>();
+                await _kubeClient.SecretsV1.Delete(
+                    name: secret.Metadata.Name
+                );
             }
             catch (HttpRequestException<UnversionedStatus> deleteFailed)
             {
-                if (deleteFailed.Response.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        secret.Metadata.Name,
-                        databaseName,
-                        _server.Id,
-                        deleteFailed.Response.Message,
-                        deleteFailed.Response.Reason
-                    );
+                Log.Error("Failed to delete secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    secret.Metadata.Name,
+                    databaseName,
+                    _server.Id,
+                    deleteFailed.Response.Message,
+                    deleteFailed.Response.Reason
+                );
 
-                    return false;
-                }
+                return false;
             }
 
             Log.Info("Deleted secret {SecretName} for database {DatabaseName} in server {ServerId}.",
@@ -453,19 +439,15 @@ namespace DaaSDemo.Provisioning.Actors
             if (String.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
 
-            string labelSelector = $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.database = {databaseName}, cloud.dimensiondata.daas.action = exec-sql";
+            List<V1ConfigMap> matchingConfigMaps = await _kubeClient.ConfigMapsV1.List(
+                kubeNamespace: "default",
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {_server.Id}, cloud.dimensiondata.daas.database = {databaseName}, cloud.dimensiondata.daas.action = exec-sql"
+            );
 
-            V1ConfigMapList matchingConfigMaps =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/configmaps")
-                        .WithQueryParameter("labelSelector", labelSelector)
-                )
-                .ReadContentAsAsync<V1ConfigMapList, UnversionedStatus>();
-
-            if (matchingConfigMaps.Items.Count == 0)
+            if (matchingConfigMaps.Count == 0)
                 return null;
 
-            return matchingConfigMaps.Items[matchingConfigMaps.Items.Count - 1]; // Most recent.
+            return matchingConfigMaps[matchingConfigMaps.Count - 1]; // Most recent.
         }
 
         /// <summary>
@@ -531,12 +513,7 @@ namespace DaaSDemo.Provisioning.Actors
                 value: sql
             );
 
-            V1ConfigMap createdConfigMap =
-                await _client.PostAsJsonAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/configmaps"),
-                    postBody: newConfigMap
-                )
-                .ReadContentAsAsync<V1ConfigMap, UnversionedStatus>();
+            V1ConfigMap createdConfigMap = await _kubeClient.ConfigMapsV1.Create(newConfigMap);
 
             Log.Info("Successfully created ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 createdConfigMap.Metadata.Name,
@@ -570,26 +547,21 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _client.DeleteAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/configmaps/{ConfigMapName}")
-                        .WithTemplateParameter("ConfigMapName", configMap.Metadata.Name)
-                )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>();
+                await _kubeClient.ConfigMapsV1.Delete(
+                    name: configMap.Metadata.Name
+                );
             }
             catch (HttpRequestException<UnversionedStatus> deleteFailed)
             {
-                if (deleteFailed.Response.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        configMap.Metadata.Name,
-                        databaseName,
-                        _server.Id,
-                        deleteFailed.Response.Message,
-                        deleteFailed.Response.Reason
-                    );
+                Log.Error("Failed to delete ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    configMap.Metadata.Name,
+                    databaseName,
+                    _server.Id,
+                    deleteFailed.Response.Message,
+                    deleteFailed.Response.Reason
+                );
 
-                    return false;
-                }
+                return false;
             }
 
             Log.Info("Deleted ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
@@ -609,40 +581,28 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Service> FindService()
         {
-            V1ServiceList matchingServices =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/services")
-                        .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {_server.Id}")
-                )
-                .ReadContentAsAsync<V1ServiceList, UnversionedStatus>();
+            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+                kubeNamespace: "default",
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {_server.Id}"
+            );
 
-            if (matchingServices.Items.Count == 0)
-                return null;
-
-            return matchingServices.Items[matchingServices.Items.Count - 1];
+            return matchingServices[matchingServices.Count - 1];
         }
 
         /// <summary>
-        ///     Create a new <see cref="HttpClient"/> for communicating with the Kubernetes API.
+        ///     Create a new <see cref="KubeApiClient"/> for communicating with the Kubernetes API.
         /// </summary>
         /// <returns>
-        ///     The configured <see cref="HttpClient"/>.
+        ///     The configured <see cref="KubeApiClient"/>.
         /// </returns>
-        HttpClient CreateKubeClient()
+        KubeApiClient CreateKubeApiClient()
         {
-            return new HttpClient
-            {
-                BaseAddress = new Uri(
+            return KubeApiClient.Create(
+                endPointUri: new Uri(
                     Context.System.Settings.Config.GetString("daas.kube.api-endpoint")
                 ),
-                DefaultRequestHeaders =
-                {
-                    Authorization = new AuthenticationHeaderValue(
-                        scheme: "Bearer",
-                        parameter: Context.System.Settings.Config.GetString("daas.kube.api-token")
-                    )
-                }
-            };
+                accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
+            );
         }
     }
 

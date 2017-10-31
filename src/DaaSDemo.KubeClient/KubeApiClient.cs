@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
 
-namespace DaasDemo.KubeClient
+namespace DaaSDemo.KubeClient
 {
     using Clients;
     using Models;
@@ -14,11 +14,6 @@ namespace DaasDemo.KubeClient
     public sealed class KubeApiClient
         : IDisposable
     {
-        /// <summary>
-        ///     The default Kubernetes namespace.
-        /// </summary>
-        public const string DefaultNamespace = "default";
-
         /// <summary>
         ///     Create a new <see cref="KubeApiClient"/>.
         /// </summary>
@@ -31,7 +26,11 @@ namespace DaasDemo.KubeClient
                 throw new ArgumentNullException(nameof(httpClient));
 
             Http = httpClient;
+            SecretsV1 = new SecretClientV1(this);
+            ConfigMapsV1 = new ConfigMapClientV1(this);
             ReplicationControllersV1 = new ReplicationControllerClientV1(this);
+            ServicesV1 = new ServiceClientV1(this);
+            JobsV1 = new JobClientV1(this);
         }
 
         /// <summary>
@@ -40,14 +39,39 @@ namespace DaasDemo.KubeClient
         public void Dispose() => Http?.Dispose();
 
         /// <summary>
+        ///     The default Kubernetes namespace.
+        /// </summary>
+        public string DefaultNamespace { get; set; } = "default";
+
+        /// <summary>
         ///     The underlying HTTP client.
         /// </summary>
-        internal HttpClient Http { get; }
+        public HttpClient Http { get; }
+
+        /// <summary>
+        ///     The client for the Secrets (v1) API.
+        /// </summary>
+        public SecretClientV1 SecretsV1 { get; }
+
+        /// <summary>
+        ///     The client for the ConfigMaps (v1) API.
+        /// </summary>
+        public ConfigMapClientV1 ConfigMapsV1 { get; }
 
         /// <summary>
         ///     The client for the ReplicationControllers (v1) API.
         /// </summary>
         public ReplicationControllerClientV1 ReplicationControllersV1 { get; }
+
+        /// <summary>
+        ///     The client for the Services (v1) API.
+        /// </summary>
+        public ServiceClientV1 ServicesV1 { get; }
+
+        /// <summary>
+        ///     The client for the Services (v1) API.
+        /// </summary>
+        public JobClientV1 JobsV1 { get; }
 
         /// <summary>
         ///     Create a new <see cref="KubeApiClient"/>.

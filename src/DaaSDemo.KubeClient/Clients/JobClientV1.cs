@@ -12,40 +12,40 @@ namespace DaaSDemo.KubeClient.Clients
     using Models;
 
     /// <summary>
-    ///     A client for the Kubernetes ReplicationControllers (v1) API.
+    ///     A client for the Kubernetes Jobs (v1) API.
     /// </summary>
-    public class ReplicationControllerClientV1
+    public class JobClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="ReplicationControllerClientV1"/>.
+        ///     Create a new <see cref="JobClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public ReplicationControllerClientV1(KubeApiClient client)
+        public JobClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all ReplicationControllers in the specified namespace, optionally matching a label selector.
+        ///     Get all Jobs in the specified namespace, optionally matching a label selector.
         /// </summary>
-        /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the ReplicationControllers.
-        /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <param name="labelSelector">
+        ///     An optional Kubernetes label selector expression used to filter the Jobs.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ReplicationControllers, as a list of <see cref="V1ReplicationController"/>s.
+        ///     The Jobs, as a list of <see cref="V1Job"/>s.
         /// </returns>
-        public async Task<List<V1ReplicationController>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1Job>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            V1ReplicationControllerList matchingControllers =
+            V1JobList matchingJobs =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,16 +54,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationControllerList, UnversionedStatus>();
+                .ReadContentAsAsync<V1JobList, UnversionedStatus>();
 
-            return matchingControllers.Items;
+            return matchingJobs.Items;
         }
 
         /// <summary>
-        ///     Get the ReplicationController with the specified name.
+        ///     Get the Job with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ReplicationController to retrieve.
+        ///     The name of the Job to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -72,14 +72,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
+        ///     A <see cref="V1Job"/> representing the current state for the Job, or <c>null</c> if no Job was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ReplicationController> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Job> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
-
-            return await GetSingleResource<V1ReplicationController>(
+            
+            return await GetSingleResource<V1Job>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Name = name,
@@ -90,45 +90,42 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="ReplicationController"/>.
+        ///     Request creation of a <see cref="Job"/>.
         /// </summary>
-        /// <param name="newController">
-        ///     A <see cref="V1ReplicationController"/> representing the ReplicationController to create.
+        /// <param name="newJob">
+        ///     A <see cref="V1Job"/> representing the Job to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the newly-created ReplicationController.
+        ///     A <see cref="V1Job"/> representing the current state for the newly-created Job.
         /// </returns>
-        public async Task<V1ReplicationController> Create(V1ReplicationController newController, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Job> Create(V1Job newJob, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (newController == null)
-                throw new ArgumentNullException(nameof(newController));
+            if (newJob == null)
+                throw new ArgumentNullException(nameof(newJob));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newController?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newJob?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newController,
+                    postBody: newJob,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationController, UnversionedStatus>();
+                .ReadContentAsAsync<V1Job, UnversionedStatus>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified ReplicationController.
+        ///     Request deletion of the specified Job.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ReplicationController to delete.
+        ///     The name of the Job to delete.
         /// </param>
         /// <param name="kubeNamespace">
-        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
-        /// </param>
-        /// <param name="propagationPolicy">
-        ///     A <see cref="DeletePropagationPolicy"/> indicating how child resources should be deleted (if at all).
+        ///     The Kubernetes namespace containing the Job to delete.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
@@ -136,40 +133,34 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await Http
-                .DeleteAsJsonAsync(
+                .DeleteAsync(
                     Requests.ByName.WithTemplateParameters(new
                     {
                         Name = name,
                         Namespace = kubeNamespace ?? Client.DefaultNamespace
                     }),
-                    deleteBody: new
-                    {
-                        apiVersion = "v1",
-                        kind = "DeleteOptions",
-                        propagationPolicy = propagationPolicy
-                    },
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>
-        ///     Request templates for the ReplicationController (v1) API.
+        ///     Request templates for the Job (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level ReplicationController (v1) request.
+            ///     A collection-level Job (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers?labelSelector={LabelSelector?}");
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs?labelSelector={LabelSelector?}");
 
             /// <summary>
-            ///     A get-by-name ReplicationController (v1) request.
+            ///     A get-by-name Job (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/replicationcontrollers/{Name}");
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs/{Name}");
         }
     }
 }

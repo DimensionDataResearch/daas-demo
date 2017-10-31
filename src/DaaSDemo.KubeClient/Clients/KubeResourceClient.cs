@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DaasDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.Clients
 {
     /// <summary>
     ///     The base class for Kubernetes resource API clients.

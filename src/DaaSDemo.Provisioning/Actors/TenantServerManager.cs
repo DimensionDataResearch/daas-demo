@@ -19,6 +19,8 @@ namespace DaaSDemo.Provisioning.Actors
 {
     using Data;
     using Data.Models;
+    using KubeClient;
+    using KubeClient.Models;
     using Messages;
 
     /// <summary>
@@ -52,9 +54,9 @@ namespace DaaSDemo.Provisioning.Actors
         readonly IActorRef _dataAccess;
 
         /// <summary>
-        ///     The <see cref="HttpClient"/> used to communicate with the Kubernetes API.
+        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
         /// </summary>
-        readonly HttpClient _client;
+        readonly KubeApiClient _kubeClient;
 
         /// <summary>
         ///     Previous state (if known) from the database.
@@ -83,7 +85,7 @@ namespace DaaSDemo.Provisioning.Actors
             _serverId = serverId;
             _dataAccess = databaseWatcher;
 
-            _client = CreateKubeClient();
+            _kubeClient = CreateKubeApiClient();
 
             ReceiveAsync<DatabaseServer>(UpdateServerState);
             Receive<IPAddressMappingsChanged>(mappingsChanged =>
@@ -115,8 +117,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         protected override void PostStop()
         {
-            _client.CancelPendingRequests();
-            _client.Dispose();
+            _kubeClient.Dispose();
 
             base.PostStop();
         }
@@ -352,17 +353,14 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            V1ReplicationControllerList matchingControllers =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers")
-                        .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
-                )
-                .ReadContentAsAsync<V1ReplicationControllerList, UnversionedStatus>();
+           List<V1ReplicationController> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+            );
 
-            if (matchingControllers.Items.Count == 0)
+            if (matchingControllers.Count == 0)
                 return null;
 
-            return matchingControllers.Items[matchingControllers.Items.Count - 1];
+            return matchingControllers[matchingControllers.Count - 1];
         }
 
         /// <summary>
@@ -379,17 +377,14 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            V1ServiceList matchingServices =
-                await _client.GetAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/services")
-                        .WithQueryParameter("labelSelector", $"cloud.dimensiondata.daas.server-id = {server.Id}")
-                )
-                .ReadContentAsAsync<V1ServiceList, UnversionedStatus>();
+            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+            );
 
-            if (matchingServices.Items.Count == 0)
+            if (matchingServices.Count == 0)
                 return null;
 
-            return matchingServices.Items[matchingServices.Items.Count - 1];
+            return matchingServices[matchingServices.Count - 1];
         }
 
         /// <summary>
@@ -408,7 +403,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             string baseName = GetBaseResourceName(server);
 
-            HttpResponseMessage response = await _client.GetAsync(
+            HttpResponseMessage response = await _kubeClient.Http.GetAsync(
                 HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
                     .WithTemplateParameter("IngressName",
                         value: $"{baseName}-ingress"
@@ -548,12 +543,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             };
 
-            V1ReplicationController createdController =
-                await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers"),
-                    postBody: newController
-                )
-                .ReadContentAsAsync<V1ReplicationController, UnversionedStatus>();
+            V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(newController);
 
             Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
                 createdController.Metadata.Name,
@@ -588,31 +578,21 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _client.DeleteAsJsonAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/replicationcontrollers/{ControllerName}")
-                        .WithTemplateParameter("ControllerName", controller.Metadata.Name),
-                    deleteBody: new
-                    {
-                        apiVersion = "v1",
-                        kind = "DeleteOptions",
-                        propagationPolicy = "Background"
-                    }
-                )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>();
+                await _kubeClient.ReplicationControllersV1.Delete(
+                    name: controller.Metadata.Name,
+                    propagationPolicy: DeletePropagationPolicy.Background
+                );
             }
             catch (HttpRequestException<UnversionedStatus> deleteFailed)
             {
-                if (deleteFailed.Response.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        controller.Metadata.Name,
-                        server.Id,
-                        deleteFailed.Response.Message,
-                        deleteFailed.Response.Reason
-                    );
+                Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    controller.Metadata.Name,
+                    server.Id,
+                    deleteFailed.Response.Message,
+                    deleteFailed.Response.Reason
+                );
 
-                    return false;
-                }
+                return false;
             }
 
             Log.Info("Deleted replication controller {ControllerName} for server {ServerId}.",
@@ -685,12 +665,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             };
 
-            V1Service createdService =
-                await _client.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("api/v1/namespaces/default/services"),
-                    postBody: newService
-                )
-                .ReadContentAsAsync<V1Service, UnversionedStatus>();
+            V1Service createdService = await _kubeClient.ServicesV1.Create(newService);
 
             Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
                 createdService.Metadata.Name,
@@ -723,14 +698,9 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            UnversionedStatus result =
-                await _client.DeleteAsync(
-                    HttpRequest.Factory.Json("api/v1/namespaces/default/services/{ServiceName}")
-                        .WithTemplateParameter("ServiceName",
-                            value: service.Metadata.Name
-                        )
-                )
-                .ReadContentAsAsync<UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+            UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
+                name: service.Metadata.Name
+            );
 
             if (result.Status != "Success" && result.Reason != "NotFound")
             {
@@ -822,7 +792,7 @@ namespace DaaSDemo.Provisioning.Actors
             };
 
             V1Beta1VoyagerIngress createdIngress =
-                await _client.PostAsJsonAsync(
+                await _kubeClient.Http.PostAsJsonAsync(
                     request: HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses"),
                     postBody: newIngress
                 )
@@ -861,7 +831,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _client.DeleteAsync(
+                await _kubeClient.Http.DeleteAsync(
                     HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
                         .WithTemplateParameter("IngressName",
                             value: ingress.Metadata.Name
@@ -910,7 +880,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             // Find the Pod that implements the ingress (the origin-name label will point back to the ingress resource).
             V1PodList matchingPods =
-                await _client.GetAsync(
+                await _kubeClient.Http.GetAsync(
                     HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
                         .WithQueryParameter("labelSelector", $"origin-name = {ingressResourceName}")
                 )
@@ -943,7 +913,7 @@ namespace DaaSDemo.Provisioning.Actors
             string entityName = $"sql-server-{server.Id}-ingress";
 
             V1PodList matchingPods =
-                await _client.GetAsync(
+                await _kubeClient.Http.GetAsync(
                     HttpRequest.Factory.Json("api/v1/namespaces/default/pods")
                         .WithQueryParameter("labelSelector", $"origin-name = {entityName}")
                 )
@@ -957,26 +927,19 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Create a new <see cref="HttpClient"/> for communicating with the Kubernetes API.
+        ///     Create a new <see cref="KubeApiClient"/> for communicating with the Kubernetes API.
         /// </summary>
         /// <returns>
-        ///     The configured <see cref="HttpClient"/>.
+        ///     The configured <see cref="KubeApiClient"/>.
         /// </returns>
-        HttpClient CreateKubeClient()
+        KubeApiClient CreateKubeApiClient()
         {
-            return new HttpClient
-            {
-                BaseAddress = new Uri(
+            return KubeApiClient.Create(
+                endPointUri: new Uri(
                     Context.System.Settings.Config.GetString("daas.kube.api-endpoint")
                 ),
-                DefaultRequestHeaders =
-                {
-                    Authorization = new AuthenticationHeaderValue(
-                        scheme: "Bearer",
-                        parameter: Context.System.Settings.Config.GetString("daas.kube.api-token")
-                    )
-                }
-            };
+                accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
+            );
         }
 
         /// <summary>

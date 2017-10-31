@@ -1,4 +1,4 @@
-namespace DaasDemo.KubeClient.Models
+namespace DaaSDemo.KubeClient.Models
 {
     /// <summary>
     ///     Well-known policies for propagating deletion of a resource to its children.
