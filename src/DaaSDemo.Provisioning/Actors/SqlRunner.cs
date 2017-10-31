@@ -522,7 +522,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             };
             newConfigMap.AddData("database-server",
-                value: $"{service.Metadata.Name}.{service.Metadata.Namespace}.cluster.local,{service.Spec.Ports[0].Port}"
+                value: $"{service.Metadata.Name}.{service.Metadata.Namespace}.svc.cluster.local,{service.Spec.Ports[0].Port}"
             );
             newConfigMap.AddData("database-name",
                 value: databaseName
