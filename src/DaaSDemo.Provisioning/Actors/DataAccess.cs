@@ -202,6 +202,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("One or more node IP address mappings have changed; publishing changes...");
 
+                _nodeIPAddressMappings = currentMappings;
+                
                 foreach (IActorRef serverManager in _serverManagers.Values)
                 {
                     serverManager.Tell(
