@@ -5,6 +5,7 @@ using System.Collections.Generic;
 namespace DaaSDemo.Provisioning
 {
     using Data.Models;
+    using KubeClient.Models;
 
     /// <summary>
     ///     Factory methods for common Kubernetes resources.
@@ -121,7 +122,7 @@ namespace DaaSDemo.Provisioning
         ///     The service name.
         /// </param>
         /// <param name="spec">
-        ///     A <see cref="V1ServiceSpec"/> representing the controller specification.
+        ///     A <see cref="V1ServiceSpec"/> representing the service specification.
         /// </param>
         /// <param name="labels">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the service.
@@ -144,6 +145,77 @@ namespace DaaSDemo.Provisioning
             {
                 ApiVersion = "v1",
                 Kind = "Service",
+                Metadata = new V1ObjectMeta
+                {
+                    Name = name,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Spec = spec
+            };
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="V1Beta1VoyagerIngress"/> for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Beta1VoyagerIngress"/>.
+        /// </returns>
+        public static V1Beta1VoyagerIngress Ingress(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = GetBaseName(server);
+
+            return Ingress(
+                name: $"{baseName}-ingress",
+                spec: KubeSpecs.Ingress(server),
+                labels: new Dictionary<string, string>
+                {
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                },
+                annotations: new Dictionary<string, string>
+                {
+                    ["ingress.appscode.com/type"] = "HostPort",
+                    ["kubernetes.io/ingress.class"] = "voyager"
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="V1Beta1VoyagerIngress"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The ingress name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="V1Beta1VoyagerIngressSpec"/> representing the ingress specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the ingress.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the ingress.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Beta1VoyagerIngress"/>.
+        /// </returns>
+        public static V1Beta1VoyagerIngress Ingress(string name, V1Beta1VoyagerIngressSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            return new V1Beta1VoyagerIngress
+            {
+                ApiVersion = "voyager.appscode.com/v1beta1",
+                Kind = "Ingress",
                 Metadata = new V1ObjectMeta
                 {
                     Name = name,

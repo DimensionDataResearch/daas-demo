@@ -137,5 +137,42 @@ namespace DaaSDemo.Provisioning
                 }
             };
         }
+
+        /// <summary>
+        ///     Build a <see cref="V1Beta1VoyagerIngressSpec"/> for the specified server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Beta1VoyagerIngressSpec"/>.
+        /// </returns>
+        public static V1Beta1VoyagerIngressSpec Ingress(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = KubeResources.GetBaseName(server);
+
+            return new V1Beta1VoyagerIngressSpec
+            {
+                Rules = new List<V1Beta1VoyagerIngressRule>
+                {
+                    new V1Beta1VoyagerIngressRule
+                    {
+                        Host = $"{server.Name}.local",
+                        Tcp = new V1Beta1VoyagerIngressRuleTcp
+                        {
+                            Port = (11433 + server.Id).ToString(), // Cheaty!
+                            Backend = new V1beta1IngressBackend
+                            {
+                                ServiceName = $"{baseName}-service",
+                                ServicePort = "1433"
+                            }
+                        }
+                    }
+                }
+            };
+        }
     }
 }

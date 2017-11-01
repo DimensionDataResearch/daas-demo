@@ -397,34 +397,14 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string baseName = KubeResources.GetBaseName(server);
-
-            HttpResponseMessage response = await _kubeClient.Http.GetAsync(
-                HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
-                    .WithTemplateParameter("IngressName",
-                        value: $"{baseName}-ingress"
-                    )
+            List<V1Beta1VoyagerIngress> matchingIngresses = await _kubeClient.VoyagerIngressesV1Beta1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
             );
-            using (response)
-            {
-                switch (response.StatusCode)
-                {
-                    case HttpStatusCode.OK:
-                    {
-                        return await response.ReadContentAsAsync<V1Beta1VoyagerIngress>();
-                    }
-                    case HttpStatusCode.NotFound:
-                    {
-                        return null;
-                    }
-                    default:
-                    {
-                        UnversionedStatus status = await response.ReadContentAsAsync<UnversionedStatus>();
 
-                        throw new HttpRequestException<UnversionedStatus>(response.StatusCode, status);
-                    }
-                }
-            }
+            if (matchingIngresses.Count == 0)
+                return null;
+
+            return matchingIngresses[matchingIngresses.Count - 1];
         }
 
         /// <summary>
@@ -455,8 +435,6 @@ namespace DaaSDemo.Provisioning.Actors
             Log.Info("Creating replication controller for server {ServerId}...",
                 server.Id
             );
-
-            string baseName = KubeResources.GetBaseName(server);
 
             V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
                 KubeResources.ReplicationController(server, 
@@ -551,8 +529,6 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            string baseName = KubeResources.GetBaseName(server);
-
             V1Service createdService = await _kubeClient.ServicesV1.Create(
                 KubeResources.Service(server)
             );
@@ -641,52 +617,9 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            string baseName = KubeResources.GetBaseName(server);
-
-            var newIngress = new V1Beta1VoyagerIngress
-            {
-                ApiVersion = "voyager.appscode.com/v1beta1",
-                Kind = "Ingress",
-                Metadata = new V1ObjectMeta
-                {
-                    Name = $"{baseName}-ingress",
-                    Labels = new Dictionary<string, string>
-                    {
-                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
-                    },
-                    Annotations = new Dictionary<string, string>
-                    {
-                        ["ingress.appscode.com/type"] = "HostPort",
-                        ["kubernetes.io/ingress.class"] = "voyager"
-                    }
-                },
-                Spec = new V1BetaVoyagerIngressSpec
-                {
-                    Rules = new List<V1Beta1VoyagerIngressRule>
-                    {
-                        new V1Beta1VoyagerIngressRule
-                        {
-                            Host = $"{server.Name}.local",
-                            Tcp = new V1Beta1VoyagerIngressRuleTcp
-                            {
-                                Port = (11433 + server.Id).ToString(), // Cheaty!
-                                Backend = new V1beta1IngressBackend
-                                {
-                                    ServiceName = $"{baseName}-service",
-                                    ServicePort = "1433"
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            V1Beta1VoyagerIngress createdIngress =
-                await _kubeClient.Http.PostAsJsonAsync(
-                    request: HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses"),
-                    postBody: newIngress
-                )
-                .ReadContentAsAsync<V1Beta1VoyagerIngress, UnversionedStatus>();
+            V1Beta1VoyagerIngress createdIngress = await _kubeClient.VoyagerIngressesV1Beta1.Create(
+                KubeResources.Ingress(server)
+            );
 
             Log.Info("Successfully created ingress {IngressName} for server {ServerId}.",
                 createdIngress.Metadata.Name,
@@ -721,13 +654,9 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _kubeClient.Http.DeleteAsync(
-                    HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
-                        .WithTemplateParameter("IngressName",
-                            value: ingress.Metadata.Name
-                        )
-                )
-                .ReadContentAsAsync<V1Beta1VoyagerIngress, UnversionedStatus>();
+                await _kubeClient.VoyagerIngressesV1Beta1.Delete(
+                    name: ingress.Metadata.Name
+                );
             }
             catch (HttpRequestException<UnversionedStatus> deleteFailed)
             {
@@ -766,26 +695,15 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string ingressResourceName = $"sql-server-{server.Id}-ingress";
-
-            // Find the Pod that implements the ingress (the origin-name label will point back to the ingress resource).
-            List<V1Pod> matchingPods = await _kubeClient.PodsV1.List(
-                labelSelector: $"origin-name = {ingressResourceName}"
-            );
-
-            V1Pod ingressPod = matchingPods.FirstOrDefault(item => item.Status.Phase == "Running");
-            if (ingressPod == null)
+            (string hostIP, int? hostPort) = await _kubeClient.GetServerIngressEndPoint(server);
+            if (String.IsNullOrWhiteSpace(hostIP))
                 return (hostIP: null, hostPort: null);
 
-            if (_nodeExternalIPs.TryGetValue(ingressPod.Status.HostIP, out string hostExternalIP))
-            {
-                return (
-                    hostIP: hostExternalIP,
-                    hostPort: ingressPod.Spec.Containers[0].Ports[0].HostPort
-                );
-            }
-
-            return (hostIP: null, hostPort: null); // If we can't map to the corresponding external IP address, don't bother.
+            string hostExternalIP;
+            if (!_nodeExternalIPs.TryGetValue(hostIP, out hostExternalIP))
+                return (hostIP: null, hostPort: null); // If we can't map to the corresponding external IP address, don't bother.
+            
+            return (hostExternalIP, hostPort);
         }
 
         /// <summary>

@@ -80,7 +80,7 @@ namespace DaaSDemo.KubeClient.Clients
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
             return await GetSingleResource<V1Service>(
-                Requests.Collection.WithTemplateParameters(new
+                Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
                     Namespace = kubeNamespace ?? Client.DefaultNamespace

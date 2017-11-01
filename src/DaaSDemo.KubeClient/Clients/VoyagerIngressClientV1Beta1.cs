@@ -14,16 +14,16 @@ namespace DaaSDemo.KubeClient.Clients
     /// <summary>
     ///     A client for the Kubernetes Pods (v1) API.
     /// </summary>
-    public class PodClientV1
+    public class VoyagerIngressClientV1Beta1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="PodClientV1"/>.
+        ///     Create a new <see cref="VoyagerIngressClientV1Beta1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public PodClientV1(KubeApiClient client)
+        public VoyagerIngressClientV1Beta1(KubeApiClient client)
             : base(client)
         {
         }
@@ -41,11 +41,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Pods, as a list of <see cref="V1Pod"/>s.
+        ///     The Pods, as a list of <see cref="V1Beta1VoyagerIngress"/>es.
         /// </returns>
-        public async Task<List<V1Pod>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1Beta1VoyagerIngress>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            V1PodList matchingPods =
+            V1Beta1VoyagerIngressList matchingPods =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +54,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1PodList, UnversionedStatus>();
+                .ReadContentAsAsync<V1Beta1VoyagerIngressList, UnversionedStatus>();
 
             return matchingPods.Items;
         }
@@ -72,14 +72,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Pod"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
+        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Pod> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Beta1VoyagerIngress> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1Pod>(
+            return await GetSingleResource<V1Beta1VoyagerIngress>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -93,15 +93,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Pod"/>.
         /// </summary>
         /// <param name="newPod">
-        ///     A <see cref="V1Pod"/> representing the Pod to create.
+        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the Pod to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Pod"/> representing the current state for the newly-created Pod.
+        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the current state for the newly-created Pod.
         /// </returns>
-        public async Task<V1Pod> Create(V1Pod newPod, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Beta1VoyagerIngress> Create(V1Beta1VoyagerIngress newPod, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (newPod == null)
                 throw new ArgumentNullException(nameof(newPod));
@@ -115,7 +115,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newPod,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Pod, UnversionedStatus>();
+                .ReadContentAsAsync<V1Beta1VoyagerIngress, UnversionedStatus>();
         }
 
         /// <summary>
@@ -155,12 +155,12 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level Pod (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Pod (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{Name}", SerializerSettings);
         }
     }
 }
