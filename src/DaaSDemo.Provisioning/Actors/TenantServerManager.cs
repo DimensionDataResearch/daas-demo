@@ -44,6 +44,11 @@ namespace DaaSDemo.Provisioning.Actors
         readonly Dictionary<int, IActorRef> _databaseManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
+        ///     A reference to <see cref="SqlRunner"/> actors, keyed by database Id (0 = "master").
+        /// </summary>
+        readonly Dictionary<int, IActorRef> _sqlRunners = new Dictionary<int, IActorRef>();
+
+        /// <summary>
         ///     The Id of the target server.
         /// </summary>
         readonly int _serverId;
@@ -59,14 +64,14 @@ namespace DaaSDemo.Provisioning.Actors
         readonly KubeApiClient _kubeClient;
 
         /// <summary>
-        ///     Previous state (if known) from the database.
-        /// </summary>
-        DatabaseServer _previousState;
-
-        /// <summary>
         ///     External IP addresses for Kubernetes nodes, keyed by the node's internal IP.
         /// </summary>
         ImmutableDictionary<string, string> _nodeExternalIPs = ImmutableDictionary<string, string>.Empty;
+
+        /// <summary>
+        ///     Previous state (if known) from the database.
+        /// </summary>
+        DatabaseServer _previousState;
 
         /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
@@ -104,9 +109,29 @@ namespace DaaSDemo.Provisioning.Actors
                     .FirstOrDefault();
 
                 if (databaseId.HasValue)
+                {
                     _databaseManagers.Remove(databaseId.Value); // Database manager terminated.
-                else
-                    Unhandled(terminated);
+
+                    return;
+                }
+
+                databaseId =
+                    _sqlRunners.Where(
+                        entry => Equals(entry.Value, terminated.ActorRef)
+                    )
+                    .Select(
+                        entry => (int?)entry.Key
+                    )
+                    .FirstOrDefault();
+
+                if (databaseId.HasValue)
+                {
+                    _sqlRunners.Remove(databaseId.Value); // SQL runner terminated.
+
+                    return;
+                }
+
+                Unhandled(terminated); // DeathPactException
             });
         }
 
@@ -279,6 +304,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Props.Create(() => new TenantDatabaseManager(_dataAccess)),
                         name: TenantDatabaseManager.ActorName(database.Id)
                     );
+                    Context.Watch(databaseManager);
                     _databaseManagers.Add(database.Id, databaseManager);
 
                     Log.Info("Created TenantDatabaseManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
@@ -349,9 +375,9 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-           List<V1ReplicationController> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
-            );
+            List<V1ReplicationController> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
+                 labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+             );
 
             if (matchingControllers.Count == 0)
                 return null;
@@ -437,7 +463,7 @@ namespace DaaSDemo.Provisioning.Actors
             );
 
             V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
-                KubeResources.ReplicationController(server, 
+                KubeResources.ReplicationController(server,
                     dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
                 )
             );
@@ -463,7 +489,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
-            
+
             V1ReplicationController controller = await FindReplicationController(server);
             if (controller == null)
                 return true;
@@ -554,7 +580,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
-            
+
             V1Service service = await FindService(server);
             if (service == null)
                 return true;
@@ -702,8 +728,40 @@ namespace DaaSDemo.Provisioning.Actors
             string hostExternalIP;
             if (!_nodeExternalIPs.TryGetValue(hostIP, out hostExternalIP))
                 return (hostIP: null, hostPort: null); // If we can't map to the corresponding external IP address, don't bother.
-            
+
             return (hostExternalIP, hostPort);
+        }
+
+        /// <summary>
+        ///     Execute T-SQL to initialise the server configuration.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        void InitialiseServerConfiguration(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            IActorRef sqlRunner;
+            if (!_sqlRunners.TryGetValue(0, out sqlRunner))
+            {
+                sqlRunner = Context.ActorOf(
+                    Props.Create(
+                        () => new SqlRunner(Self, server)
+                    ),
+                    name: $"sqlcmd-{_serverId}-master"
+                );
+                Context.Watch(sqlRunner);
+                _sqlRunners.Add(0, sqlRunner);
+            }
+
+            sqlRunner.Tell(new ExecuteSql(
+                databaseName: "master",
+                sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
+            ));
+
+            // TODO: Schedule timeout message and then wait for either SqlExecuted, Status.Failure, Terminated, or Timeout.
         }
 
         /// <summary>

@@ -109,6 +109,12 @@ namespace DaaSDemo.Provisioning.Actors
                 return;
             }
 
+            V1Job existingJob = await FindJob();
+            if (existingJob != null)
+            {
+                // TODO: Existing job is running; wait for it to terminate.
+            }
+
             V1Secret secret = await EnsureSecretPresent(
                 databaseName: executeSql.DatabaseName,
                 databaseUser: "sa",
@@ -121,9 +127,40 @@ namespace DaaSDemo.Provisioning.Actors
                 sql: executeSql.Sql
             );
 
-            V1JobSpec jobSpec = BuildJobSpec(secret, configMap);
+            try
+            {
+                await _kubeClient.JobsV1.Create(new V1Job
+                {
+                    ApiVersion = "batch/v1",
+                    Kind = "Job",
+                    Metadata = new V1ObjectMeta
+                    {
+                        Name = $"sqlcmd-{_server.Id}-{executeSql.DatabaseName}",
+                        Labels = new Dictionary<string, string>
+                        {
+                            ["cloud.dimensiondata.daas.server-id"] = _server.Id.ToString(),
+                            ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
+                        }
+                    },
+                    Spec = BuildJobSpec(secret, configMap)
+                });
+            }
+            catch (HttpRequestException<UnversionedStatus> createFailed)
+            {
+                Log.Error("Failed to create Secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    $"sqlcmd-{_server.Id}-{executeSql.DatabaseName}",
+                    executeSql.DatabaseName,
+                    _server.Id,
+                    createFailed.Response.Message,
+                    createFailed.Response.Reason
+                );
 
-            // TODO: Launch job and use Become to poll for job completion.
+                _owner.Tell(
+                    new Status.Failure(createFailed)
+                );
+
+                Context.Stop(Self);
+            }
         }
 
         /// <summary>
@@ -162,11 +199,14 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     Spec = new V1PodSpec
                     {
+                        RestartPolicy = "Never",
                         Containers = new List<V1Container>
                         {
                             new V1Container
                             {
+                                Name = "sqlcmd",
                                 Image = "ddresearch/sql-tools",
+                                ImagePullPolicy = "Always",
                                 Env = new List<V1EnvVar>
                                 {
                                     new V1EnvVar
@@ -223,12 +263,12 @@ namespace DaaSDemo.Provisioning.Actors
                                     new V1VolumeMount
                                     {
                                         Name = "sql-secrets",
-                                        MountPath = "/sql-scripts/secrets.sql"
+                                        MountPath = "/sql-scripts/secrets"
                                     },
                                     new V1VolumeMount
                                     {
                                         Name = "sql-script",
-                                        MountPath = "/sql-scripts/script.sql"
+                                        MountPath = "/sql-scripts/scripts"
                                     }
                                 }
                             }
@@ -248,7 +288,7 @@ namespace DaaSDemo.Provisioning.Actors
                                 Name = "sql-script",
                                 ConfigMap = new V1ConfigMapVolumeSource
                                 {
-                                    Name = "TODO-CREATE-CONFIG-MAP"
+                                    Name = configMap.Metadata.Name
                                 }
                             }
                         }
@@ -344,7 +384,7 @@ namespace DaaSDemo.Provisioning.Actors
             var newSecret = new V1Secret
             {
                 ApiVersion = "v1",
-                Kind = "secret",
+                Kind = "Secret",
                 Metadata = new V1ObjectMeta
                 {
                     Name = $"{_secretName}-{databaseName}",
@@ -356,6 +396,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                 },
                 Type = "Opaque",
+                Data = new Dictionary<string, string>()
             };
             newSecret.AddData("database-user", databaseUser);
             newSecret.AddData("database-password", databasePassword);
@@ -365,7 +406,23 @@ namespace DaaSDemo.Provisioning.Actors
                 :setvar DatabasePassword '{databasePassword}'
             ");
 
-            V1Secret createdSecret = await _kubeClient.SecretsV1.Create(newSecret);
+            V1Secret createdSecret;
+            try
+            {
+                createdSecret = await _kubeClient.SecretsV1.Create(newSecret);
+            }
+            catch (HttpRequestException<UnversionedStatus> createFailed)
+            {
+                Log.Error("Failed to create Secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    newSecret.Metadata.Name,
+                    databaseName,
+                    _server.Id,
+                    createFailed.Response.Message,
+                    createFailed.Response.Reason
+                );
+
+                throw;
+            }
 
             Log.Info("Successfully created secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 createdSecret.Metadata.Name,
@@ -491,7 +548,7 @@ namespace DaaSDemo.Provisioning.Actors
             var newConfigMap = new V1ConfigMap
             {
                 ApiVersion = "v1",
-                Kind = "configMap",
+                Kind = "ConfigMap",
                 Metadata = new V1ObjectMeta
                 {
                     Name = $"{_configMapName}-{databaseName}",
@@ -501,7 +558,8 @@ namespace DaaSDemo.Provisioning.Actors
                         ["cloud.dimensiondata.daas.database"] = databaseName,
                         ["cloud.dimensiondata.daas.action"] = "exec-sql"
                     }
-                }
+                },
+                Data = new Dictionary<string, string>()
             };
             newConfigMap.AddData("database-server",
                 value: $"{service.Metadata.Name}.{service.Metadata.Namespace}.svc.cluster.local,{service.Spec.Ports[0].Port}"
@@ -513,7 +571,23 @@ namespace DaaSDemo.Provisioning.Actors
                 value: sql
             );
 
-            V1ConfigMap createdConfigMap = await _kubeClient.ConfigMapsV1.Create(newConfigMap);
+            V1ConfigMap createdConfigMap;
+            try
+            {
+                createdConfigMap = await _kubeClient.ConfigMapsV1.Create(newConfigMap);
+            }
+            catch (HttpRequestException<UnversionedStatus> createFailed)
+            {
+                Log.Error("Failed to create ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    newConfigMap.Metadata.Name,
+                    databaseName,
+                    _server.Id,
+                    createFailed.Response.Message,
+                    createFailed.Response.Reason
+                );
+
+                throw;
+            }
 
             Log.Info("Successfully created ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 createdConfigMap.Metadata.Name,
@@ -662,13 +736,10 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="value">
         ///     The value to add.
         /// </param>
-        /// <param name="encoding">
-        ///     An optional encoding to use (defaults to <see cref="DefaultEncoding"/>).
-        /// </param>
         /// <returns>
         ///     The ConfigMap (enables inline use / method-chaining).
         /// </returns>
-        public static V1ConfigMap AddData(this V1ConfigMap configMap, string name, string value, Encoding encoding = null)
+        public static V1ConfigMap AddData(this V1ConfigMap configMap, string name, string value)
         {
             if (configMap == null)
                 throw new ArgumentNullException(nameof(configMap));
@@ -682,9 +753,7 @@ namespace DaaSDemo.Provisioning.Actors
             if (configMap.Data == null)
                 configMap.Data = new Dictionary<string, string>();
 
-            configMap.Data.Add(name, Convert.ToBase64String(
-                (encoding ?? DefaultEncoding).GetBytes(value)
-            ));
+            configMap.Data.Add(name, value);
 
             return configMap;
         }

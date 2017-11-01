@@ -6,18 +6,22 @@ if [ -f 'run.sql' ]; then
     rm run.sql
 fi
 
-if [ -f 'secrets.sql' ]; then
-    cat secrets.sql >> run.sql
+if [ -f 'secrets/secrets.sql' ]; then
+    cat secrets/secrets.sql >> run.sql
 fi
 
-if [ -f 'script.sql' ]; then
-    cat script.sql >> run.sql
+if [ -f 'scripts/script.sql' ]; then
+    cat scripts/script.sql >> run.sql
 fi
 
 if [ ! -f 'run.sql' ]; then
     echo "Not found: run.sql (add secrets.sql and / or script.sql to ) $PWD."
+
+    echo "Files currently present in $PWD:"
+
+    ls -la .
     
-    return 1;
+    exit 1;
 fi
 
 echo 'Running SQLCMD...'

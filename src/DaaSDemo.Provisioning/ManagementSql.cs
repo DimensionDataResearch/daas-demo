@@ -20,6 +20,10 @@ namespace DaaSDemo.Provisioning
         public static string ConfigureServerMemory(int maxMemoryMB)
         {
             return $@"
+                Use [master];
+
+                Go
+
                 Exec sys.sp_configure N'show advanced options', N'1'
                     Reconfigure With Override;
                 
