@@ -147,7 +147,7 @@ namespace DaaSDemo.Provisioning.Actors
             }
             catch (HttpRequestException<UnversionedStatus> createFailed)
             {
-                Log.Error("Failed to create Secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                Log.Error("Failed to create Job {JobName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     $"sqlcmd-{_server.Id}-{executeSql.DatabaseName}",
                     executeSql.DatabaseName,
                     _server.Id,
@@ -206,7 +206,6 @@ namespace DaaSDemo.Provisioning.Actors
                             {
                                 Name = "sqlcmd",
                                 Image = "ddresearch/sql-tools",
-                                ImagePullPolicy = "Always",
                                 Env = new List<V1EnvVar>
                                 {
                                     new V1EnvVar
