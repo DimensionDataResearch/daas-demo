@@ -77,7 +77,7 @@ namespace DaaSDemo.Data.Models
         public ICollection<DatabaseInstance> Databases { get; set; } = new HashSet<DatabaseInstance>();
 
         /// <summary>
-        ///     Get the connection string for the server's master database.
+        ///     Get the connection string for the DaaS master database.
         /// </summary>
         /// <returns>
         ///     The connection string.
