@@ -142,7 +142,10 @@ namespace DaaSDemo.Provisioning.Actors
                             ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
                         }
                     },
-                    Spec = BuildJobSpec(secret, configMap)
+                    Spec = KubeSpecs.ExecuteSql(_server,
+                        secretName: secret.Metadata.Name,
+                        configMapName: configMap.Metadata.Name
+                    )
                 });
             }
             catch (HttpRequestException<UnversionedStatus> createFailed)
@@ -171,129 +174,6 @@ namespace DaaSDemo.Provisioning.Actors
             _kubeClient.Dispose();
 
             base.PostStop();
-        }
-
-        /// <summary>
-        ///     Build a job specification for executing the specified T-SQL.
-        /// </summary>
-        /// <param name="secret">
-        ///     The Secret to be used by the job.
-        /// </param>
-        /// <param name="configMap">
-        ///     The ConfigMap to be used by the job.
-        /// </param>
-        /// <returns>
-        ///     The configured <see cref="V1JobSpec"/>.
-        /// </returns>
-        V1JobSpec BuildJobSpec(V1Secret secret, V1ConfigMap configMap)
-        {
-            if (secret == null)
-                throw new ArgumentNullException(nameof(secret));
-
-            if (configMap == null)
-                throw new ArgumentNullException(nameof(configMap));
-
-            return new V1JobSpec
-            {
-                Template = new V1PodTemplateSpec
-                {
-                    Spec = new V1PodSpec
-                    {
-                        RestartPolicy = "Never",
-                        Containers = new List<V1Container>
-                        {
-                            new V1Container
-                            {
-                                Name = "sqlcmd",
-                                Image = "ddresearch/sql-tools",
-                                Env = new List<V1EnvVar>
-                                {
-                                    new V1EnvVar
-                                    {
-                                        Name = "SQL_USER",
-                                        ValueFrom = new V1EnvVarSource
-                                        {
-                                            SecretKeyRef = new V1SecretKeySelector
-                                            {
-                                                Name = secret.Metadata.Name,
-                                                Key = "database-user"
-                                            }
-                                        }
-                                    },
-                                    new V1EnvVar
-                                    {
-                                        Name = "SQL_PASSWORD",
-                                        ValueFrom = new V1EnvVarSource
-                                        {
-                                            SecretKeyRef = new V1SecretKeySelector
-                                            {
-                                                Name = secret.Metadata.Name,
-                                                Key = "database-password"
-                                            }
-                                        }
-                                    },
-                                    new V1EnvVar
-                                    {
-                                        Name = "SQL_HOST",
-                                        ValueFrom = new V1EnvVarSource
-                                        {
-                                            ConfigMapKeyRef = new V1ConfigMapKeySelector
-                                            {
-                                                Name = configMap.Metadata.Name,
-                                                Key = "database-server"
-                                            }
-                                        }
-                                    },
-                                    new V1EnvVar
-                                    {
-                                        Name = "SQL_DATABASE",
-                                        ValueFrom = new V1EnvVarSource
-                                        {
-                                            ConfigMapKeyRef = new V1ConfigMapKeySelector
-                                            {
-                                                Name = configMap.Metadata.Name,
-                                                Key = "database-name"
-                                            }
-                                        }
-                                    }
-                                },
-                                VolumeMounts = new List<V1VolumeMount>
-                                {
-                                    new V1VolumeMount
-                                    {
-                                        Name = "sql-secrets",
-                                        MountPath = "/sql-scripts/secrets"
-                                    },
-                                    new V1VolumeMount
-                                    {
-                                        Name = "sql-script",
-                                        MountPath = "/sql-scripts/scripts"
-                                    }
-                                }
-                            }
-                        },
-                        Volumes = new List<V1Volume>
-                        {
-                            new V1Volume
-                            {
-                                Name = "sql-secrets",
-                                Secret = new V1SecretVolumeSource
-                                {
-                                    SecretName = secret.Metadata.Name
-                                }
-                            },
-                            new V1Volume
-                            {
-                                Name = "sql-script",
-                                ConfigMap = new V1ConfigMapVolumeSource
-                                {
-                                    Name = configMap.Metadata.Name
-                                }
-                            }
-                        }
-                    }
-                }
-            };
         }
 
         /// <summary>
