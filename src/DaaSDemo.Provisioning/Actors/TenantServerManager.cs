@@ -156,7 +156,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (Exception provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to provision server {ServerId}.",
-                            GetBaseResourceName(server),
+                            KubeResources.GetBaseName(server),
                             server.Id
                         );
 
@@ -184,7 +184,6 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (Exception provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to de-provision server {ServerId}.",
-                            GetBaseResourceName(server),
                             server.Id
                         );
 
@@ -398,7 +397,7 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string baseName = GetBaseResourceName(server);
+            string baseName = KubeResources.GetBaseName(server);
 
             HttpResponseMessage response = await _kubeClient.Http.GetAsync(
                 HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{IngressName}")
@@ -457,90 +456,13 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            string baseName = GetBaseResourceName(server);
+            string baseName = KubeResources.GetBaseName(server);
 
-            V1ReplicationController newController = new V1ReplicationController
-            {
-                ApiVersion = "v1",
-                Kind = "ReplicationController",
-                Metadata = new V1ObjectMeta
-                {
-                    Name = baseName
-                },
-                Spec = new V1ReplicationControllerSpec
-                {
-                    Replicas = 1,
-                    Selector = new Dictionary<string, string>
-                    {
-                        ["k8s-app"] = baseName
-                    },
-                    Template = new V1PodTemplateSpec
-                    {
-                        Metadata = new V1ObjectMeta
-                        {
-                            Labels = new Dictionary<string, string>
-                            {
-                                ["k8s-app"] = baseName,
-                                ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString() // TODO: Use tenant Id instead
-                            }
-                        },
-                        Spec = new V1PodSpec
-                        {
-                            TerminationGracePeriodSeconds = 60,
-                            Containers = new List<V1Container>
-                            {
-                                new V1Container
-                                {
-                                    Name = baseName,
-                                    Image = "microsoft/mssql-server-linux:2017-GA",
-                                    Env = new List<V1EnvVar>
-                                    {
-                                        new V1EnvVar
-                                        {
-                                            Name = "ACCEPT_EULA",
-                                            Value = "Y"
-                                        },
-                                        new V1EnvVar
-                                        {
-                                            Name = "SA_PASSWORD",
-                                            Value = server.AdminPassword // TODO: Use Secret resource instead.
-                                        }
-                                    },
-                                    Ports = new List<V1ContainerPort>
-                                    {
-                                        new V1ContainerPort
-                                        {
-                                            ContainerPort = 1433
-                                        }
-                                    },
-                                    VolumeMounts = new List<V1VolumeMount>
-                                    {
-                                        new V1VolumeMountWithSubPath
-                                        {
-                                            Name = "sql-data",
-                                            SubPath = baseName,
-                                            MountPath = "/var/opt/mssql"
-                                        }
-                                    }
-                                }
-                            },
-                            Volumes = new List<V1Volume>
-                            {
-                                new V1Volume
-                                {
-                                    Name = "sql-data",
-                                    PersistentVolumeClaim = new V1PersistentVolumeClaimVolumeSource
-                                    {
-                                        ClaimName = Context.System.Settings.Config.GetString("daas.kube.volume-claim-name") // TODO: Make this dynamically-configurable.
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(newController);
+            V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
+                KubeResources.ReplicationController(server, 
+                    dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
+                )
+            );
 
             Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
                 createdController.Metadata.Name,
@@ -629,40 +551,11 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            string baseName = GetBaseResourceName(server);
+            string baseName = KubeResources.GetBaseName(server);
 
-            V1Service newService = new V1Service
-            {
-                ApiVersion = "v1",
-                Kind = "Service",
-                Metadata = new V1ObjectMeta
-                {
-                    Name = $"{baseName}-service",
-                    Labels = new Dictionary<string, string>
-                    {
-                        ["k8s-app"] = baseName,
-                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
-                    }
-                },
-                Spec = new V1ServiceSpec
-                {
-                    Ports = new List<V1ServicePort>
-                    {
-                        new V1ServicePort
-                        {
-                            Name = "sql-server",
-                            Port = 1433,
-                            Protocol = "TCP"
-                        }
-                    },
-                    Selector = new Dictionary<string, string>
-                    {
-                        ["k8s-app"] = baseName
-                    }
-                }
-            };
-
-            V1Service createdService = await _kubeClient.ServicesV1.Create(newService);
+            V1Service createdService = await _kubeClient.ServicesV1.Create(
+                KubeResources.Service(server)
+            );
 
             Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
                 createdService.Metadata.Name,
@@ -748,7 +641,7 @@ namespace DaaSDemo.Provisioning.Actors
                 server.Id
             );
 
-            string baseName = GetBaseResourceName(server);
+            string baseName = KubeResources.GetBaseName(server);
 
             var newIngress = new V1Beta1VoyagerIngress
             {
@@ -912,17 +805,6 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Get the base resource name for the specified server.
-        /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server
-        /// </param>
-        /// <returns>
-        ///     The base resource name.
-        /// </returns>
-        static string GetBaseResourceName(DatabaseServer server) => $"sql-server-{server.Id}";
-
-        /// <summary>
         ///     Get the name of the <see cref="TenantServerManager"/> actor for the specified tenant.
         /// </summary>
         /// <param name="tenantId">
@@ -932,67 +814,5 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The actor name.
         /// </returns>
         public static string ActorName(int tenantId) => $"server-manager.{tenantId}";
-    }
-
-    /// <summary>
-    ///     A <see cref="V1VolumeMount"/> with the "subPath" property.
-    /// </summary>
-    [DataContract]
-    class V1VolumeMountWithSubPath
-        : V1VolumeMount
-    {
-        /// <summary>
-        ///     The volume sub-path (if any).
-        /// </summary>
-        [DataMember(Name = "subPath", EmitDefaultValue = false)]
-        public string SubPath { get; set; }
-    }
-
-    [DataContract]
-    class V1Beta1VoyagerIngress
-    {
-        [DataMember(Name = "apiVersion", EmitDefaultValue = false)]
-        public string ApiVersion { get; set; }
-
-        [DataMember(Name = "kind", EmitDefaultValue = false)]
-        public string Kind { get; set; }
-
-        [DataMember(Name = "metadata", EmitDefaultValue = false)]
-        public V1ObjectMeta Metadata { get; set; }
-
-        [DataMember(Name = "spec", EmitDefaultValue = false)]
-        public V1BetaVoyagerIngressSpec Spec { get; set; }
-
-        public V1beta1IngressStatus Status { get; set; }
-    }
-
-    [DataContract]
-    class V1BetaVoyagerIngressSpec
-    {
-        [DataMember(Name = "tls", EmitDefaultValue = false)]
-        public List<V1beta1IngressTLS> Tls { get; set; }
-
-        [DataMember(Name = "rules", EmitDefaultValue = false)]
-        public List<V1Beta1VoyagerIngressRule> Rules { get; set; }
-    }
-
-    [DataContract]
-    class V1Beta1VoyagerIngressRule
-    {
-        [DataMember(Name = "host", EmitDefaultValue = false)]
-        public string Host { get; set; }
-
-        [DataMember(Name = "tcp", EmitDefaultValue = false)]
-        public V1Beta1VoyagerIngressRuleTcp Tcp { get; set; }
-    }
-
-    [DataContract]
-    class V1Beta1VoyagerIngressRuleTcp
-    {
-        [DataMember(Name = "backend", EmitDefaultValue = false)]
-        public V1beta1IngressBackend Backend { get; set; }
-
-        [DataMember(Name = "port", EmitDefaultValue = false)]
-        public string Port { get; set; }
     }
 }
