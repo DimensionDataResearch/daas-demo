@@ -152,12 +152,12 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void InitializingServerConfiguration()
         {
-            ReceiveAsync<SqlExecuted>(async executed =>
+            ReceiveAsync<SqlExecuted>(async sqlExecuted =>
             {
-                if (executed.DatabaseName != "master")
+                if (sqlExecuted.DatabaseName != "master")
                 {
                     Log.Error("Received T-SQL execution result for unexpected database named {DatabaseName} in server {ServerId} (expected database {MasterDatabaseName}, since the server is currently being provisioned).",
-                        executed.DatabaseName,
+                        sqlExecuted.DatabaseName,
                         _serverId,
                         "master"
                     );
@@ -174,16 +174,21 @@ namespace DaaSDemo.Provisioning.Actors
                 SqlRunnerState runnerState;
                 if (_sqlRunners.TryGetValue(MasterDatabaseId, out runnerState))
                 {
-                    Log.Info("Configuration initialised for server {ServerId}.", _serverId);
-
                     runnerState.IsBusy = false;
 
-                    await UpdateServerState(); // Pick up where we left off.
+                    if (sqlExecuted.Success)
+                    {
+                        Log.Info("Configuration initialised for server {ServerId}.", _serverId);
+
+                        await UpdateServerState(); // Pick up where we left off.
+                    }
+                    else
+                        Log.Warning("Failed to initialise configuration server {ServerId} ({Reason})", _serverId, sqlExecuted.Result);
                 }
                 else
                 {
                     Log.Error("Received T-SQL execution result for {DatabaseName} database in server {ServerId}, but no SqlRunner for this database was found.",
-                        executed.DatabaseName,
+                        sqlExecuted.DatabaseName,
                         _serverId
                     );
 
@@ -832,6 +837,10 @@ namespace DaaSDemo.Provisioning.Actors
         void InitialiseServerConfiguration()
         {
             SetProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
+
+            Log.Info("Initialising configuration for server {ServerId}...",
+                Currentstate.Id
+            );
             
             SqlRunnerState runnerState;
             if (!_sqlRunners.TryGetValue(MasterDatabaseId, out runnerState))
@@ -848,14 +857,16 @@ namespace DaaSDemo.Provisioning.Actors
                 _sqlRunners.Add(MasterDatabaseId, runnerState);
             }
 
-            // TODO: If runnerState.IsBusy, Stash current message instead.
-
             runnerState.Runner.Tell(new ExecuteSql(
                 databaseName: "master",
                 jobNameSuffix: "initialize-configuration",
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
             ));
             runnerState.IsBusy = true;
+
+            Log.Info("Waiting for initialisation of configuration server {ServerId} to complete...",
+                Currentstate.Id
+            );
         }
 
         /// <summary>
