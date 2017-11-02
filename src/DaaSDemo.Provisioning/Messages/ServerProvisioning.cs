@@ -6,7 +6,7 @@ namespace DaaSDemo.Provisioning.Messages
     ///     Message indicating that a database server is being provisioned.
     /// </summary>
     public class ServerProvisioning
-            : ServerStatusChanged
+        : ServerStatusChanged
     {
         /// <summary>
         ///     Create a new <see cref="ServerProvisioning"/> message.
@@ -14,8 +14,11 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server being provisioned.
         /// </param>
-        public ServerProvisioning(int serverId)
-            : base(serverId, ProvisioningStatus.Provisioning)
+        /// <param name="phase">
+        ///     The current provisioning phase.
+        /// </param>
+        public ServerProvisioning(int serverId, ServerProvisioningPhase phase)
+            : base(serverId, ProvisioningStatus.Provisioning, phase)
         {
         }
     }

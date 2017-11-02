@@ -37,7 +37,7 @@ namespace DaaSDemo.Provisioning.Actors
     ///           Mount the script into the job's pod as a Secret volume.
     /// </remarks>
     public class TenantServerManager
-        : ReceiveActorEx
+        : ReceiveActorEx, IWithUnboundedStash
     {
         /// <summary>
         ///     The pseudo-identifier referring to the "master" database on the tenant server.
@@ -75,11 +75,6 @@ namespace DaaSDemo.Provisioning.Actors
         ImmutableDictionary<string, string> _nodeExternalIPs = ImmutableDictionary<string, string>.Empty;
 
         /// <summary>
-        ///     Previous state (if known) from the database.
-        /// </summary>
-        DatabaseServer _previousState;
-
-        /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
         /// </summary>
         /// <param name="serverId">
@@ -102,6 +97,21 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     The actor's local message-stash facility.
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        ///     Current state (if known) from the database.
+        /// </summary>
+        DatabaseServer Currentstate { get; set; }
+
+        /// <summary>
+        ///     Previous state (if known) from the database.
+        /// </summary>
+        DatabaseServer PreviousState { get; set; }
+
+        /// <summary>
         ///     Called when the actor has stopped.
         /// </summary>
         protected override void PostStop()
@@ -116,7 +126,83 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void Ready()
         {
-            ReceiveAsync<DatabaseServer>(UpdateServerState);
+            ReceiveAsync<DatabaseServer>(async databaseServer =>
+            {
+                Log.Info("Received server configuration (Id:{ServerId}, Name:{ServerName}).",
+                    databaseServer.Id,
+                    databaseServer.Name
+                );
+
+                PreviousState = Currentstate;
+                Currentstate = databaseServer;
+
+                await UpdateServerState();
+            });
+            Receive<IPAddressMappingsChanged>(mappingsChanged =>
+            {
+                _nodeExternalIPs = mappingsChanged.Mappings;
+            });
+            Receive<Terminated>(
+                terminated => HandleTermination(terminated)
+            );
+        }
+
+        /// <summary>
+        ///     Called when the actor is waiting for initialisation of the server's configuration to complete.
+        /// </summary>
+        void InitializingServerConfiguration()
+        {
+            ReceiveAsync<SqlExecuted>(async executed =>
+            {
+                if (executed.DatabaseName != "master")
+                {
+                    Log.Error("Received T-SQL execution result for unexpected database named {DatabaseName} in server {ServerId} (expected database {MasterDatabaseName}, since the server is currently being provisioned).",
+                        executed.DatabaseName,
+                        _serverId,
+                        "master"
+                    );
+
+                    _dataAccess.Tell(
+                        new ServerProvisioningFailed(_serverId)
+                    );
+                    
+                    Become(Ready);
+
+                    return;
+                }
+
+                SqlRunnerState runnerState;
+                if (_sqlRunners.TryGetValue(MasterDatabaseId, out runnerState))
+                {
+                    Log.Info("Configuration initialised for server {ServerId}.", _serverId);
+
+                    runnerState.IsBusy = false;
+
+                    await UpdateServerState(); // Pick up where we left off.
+                }
+                else
+                {
+                    Log.Error("Received T-SQL execution result for {DatabaseName} database in server {ServerId}, but no SqlRunner for this database was found.",
+                        executed.DatabaseName,
+                        _serverId
+                    );
+
+                    _dataAccess.Tell(
+                        new ServerProvisioningFailed(_serverId)
+                    );
+                }
+
+                Become(Ready);
+            });
+
+            Receive<DatabaseServer>(_ =>
+            {
+                // Nothing we can do with it right now; we'll get another notification sooner or later.
+                //
+                // TODO: Consider whether this would be where we could allow for cancellation of the provisioning process.
+                //
+                Log.Info("Ignoring status notification for server {ServerId} (still waiting for initialisation of server configuration to complete).", _serverId);
+            });
             Receive<IPAddressMappingsChanged>(mappingsChanged =>
             {
                 _nodeExternalIPs = mappingsChanged.Mappings;
@@ -129,41 +215,26 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Update the server state in Kubernetes.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server state.
-        /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task UpdateServerState(DatabaseServer server)
+        async Task UpdateServerState()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
-            Log.Info("Received server configuration (Id:{ServerId}, Name:{ServerName}).",
-                server.Id,
-                server.Name
-            );
-
-            switch (server.Action)
+            switch (Currentstate.Action)
             {
                 case ProvisioningAction.Provision:
                 {
-                    Log.Info("Provisioning server {ServerId}...", server.Id);
-
-                    _dataAccess.Tell(
-                        new ServerProvisioning(_serverId)
-                    );
+                    Log.Info("Provisioning server {ServerId}...", Currentstate.Id);
 
                     try
                     {
-                        await DeployServer(server);
+                        await ProvisionServer();
                     }
                     catch (Exception provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to provision server {ServerId}.",
-                            KubeResources.GetBaseName(server),
-                            server.Id
+                            KubeResources.GetBaseName(Currentstate),
+                            Currentstate.Id
                         );
 
                         _dataAccess.Tell(
@@ -177,20 +248,16 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ProvisioningAction.Deprovision:
                 {
-                    Log.Info("De-provisioning server {ServerId}...", server.Id);
-
-                    _dataAccess.Tell(
-                        new ServerDeprovisioning(_serverId)
-                    );
+                    Log.Info("De-provisioning server {ServerId}...", Currentstate.Id);
 
                     try
                     {
-                        await DestroyServer(server);
+                        await DeprovisionServer();
                     }
                     catch (Exception provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to de-provision server {ServerId}.",
-                            server.Id
+                            Currentstate.Id
                         );
 
                         _dataAccess.Tell(
@@ -215,63 +282,9 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             }
 
-            (string ingressIP, int? ingressPort) = await GetServerIngress(server);
-            if (!String.IsNullOrWhiteSpace(ingressIP))
-            {
-                if (ingressPort != null)
-                {
-                    Log.Info("Server {ServerName} is accessible at {HostIP}:{HostPort}",
-                        server.Name,
-                        ingressIP,
-                        ingressPort.Value
-                    );
+            await UpdateServerIngressDetails();
 
-                    if (ingressIP != server.IngressIP || ingressPort != server.IngressPort)
-                    {
-                        _dataAccess.Tell(
-                            new ServerIngressChanged(_serverId, ingressIP, ingressPort)
-                        );
-
-                        // Capture current ingress details to enable subsequent provisioning actions.
-                        server.IngressIP = ingressIP;
-                        server.IngressPort = ingressPort;
-                    }
-
-                    if (server.Status == ProvisioningStatus.Provisioning)
-                    {
-                        // TODO: Connect to the server and perform initial configuration (e.g. max memory usage).
-                        // TODO: Alternatively, consider using a Job and Secret to just run SQLCMD inside the cluster with a generated provisioning script (so we don't need the ingress).
-
-                        _dataAccess.Tell(
-                            new ServerProvisioned(_serverId)
-                        );
-                    }
-                }
-                else
-                {
-                    Log.Info("Cannot determine host port for server {ServerName}.", server.Name);
-
-                    if (server.IngressIP != null)
-                    {
-                        _dataAccess.Tell(
-                            new ServerIngressChanged(_serverId, server.IngressIP, ingressPort: null)
-                        );
-                    }
-                }
-            }
-            else
-            {
-                Log.Info("Cannot determine host IP for server {ServerName}.", server.Name);
-
-                if (server.IngressIP != null)
-                {
-                    _dataAccess.Tell(
-                        new ServerIngressChanged(_serverId, ingressIP: null, ingressPort: null)
-                    );
-                }
-            }
-
-            foreach (DatabaseInstance database in server.Databases)
+            foreach (DatabaseInstance database in Currentstate.Databases)
             {
                 Log.Info("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
                     database.Name,
@@ -290,18 +303,16 @@ namespace DaaSDemo.Provisioning.Actors
 
                     Log.Info("Created TenantDatabaseManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
                         databaseManager.Path.Name,
-                        server.Id,
-                        server.TenantId
+                        Currentstate.Id,
+                        Currentstate.TenantId
                     );
                 }
 
                 // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
-                database.DatabaseServer = server;
+                database.DatabaseServer = Currentstate;
 
                 databaseManager.Tell(database);
             }
-
-            _previousState = server;
         }
 
         /// <summary>
@@ -351,57 +362,95 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Deploy an instance of SQL Server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> describing the server.
-        /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task DeployServer(DatabaseServer server)
+        async Task ProvisionServer()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            switch (Currentstate.Phase)
+            {
+                case ServerProvisioningPhase.None:
+                {
+                    await EnsureReplicationControllerPresent();
 
-            await EnsureReplicationControllerPresent(server);
-            await EnsureServicePresent(server);
-            await EnsureIngressPresent(server);
+                    goto case ServerProvisioningPhase.ReplicationController;
+                }
+                case ServerProvisioningPhase.ReplicationController:
+                {
+                    await EnsureServicePresent();
+
+                    goto case ServerProvisioningPhase.Service;
+                }
+                case ServerProvisioningPhase.Service:
+                {
+                    InitialiseServerConfiguration();
+
+                    Become(InitializingServerConfiguration);
+
+                    return;
+                }
+                case ServerProvisioningPhase.InitializeConfiguration:
+                {
+                    await EnsureIngressPresent();
+
+                    goto case ServerProvisioningPhase.Ingress;
+                }
+                case ServerProvisioningPhase.Ingress:
+                {
+                    SetProvisioningPhase(ServerProvisioningPhase.None);
+
+                    break;
+                }
+            }
         }
 
         /// <summary>
         ///     Destroy an instance of SQL Server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> describing the server.
-        /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task DestroyServer(DatabaseServer server)
+        async Task DeprovisionServer()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            switch (Currentstate.Phase)
+            {
+                case ServerProvisioningPhase.None:
+                {
+                    await EnsureReplicationControllerAbsent();
 
-            await EnsureIngressAbsent(server);
-            await EnsureServiceAbsent(server);
-            await EnsureReplicationControllerAbsent(server);
+                    goto case ServerProvisioningPhase.ReplicationController;
+                }
+                case ServerProvisioningPhase.ReplicationController:
+                {
+                    await EnsureServiceAbsent();
+
+                    goto case ServerProvisioningPhase.Service;
+                }
+                case ServerProvisioningPhase.Service:
+                {
+                    await EnsureIngressAbsent();
+
+                    goto case ServerProvisioningPhase.Ingress;
+                }
+                case ServerProvisioningPhase.Ingress:
+                {
+                    SetProvisioningPhase(ServerProvisioningPhase.None);
+
+                    break;
+                }
+            }
         }
 
         /// <summary>
         ///     Find the server's associated ReplicationController (if it exists).
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     The ReplicationController, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1ReplicationController> FindReplicationController(DatabaseServer server)
+        async Task<V1ReplicationController> FindReplicationController()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
             List<V1ReplicationController> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
-                 labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+                 labelSelector: $"cloud.dimensiondata.daas.server-id = {Currentstate.Id}"
              );
 
             if (matchingControllers.Count == 0)
@@ -413,19 +462,13 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Find the server's associated Service (if it exists).
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Service> FindService(DatabaseServer server)
+        async Task<V1Service> FindService()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
             List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {Currentstate.Id}"
             );
 
             if (matchingServices.Count == 0)
@@ -437,19 +480,13 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Determine whether the server's associated Ingress exists.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the Ingress exists; otherwise, <c>false</c>.
         /// </returns>
-        async Task<V1Beta1VoyagerIngress> FindIngress(DatabaseServer server)
+        async Task<V1Beta1VoyagerIngress> FindIngress()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
             List<V1Beta1VoyagerIngress> matchingIngresses = await _kubeClient.VoyagerIngressesV1Beta1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id}"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {Currentstate.Id}"
             );
 
             if (matchingIngresses.Count == 0)
@@ -461,41 +498,37 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that a ReplicationController resource exists for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     The ReplicationController resource, as a <see cref="V1ReplicationController"/>.
         /// </returns>
-        async Task<V1ReplicationController> EnsureReplicationControllerPresent(DatabaseServer server)
+        async Task<V1ReplicationController> EnsureReplicationControllerPresent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetProvisioningPhase(ServerProvisioningPhase.ReplicationController);
 
-            V1ReplicationController existingController = await FindReplicationController(server);
+            V1ReplicationController existingController = await FindReplicationController();
             if (existingController != null)
             {
                 Log.Info("Found existing replication controller {ReplicationControllerName} for server {ServerId}.",
                     existingController.Metadata.Name,
-                    server.Id
+                    Currentstate.Id
                 );
 
                 return existingController;
             }
 
             Log.Info("Creating replication controller for server {ServerId}...",
-                server.Id
+                Currentstate.Id
             );
 
             V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
-                KubeResources.ReplicationController(server,
+                KubeResources.ReplicationController(Currentstate,
                     dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
                 )
             );
 
             Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
                 createdController.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return createdController;
@@ -504,24 +537,20 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that a ReplicationController resource does not exist for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureReplicationControllerAbsent(DatabaseServer server)
+        async Task<bool> EnsureReplicationControllerAbsent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetDeprovisioningPhase(ServerProvisioningPhase.ReplicationController);
 
-            V1ReplicationController controller = await FindReplicationController(server);
+            V1ReplicationController controller = await FindReplicationController();
             if (controller == null)
                 return true;
 
             Log.Info("Deleting replication controller {ControllerName} for server {ServerId}...",
                 controller.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             try
@@ -535,7 +564,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     controller.Metadata.Name,
-                    server.Id,
+                    Currentstate.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
                 );
@@ -545,7 +574,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted replication controller {ControllerName} for server {ServerId}.",
                 controller.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return true;
@@ -554,39 +583,35 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that a Service resource exists for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     The Service resource, as a <see cref="V1Service"/>.
         /// </returns>
-        async Task<V1Service> EnsureServicePresent(DatabaseServer server)
+        async Task<V1Service> EnsureServicePresent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetProvisioningPhase(ServerProvisioningPhase.Service);
 
-            V1Service existingService = await FindService(server);
+            V1Service existingService = await FindService();
             if (existingService != null)
             {
                 Log.Info("Found existing service {ServiceName} for server {ServerId}.",
                     existingService.Metadata.Name,
-                    server.Id
+                    Currentstate.Id
                 );
 
                 return existingService;
             }
 
             Log.Info("Creating service for server {ServerId}...",
-                server.Id
+                Currentstate.Id
             );
 
             V1Service createdService = await _kubeClient.ServicesV1.Create(
-                KubeResources.Service(server)
+                KubeResources.Service(Currentstate)
             );
 
             Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
                 createdService.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return createdService;
@@ -595,24 +620,20 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that a Service resource does not exist for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the service is now absent; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureServiceAbsent(DatabaseServer server)
+        async Task<bool> EnsureServiceAbsent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetDeprovisioningPhase(ServerProvisioningPhase.Service);
 
-            V1Service service = await FindService(server);
+            V1Service service = await FindService();
             if (service == null)
                 return true;
 
             Log.Info("Deleting service {ServiceName} for server {ServerId}...",
                 service.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
@@ -623,7 +644,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     service.Metadata.Name,
-                    server.Id,
+                    Currentstate.Id,
                     result.Message,
                     result.Reason
                 );
@@ -633,7 +654,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted service {ServiceName} for server {ServerId}.",
                 service.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return true;
@@ -642,39 +663,35 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that an Ingress resource exists for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     The Ingress resource, as a <see cref="V1Beta1VoyagerIngress"/>.
         /// </returns>
-        async Task<V1Beta1VoyagerIngress> EnsureIngressPresent(DatabaseServer server)
+        async Task<V1Beta1VoyagerIngress> EnsureIngressPresent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetProvisioningPhase(ServerProvisioningPhase.Ingress);
 
-            V1Beta1VoyagerIngress ingress = await FindIngress(server);
+            V1Beta1VoyagerIngress ingress = await FindIngress();
             if (ingress != null)
             {
                 Log.Info("Found existing ingress {IngressName} for server {ServerId}.",
                     ingress.Metadata.Name,
-                    server.Id
+                    Currentstate.Id
                 );
 
                 return ingress;
             }
 
             Log.Info("Creating ingress for server {ServerId}...",
-                server.Id
+                Currentstate.Id
             );
 
             V1Beta1VoyagerIngress createdIngress = await _kubeClient.VoyagerIngressesV1Beta1.Create(
-                KubeResources.Ingress(server)
+                KubeResources.Ingress(Currentstate)
             );
 
             Log.Info("Successfully created ingress {IngressName} for server {ServerId}.",
                 createdIngress.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return createdIngress;
@@ -683,24 +700,20 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that an Ingress resource does not exist for the specified database server.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the ingress is now absent; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureIngressAbsent(DatabaseServer server)
+        async Task<bool> EnsureIngressAbsent()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetDeprovisioningPhase(ServerProvisioningPhase.Ingress);
 
-            V1Beta1VoyagerIngress ingress = await FindIngress(server);
+            V1Beta1VoyagerIngress ingress = await FindIngress();
             if (ingress == null)
                 return true;
 
             Log.Info("Deleting ingress {IngressName} for server {ServerId}...",
                 ingress.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             try
@@ -715,7 +728,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     Log.Error("Failed to delete replication service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                         ingress.Metadata.Name,
-                        server.Id,
+                        Currentstate.Id,
                         deleteFailed.Response.Message,
                         deleteFailed.Response.Reason
                     );
@@ -726,27 +739,83 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted ingress {IngressName} for server {ServerId}.",
                 ingress.Metadata.Name,
-                server.Id
+                Currentstate.Id
             );
 
             return true;
         }
 
         /// <summary>
+        ///     Update ingress details for the database server.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task UpdateServerIngressDetails()
+        {
+            (string ingressIP, int? ingressPort) = await GetServerIngress();
+            if (!String.IsNullOrWhiteSpace(ingressIP))
+            {
+                if (ingressPort != null)
+                {
+                    Log.Info("Server {ServerName} is accessible at {HostIP}:{HostPort}",
+                        Currentstate.Name,
+                        ingressIP,
+                        ingressPort.Value
+                    );
+
+                    if (ingressIP != Currentstate.IngressIP || ingressPort != Currentstate.IngressPort)
+                    {
+                        _dataAccess.Tell(
+                            new ServerIngressChanged(_serverId, ingressIP, ingressPort)
+                        );
+
+                        // Capture current ingress details to enable subsequent provisioning actions.
+                        Currentstate.IngressIP = ingressIP;
+                        Currentstate.IngressPort = ingressPort;
+                    }
+
+                    if (Currentstate.Status == ProvisioningStatus.Provisioning)
+                    {
+                        _dataAccess.Tell(
+                            new ServerProvisioned(_serverId)
+                        );
+                    }
+                }
+                else
+                {
+                    Log.Info("Cannot determine host port for server {ServerName}.", Currentstate.Name);
+
+                    if (Currentstate.IngressIP != null)
+                    {
+                        _dataAccess.Tell(
+                            new ServerIngressChanged(_serverId, Currentstate.IngressIP, ingressPort: null)
+                        );
+                    }
+                }
+            }
+            else
+            {
+                Log.Info("Cannot determine host IP for server {ServerName}.", Currentstate.Name);
+
+                if (Currentstate.IngressIP != null)
+                {
+                    _dataAccess.Tell(
+                        new ServerIngressChanged(_serverId, ingressIP: null, ingressPort: null)
+                    );
+                }
+            }
+        }
+
+        /// <summary>
         ///     Get the (external) IP and port on which the database server is accessible.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> describing the server.
-        /// </param>
         /// <returns>
         ///     The IP and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
         /// </returns>
-        async Task<(string hostIP, int? hostPort)> GetServerIngress(DatabaseServer server)
+        async Task<(string hostIP, int? hostPort)> GetServerIngress()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
-            (string hostIP, int? hostPort) = await _kubeClient.GetServerIngressEndPoint(server);
+            (string hostIP, int? hostPort) = await _kubeClient.GetServerIngressEndPoint(Currentstate);
             if (String.IsNullOrWhiteSpace(hostIP))
                 return (hostIP: null, hostPort: null);
 
@@ -760,20 +829,16 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Execute T-SQL to initialise the server configuration.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
-        void InitialiseServerConfiguration(DatabaseServer server)
+        void InitialiseServerConfiguration()
         {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
+            SetProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
             
             SqlRunnerState runnerState;
             if (!_sqlRunners.TryGetValue(MasterDatabaseId, out runnerState))
             {
                 IActorRef sqlRunner = Context.ActorOf(
                     Props.Create(
-                        () => new SqlRunner(Self, server)
+                        () => new SqlRunner(Self, Currentstate)
                     ),
                     name: $"sqlcmd-{_serverId}-master"
                 );
@@ -791,6 +856,34 @@ namespace DaaSDemo.Provisioning.Actors
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
             ));
             runnerState.IsBusy = true;
+        }
+
+        /// <summary>
+        ///     Set and persist the current provisioning phase.
+        /// </summary>
+        /// <param name="phase">
+        ///     The current provisioning phase.
+        /// </param>
+        void SetProvisioningPhase(ServerProvisioningPhase phase)
+        {
+            Currentstate.Phase = phase;
+            _dataAccess.Tell(
+                new ServerProvisioning(_serverId, phase)
+            );
+        }
+
+        /// <summary>
+        ///     Set and persist the current de-provisioning phase.
+        /// </summary>
+        /// <param name="phase">
+        ///     The current de-provisioning phase.
+        /// </param>
+        void SetDeprovisioningPhase(ServerProvisioningPhase phase)
+        {
+            Currentstate.Phase = phase;
+            _dataAccess.Tell(
+                new ServerDeprovisioning(_serverId, phase)
+            );
         }
 
         /// <summary>

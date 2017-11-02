@@ -243,24 +243,31 @@ namespace DaaSDemo.Provisioning.Actors
                     return;
                 }
 
-                server.Status = serverProvisioningNotification.Status;
-
-                switch (server.Status)
+                if (serverProvisioningNotification.Status.HasValue)
                 {
-                    case ProvisioningStatus.Ready:
-                    case ProvisioningStatus.Error:
-                    {
-                        server.Action = ProvisioningAction.None;
+                    server.Status = serverProvisioningNotification.Status.Value;
 
-                        break;
-                    }
-                    case ProvisioningStatus.Deprovisioned:
+                    switch (server.Status)
                     {
-                        entities.DatabaseServers.Remove(server);
+                        case ProvisioningStatus.Ready:
+                        case ProvisioningStatus.Error:
+                        {
+                            server.Action = ProvisioningAction.None;
+                            server.Phase = ServerProvisioningPhase.None;
 
-                        break;
+                            break;
+                        }
+                        case ProvisioningStatus.Deprovisioned:
+                        {
+                            entities.DatabaseServers.Remove(server);
+
+                            break;
+                        }
                     }
                 }
+
+                if (serverProvisioningNotification.Phase.HasValue)
+                    server.Phase = serverProvisioningNotification.Phase.Value;
 
                 await entities.SaveChangesAsync();
             }

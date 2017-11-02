@@ -14,8 +14,11 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server being de-provisioned.
         /// </param>
-        public ServerDeprovisioning(int serverId)
-            : base(serverId, ProvisioningStatus.Deprovisioning)
+        /// <param name="phase">
+        ///     The current provisioning phase.
+        /// </param>
+        public ServerDeprovisioning(int serverId, ServerProvisioningPhase phase)
+            : base(serverId, ProvisioningStatus.Deprovisioning, phase)
         {
         }
     }
