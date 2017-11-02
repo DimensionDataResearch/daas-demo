@@ -6,6 +6,7 @@ namespace DaaSDemo.Provisioning
 {
     using Data.Models;
     using KubeClient.Models;
+    using Messages;
 
     /// <summary>
     ///     Factory methods for common Kubernetes resources.
@@ -22,6 +23,20 @@ namespace DaaSDemo.Provisioning
         ///     The base resource name.
         /// </returns>
         public static string GetBaseName(DatabaseServer server) => $"sql-server-{server.Id}";
+
+        /// <summary>
+        ///     Get the name of the job used to execute T-SQL.
+        /// </summary>
+        /// <param name="executeSql">
+        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
+        /// </param>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> message representing the target database server.
+        /// </param>
+        /// <returns>
+        ///     The job name.
+        /// </returns>
+        public static string GetJobName(ExecuteSql executeSql, DatabaseServer server) => $"sqlcmd-{server.Id}-{executeSql.DatabaseName}-{executeSql.JobName}";
 
         /// <summary>
         ///     Create a new <see cref="V1ReplicationController"/> for the specified database server.
@@ -216,6 +231,93 @@ namespace DaaSDemo.Provisioning
             {
                 ApiVersion = "voyager.appscode.com/v1beta1",
                 Kind = "Ingress",
+                Metadata = new V1ObjectMeta
+                {
+                    Name = name,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Spec = spec
+            };
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="V1Job"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The Job name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="V1JobSpec"/> representing the Job specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the Job.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the Job.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Job"/>.
+        /// </returns>
+        public static V1Job Job(ExecuteSql executeSql, DatabaseServer server, string secretName, string configMapName)
+        {
+            if (executeSql == null)
+                throw new ArgumentNullException(nameof(executeSql));
+
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            if (String.IsNullOrWhiteSpace(secretName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'secretName'.", nameof(secretName));
+            
+            if (String.IsNullOrWhiteSpace(configMapName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'configMapName'.", nameof(configMapName));
+            
+            string jobName = GetJobName(executeSql, server);
+
+            return Job(jobName,
+                spec: KubeSpecs.ExecuteSql(server,
+                    secretName: jobName,
+                    configMapName: jobName
+                ),
+                labels: new Dictionary<string, string>
+                {
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="V1Job"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The Job name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="V1JobSpec"/> representing the Job specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the Job.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the Job.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Job"/>.
+        /// </returns>
+        public static V1Job Job(string name, V1JobSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            return new V1Job
+            {
+                ApiVersion = "batch/v1",
+                Kind = "Job",
                 Metadata = new V1ObjectMeta
                 {
                     Name = name,

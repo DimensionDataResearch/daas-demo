@@ -757,6 +757,7 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             sqlRunner.Tell(new ExecuteSql(
+                jobName: "initialize-configuration",
                 databaseName: "master",
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
             ));
