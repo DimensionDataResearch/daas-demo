@@ -74,7 +74,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Pod"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Pod> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Pod> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -87,6 +87,49 @@ namespace DaaSDemo.KubeClient.Clients
                 }),
                 cancellationToken: cancellationToken
             );
+        }
+
+        /// <summary>
+        ///     Get the combined logs for the Pod with the specified name.
+        /// </summary>
+        /// <param name="name">
+        ///     The name of the target Pod.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <param name="limitBytes">
+        ///     Limit the number of bytes returned.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     A string containing the logs.
+        /// </returns>
+        public async Task<string> Logs(string name, string kubeNamespace = null, int? limitBytes = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            HttpResponseMessage responseMessage = await Http.GetAsync(
+                Requests.Logs.WithTemplateParameters(new
+                {
+                    Name = name,
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LimitBytes = limitBytes
+                }),
+                cancellationToken
+            );
+            using (responseMessage)
+            {
+                if (responseMessage.IsSuccessStatusCode)
+                    return await responseMessage.Content.ReadAsStringAsync();
+
+                throw new HttpRequestException<UnversionedStatus>(responseMessage.StatusCode,
+                    response: await responseMessage.ReadContentAsAsync<UnversionedStatus, UnversionedStatus>()
+                );
+            }
         }
 
         /// <summary>
@@ -161,6 +204,11 @@ namespace DaaSDemo.KubeClient.Clients
             ///     A get-by-name Pod (v1) request.
             /// </summary>
             public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods/{Name}", SerializerSettings);
+
+            /// <summary>
+            ///     A get-logs Pod (v1) request.
+            /// </summary>
+            public static readonly HttpRequest Logs = ByName.WithRelativeUri("log?limitBytes={LimitBytes?}");
         }
     }
 }

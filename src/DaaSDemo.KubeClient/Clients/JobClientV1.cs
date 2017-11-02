@@ -127,21 +127,30 @@ namespace DaaSDemo.KubeClient.Clients
         /// <param name="kubeNamespace">
         ///     The Kubernetes namespace containing the Job to delete.
         /// </param>
+        /// <param name="propagationPolicy">
+        ///     A <see cref="DeletePropagationPolicy"/> indicating how child resources should be deleted (if at all).
+        /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await Http
-                .DeleteAsync(
+                .DeleteAsJsonAsync(
                     Requests.ByName.WithTemplateParameters(new
                     {
                         Name = name,
                         Namespace = kubeNamespace ?? Client.DefaultNamespace
                     }),
+                    deleteBody: new
+                    {
+                        apiVersion = "v1",
+                        kind = "DeleteOptions",
+                        propagationPolicy = propagationPolicy
+                    },
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);

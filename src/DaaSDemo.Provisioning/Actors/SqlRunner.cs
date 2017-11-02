@@ -25,7 +25,7 @@ namespace DaaSDemo.Provisioning.Actors
     ///     Actor that invokes a Kubernetes job to run SQLCMD.
     /// </summary>
     public class SqlRunner
-        : ReceiveActorEx
+        : ReceiveActorEx, IWithUnboundedStash
     {
         /// <summary>
         ///     The maximum amount of time to wait for a job to complete.
@@ -33,24 +33,13 @@ namespace DaaSDemo.Provisioning.Actors
         public static readonly TimeSpan JobCompletionTimeout = TimeSpan.FromMinutes(2);
 
         /// <summary>
-        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
+        ///     Cancellation for the periodic poll signal.
         /// </summary>
-        readonly KubeApiClient _kubeClient;
+        ICancelable _pollCancellation;
 
         /// <summary>
-        ///     A reference to the actor that owns the <see cref="SqlRunner"/>.
+        ///     Cancellation for the timeout signal.
         /// </summary>
-        readonly IActorRef _owner;
-
-        /// <summary>
-        ///     A <see cref="DatabaseServer"/> representing the target instance of SQL Server.
-        /// </summary>
-        readonly DatabaseServer _server;
-
-        V1Job _existingJob;
-
-        ICancelable _timerCancellation;
-
         ICancelable _timeoutCancellation;
 
         /// <summary>
@@ -62,7 +51,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="serverId">
         ///     The Id of the target instance of SQL Server.
         /// </param>
-        public SqlRunner(IActorRef owner, DatabaseServer server)
+        public SqlRunner(IActorRef owner, DatabaseServer server, string databaseName)
         {
             if (owner == null)
                 throw new ArgumentNullException(nameof(owner));
@@ -70,115 +59,102 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            _owner = owner;
-            _server = server;
-            _kubeClient = CreateKubeApiClient();
+            if (String.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
 
+            Owner = owner;
+            Server = server;
+            DatabaseName = databaseName;
+            KubeClient = CreateKubeApiClient();
+        }
+
+        /// <summary>
+        ///     A reference to the actor that owns the <see cref="SqlRunner"/>.
+        /// </summary>
+        IActorRef Owner { get; }
+
+        /// <summary>
+        ///     A <see cref="DatabaseServer"/> representing the target instance of SQL Server.
+        /// </summary>
+        DatabaseServer Server { get; }
+
+        /// <summary>
+        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
+        /// </summary>
+        KubeApiClient KubeClient { get; }
+
+        /// <summary>
+        ///     The name of the database targeted by the <see cref="SqlRunner"/>.
+        /// </summary>
+        string DatabaseName { get; }
+
+        /// <summary>
+        ///     The current state of the Job (if any) used to execute T-SQL.
+        /// </summary>
+        V1Job Job { get; set; }
+
+        /// <summary>
+        ///     The actor's local message-stash facility.
+        /// </summary>
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        ///     Called when the actor is started.
+        /// </summary>
+        protected override void PreStart()
+        {
             Become(Ready);
         }
 
+        /// <summary>
+        ///     Called when the actor has stopped.
+        /// </summary>
+        protected override void PostStop()
+        {
+            KubeClient.Dispose();
+
+            base.PostStop();
+        }
+
+        /// <summary>
+        ///     Called when the actor is ready to process requests.
+        /// </summary>
         void Ready()
         {
-            if (_timeoutCancellation != null)
-            {
-                _timeoutCancellation.Cancel();
-                _timeoutCancellation = null;
-            }
+            StopPolling();
+            Stash.UnstashAll();
 
-            if (_timerCancellation != null)
-            {
-                _timerCancellation.Cancel();
-                _timerCancellation = null;
-            }
+            Job = null;
 
             ReceiveAsync<ExecuteSql>(Execute);
         }
 
-        void WaitForExistingJob()
+        /// <summary>
+        ///     Called when the actor is executing a newly-created job.
+        /// </summary>
+        void ExecutingJob()
         {
-            _timerCancellation = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                initialDelay: TimeSpan.FromSeconds(5),
-                interval: TimeSpan.FromSeconds(5),
-                receiver: Self,
-                message: Command.PollJobStatus,
-                sender: Self
-            );
-
-            _timeoutCancellation = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                delay: JobCompletionTimeout,
-                receiver: Self,
-                message: Command.Timeout,
-                sender: Self
-            );
-
-            ReceiveAsync<Command>(async command =>
+            StartPolling();
+            ReceiveAsync<Signal>(HandleCurrentJobSignal);
+            Receive<ExecuteSql>(executeSql =>
             {
-                switch (command)
-                {
-                    case Command.PollJobStatus:
-                    {
-                        string jobName = _existingJob.Metadata.Name;
-                        
-                        _existingJob = await _kubeClient.JobsV1.GetByName(jobName);
-                        if (_existingJob == null)
-                        {
-                            Log.Info("Job {JobName} not found; will treat as completed.", jobName);
+                // Defer request until existing job is complete.
+                Stash.Stash();
+            });
+        }
 
-                            Become(Ready);
-                        }
+        /// <summary>
+        ///     Called when the actor is waiting for an existing job to finish.
+        /// </summary>
+        void WaitingForExistingJob()
+        {
+            StartPolling();
 
-                        if (_existingJob.Status.Active == 0)
-                        {
-                            if (_existingJob.Status.Conditions[0].Type == "Complete")
-                            {
-                                Log.Info("Job {JobName} has successfully completed.",
-                                    _existingJob.Metadata.Name
-                                );
-                            }
-                            else
-                            {
-                                Log.Info("Job {JobName} failed ({FailureReason}:{FailureMessage}).",
-                                    _existingJob.Metadata.Name,
-                                    _existingJob.Status.Conditions[0].Reason,
-                                    _existingJob.Status.Conditions[0].Message                                    
-                                );
-                            }
-
-                            Become(Ready);
-                        }
-
-                        break;
-                    }
-                    case Command.Timeout:
-                    {
-                        string jobName = _existingJob.Metadata.Name;
-
-                        Log.Info("Timed out after waiting {JobCompletionTimeout} for Job {JobName} to complete.", JobCompletionTimeout, jobName);
-                        
-                        _existingJob = await _kubeClient.JobsV1.GetByName(jobName);
-                        if (_existingJob != null)
-                        {
-                            Log.Info("Deleting Job {JobName}...", jobName);
-
-                            await _kubeClient.JobsV1.Delete(jobName);
-                            _existingJob = null;
-
-                            Log.Info("Deleted Job {JobName}.", jobName);
-                        }
-                        else
-                            Log.Info("Job {JobName} not found; will treat as completed.", jobName);
-
-                        Become(Ready);
-
-                        break;
-                    }
-                    default:
-                    {
-                        Unhandled(command);
-
-                        break;
-                    }
-                }
+            ReceiveAsync<Signal>(HandleExistingJobSignal);
+            Receive<ExecuteSql>(executeSql =>
+            {
+                // Defer request until existing job is complete.
+                Stash.Stash();
             });
         }
 
@@ -199,11 +175,11 @@ namespace DaaSDemo.Provisioning.Actors
             V1Service serverService = await FindServerService();
             if (serverService == null)
             {
-                Log.Error("Cannot find Service for server {ServerId}.", _server.Id);
+                Log.Error("Cannot find Service for server {ServerId}.", Server.Id);
 
-                _owner.Tell(
+                Owner.Tell(
                     new Status.Failure(new Exception(
-                        message: $"Cannot find Service for server {_server.Id}."
+                        message: $"Cannot find Service for server {Server.Id}."
                     ))
                 );
 
@@ -212,32 +188,31 @@ namespace DaaSDemo.Provisioning.Actors
                 return;
             }
 
-            _existingJob = await FindJob(executeSql);
-            if (_existingJob != null)
+            Job = await FindJob(executeSql);
+            if (Job != null)
             {
-                Log.Info("Found existing job {JobName}.", _existingJob.Metadata.Name);
+                Log.Info("Found existing job {JobName}.", Job.Metadata.Name);
 
-                // TODO: Do conditions only show up when job is complete, or are they *always* present?
-                if (_existingJob.Status.Active  == 0)
+                if (Job.Status.Active  == 0)
                 {
-                    Log.Info("Deleting existing job {JobName}...", _existingJob.Metadata.Name);
+                    Log.Info("Deleting existing job {JobName}...", Job.Metadata.Name);
 
-                    await _kubeClient.JobsV1.Delete(
-                        _existingJob.Metadata.Name
+                    await KubeClient.JobsV1.Delete(
+                        Job.Metadata.Name
                     );
 
-                    Log.Info("Deleted existing job {JobName}.", _existingJob.Metadata.Name);
+                    Log.Info("Deleted existing job {JobName}.", Job.Metadata.Name);
                 }
                 else
                 {
                     Log.Info("Existing job {JobName} still has {ActivePodCount} active pods; will wait {JobCompletionTimeout} before forcing job termination...",
                         JobCompletionTimeout,
-                        _existingJob.Metadata.Name,
-                        _existingJob.Status.Active
+                        Job.Metadata.Name,
+                        Job.Status.Active
                     );
 
                     // Existing job is running; wait for it to terminate.
-                    Become(WaitForExistingJob);
+                    Become(WaitingForExistingJob);
 
                     return;
                 }
@@ -249,7 +224,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _kubeClient.JobsV1.Create(new V1Job
+                Job = await KubeClient.JobsV1.Create(new V1Job
                 {
                     ApiVersion = "batch/v1",
                     Kind = "Job",
@@ -258,27 +233,29 @@ namespace DaaSDemo.Provisioning.Actors
                         Name = GetJobName(executeSql),
                         Labels = new Dictionary<string, string>
                         {
-                            ["cloud.dimensiondata.daas.server-id"] = _server.Id.ToString(),
-                            ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
+                            ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
+                            ["cloud.dimensiondata.daas.database"] = DatabaseName
                         }
                     },
-                    Spec = KubeSpecs.ExecuteSql(_server,
+                    Spec = KubeSpecs.ExecuteSql(Server,
                         secretName: secret.Metadata.Name,
                         configMapName: configMap.Metadata.Name
                     )
                 });
+
+                Become(ExecutingJob);
             }
             catch (HttpRequestException<UnversionedStatus> createFailed)
             {
                 Log.Error("Failed to create Job {JobName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    $"sqlcmd-{_server.Id}-{executeSql.DatabaseName}",
-                    executeSql.DatabaseName,
-                    _server.Id,
+                    $"sqlcmd-{Server.Id}-{DatabaseName}",
+                    DatabaseName,
+                    Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
                 );
 
-                _owner.Tell(
+                Owner.Tell(
                     new Status.Failure(createFailed)
                 );
 
@@ -287,29 +264,290 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Called when the actor has stopped.
+        ///     Handle a signal while waiting for a newly-created job to complete.
         /// </summary>
-        protected override void PostStop()
+        /// <param name="signal">
+        ///     The signal to handle.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task HandleCurrentJobSignal(Signal signal)
         {
-            _kubeClient.Dispose();
+            switch (signal)
+            {
+                case Signal.PollJobStatus:
+                {
+                    string jobName = Job.Metadata.Name;
+                    
+                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    if (Job == null)
+                    {
+                        Log.Info("Job {JobName} not found; will treat as failed.", jobName);
 
-            base.PostStop();
+                        Owner.Tell(
+                            new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobDeleted,
+                                output: "T-SQL job was deleted."
+                            )
+                        );
+
+                        Become(Ready);
+                    }
+
+                    if (Job.Status.Active == 0)
+                    {
+                        // TODO: This is a dodgy way to process the job's conditions. There can be multiple conditions.
+                        V1JobCondition jobCondition = Job.Status.Conditions[0];
+                        if (jobCondition.Type == "Complete")
+                        {
+                            Log.Info("Job {JobName} has successfully completed.",
+                                Job.Metadata.Name
+                            );
+
+                            Owner.Tell(
+                                new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.Success,
+                                    output: "T-SQL executed successfully." // TODO: Collect and use Pod logs here.
+                                )
+                            );
+                        }
+                        else
+                        {
+                            Log.Info("Job {JobName} failed ({FailureReason}: {FailureMessage}).",
+                                Job.Metadata.Name,
+                                jobCondition.Reason,
+                                jobCondition.Message                                    
+                            );
+
+                            Owner.Tell(
+                                new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.Failed,
+                                    output: $"Job {jobName} failed ({jobCondition.Reason}: {jobCondition.Message})."
+                                )
+                            );
+                        }
+
+                        Become(Ready);
+                    }
+
+                    break;
+                }
+                case Signal.Timeout:
+                {
+                    string jobName = Job.Metadata.Name;
+
+                    Log.Info("Timed out after waiting {JobCompletionTimeout} for Job {JobName} to complete.", JobCompletionTimeout, jobName);
+                    
+                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    if (Job != null)
+                    {
+                        Log.Info("Deleting Job {JobName}...", jobName);
+
+                        await KubeClient.JobsV1.Delete(jobName);
+                        Job = null;
+
+                        Log.Info("Deleted Job {JobName}.", jobName);
+                    }
+                    else
+                        Log.Info("Job {JobName} not found; will treat as completed.", jobName);
+
+                    Owner.Tell(
+                        new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobTimeout,
+                            output: "Timed out waiting for an existing T-SQL job to complete." // TODO: Collect this from pod logs.
+                        )
+                    );
+
+                    Become(Ready);
+
+                    break;
+                }
+                default:
+                {
+                    Unhandled(signal);
+
+                    break;
+                }
+            }
         }
 
         /// <summary>
-        ///     Find the server's current Job (if any) for executing T-SQL.
+        ///     Handle a signal while waiting for an existing job to complete.
+        /// </summary>
+        /// <param name="signal">
+        ///     The signal to handle.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task HandleExistingJobSignal(Signal signal)
+        {
+            switch (signal)
+            {
+                case Signal.PollJobStatus:
+                {
+                    string jobName = Job.Metadata.Name;
+                    
+                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    if (Job == null)
+                    {
+                        Log.Info("Job {JobName} not found; will treat as completed.", jobName);
+
+                        Become(ExecutingJob);
+                    }
+
+                    if (Job.Status.Active == 0)
+                    {
+                        if (Job.Status.Conditions[0].Type == "Complete")
+                        {
+                            Log.Info("Job {JobName} has successfully completed.",
+                                Job.Metadata.Name
+                            );
+                        }
+                        else
+                        {
+                            Log.Info("Job {JobName} failed ({FailureReason}:{FailureMessage}).",
+                                Job.Metadata.Name,
+                                Job.Status.Conditions[0].Reason,
+                                Job.Status.Conditions[0].Message                                    
+                            );
+                        }
+
+                        Become(ExecutingJob);
+                    }
+
+                    break;
+                }
+                case Signal.Timeout:
+                {
+                    string jobName = Job.Metadata.Name;
+                    string databaseName;
+                    Job.Metadata.Labels.TryGetValue("cloud.dimensiondata.daas.database", out databaseName);
+
+                    Log.Info("Timed out after waiting {JobCompletionTimeout} for Job {JobName} to complete.", JobCompletionTimeout, jobName);
+                    
+                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    if (Job != null)
+                    {
+                        Log.Info("Deleting Job {JobName}...", jobName);
+
+                        await KubeClient.JobsV1.Delete(jobName);
+                        Job = null;
+
+                        Log.Info("Deleted Job {JobName}.", jobName);
+                    }
+                    else
+                        Log.Info("Job {JobName} not found; will treat as completed.", jobName);
+
+                    Owner.Tell(
+                        new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobTimeout,
+                            output: "Timed out waiting for an existing T-SQL job to complete." // TODO: Collect this from pod logs.
+                        )
+                    );
+
+                    Become(Ready);
+
+                    break;
+                }
+                default:
+                {
+                    Unhandled(signal);
+
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Start the polling and timeout signals.
+        /// </summary>
+        void StartPolling()
+        {
+            Log.Info("Starting the polling and timeout signals...");
+
+            if (_pollCancellation != null || _timeoutCancellation != null)
+            {
+                Log.Warning("The polling and / or timeout signals are already active; cancelling...");
+                
+                StopPolling();
+            }
+
+            _pollCancellation = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
+                initialDelay: TimeSpan.FromSeconds(5),
+                interval: TimeSpan.FromSeconds(5),
+                receiver: Self,
+                message: Signal.PollJobStatus,
+                sender: Self
+            );
+
+            _timeoutCancellation = Context.System.Scheduler.ScheduleTellOnceCancelable(
+                delay: JobCompletionTimeout,
+                receiver: Self,
+                message: Signal.Timeout,
+                sender: Self
+            );
+
+            Log.Info("The polling and timeout signals have been started.");
+        }
+
+        /// <summary>
+        ///     Cancel the polling and timeout signals.
+        /// </summary>
+        void StopPolling()
+        {
+            if (_timeoutCancellation == null && _pollCancellation == null)
+                return; // Nothing to do.
+
+            Log.Info("Stopping the polling and / or timeout signals...");
+
+            _timeoutCancellation?.Cancel();
+            _timeoutCancellation = null;
+            
+            _pollCancellation?.Cancel();
+            _pollCancellation = null;
+
+            Log.Info("The polling and / or timeout have been stopped.");
+        }
+
+        /// <summary>
+        ///     Find the current Job (if any) used to execute the specified T-SQL.
         /// </summary>
         /// <param name="executeSql">
-        ///     The <see cref="ExecuteSql"/> message representing the T-SQL to be executed.
+        ///     The <see cref="ExecuteSql"/> message representing the T-SQL.
         /// </param>
         /// <returns>
         ///     The Job, or <c>null</c> if it was not found.
         /// </returns>
         async Task<V1Job> FindJob(ExecuteSql executeSql)
         {
-            return await _kubeClient.JobsV1.GetByName(
-                name: GetJobName(executeSql)
+            if (executeSql == null)
+                throw new ArgumentNullException(nameof(executeSql));
+
+            string jobName = GetJobName(executeSql);
+
+            return await KubeClient.JobsV1.GetByName(jobName);
+        }
+
+        /// <summary>
+        ///     Find the pod for the current Job (if any) used to execute the specified T-SQL.
+        /// </summary>
+        /// <param name="executeSql">
+        ///     The <see cref="ExecuteSql"/> message representing the T-SQL.
+        /// </param>
+        /// <returns>
+        ///     The Pod, or <c>null</c> if it was not found.
+        /// </returns>
+        async Task<V1Pod> FindJobPod(ExecuteSql executeSql)
+        {
+            if (executeSql == null)
+                throw new ArgumentNullException(nameof(executeSql));
+            
+            string jobName = GetJobName(executeSql);
+
+            List<V1Pod> matchingPods = await KubeClient.PodsV1.List(
+                labelSelector: $"job-name = {jobName}"
             );
+            if (matchingPods.Count == 0)
+                return null;
+
+            return matchingPods[matchingPods.Count - 1];
         }
 
         /// <summary>
@@ -326,8 +564,8 @@ namespace DaaSDemo.Provisioning.Actors
             if (executeSql == null)
                 throw new ArgumentNullException(nameof(executeSql));
 
-            return await _kubeClient.SecretsV1.GetByName(
-                KubeResources.GetJobName(executeSql, _server)
+            return await KubeClient.SecretsV1.GetByName(
+                KubeResources.GetJobName(executeSql, Server, DatabaseName)
             );
         }
 
@@ -350,8 +588,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("Found existing secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                     existingSecret.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id
+                    DatabaseName,
+                    Server.Id
                 );
 
                 return existingSecret;
@@ -363,11 +601,11 @@ namespace DaaSDemo.Provisioning.Actors
                 Kind = "Secret",
                 Metadata = new V1ObjectMeta
                 {
-                    Name = KubeResources.GetJobName(executeSql, _server),
+                    Name = KubeResources.GetJobName(executeSql, Server, DatabaseName),
                     Labels = new Dictionary<string, string>
                     {
-                        ["cloud.dimensiondata.daas.server-id"] = _server.Id.ToString(),
-                        ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName,
+                        ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
+                        ["cloud.dimensiondata.daas.database"] = DatabaseName,
                         ["cloud.dimensiondata.daas.action"] = "exec-sql"
                     }
                 },
@@ -375,24 +613,24 @@ namespace DaaSDemo.Provisioning.Actors
                 Data = new Dictionary<string, string>()
             };
             newSecret.AddData("database-user", "sa");
-            newSecret.AddData("database-password", _server.AdminPassword);
+            newSecret.AddData("database-password", Server.AdminPassword);
             newSecret.AddData("secrets.sql", $@"
-                :setvar DatabaseName '{executeSql.DatabaseName}'
+                :setvar DatabaseName '{DatabaseName}'
                 :setvar DatabaseUser 'sa'
-                :setvar DatabasePassword '{_server.AdminPassword}'
+                :setvar DatabasePassword '{Server.AdminPassword}'
             ");
 
             V1Secret createdSecret;
             try
             {
-                createdSecret = await _kubeClient.SecretsV1.Create(newSecret);
+                createdSecret = await KubeClient.SecretsV1.Create(newSecret);
             }
             catch (HttpRequestException<UnversionedStatus> createFailed)
             {
                 Log.Error("Failed to create Secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     newSecret.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id,
+                    DatabaseName,
+                    Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
                 );
@@ -402,8 +640,8 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Successfully created secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 createdSecret.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             return createdSecret;
@@ -429,13 +667,13 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleting secret {SecretName} for database {DatabaseName} in server {ServerId}...",
                 secret.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             try
             {
-                await _kubeClient.SecretsV1.Delete(
+                await KubeClient.SecretsV1.Delete(
                     name: secret.Metadata.Name
                 );
             }
@@ -443,8 +681,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     secret.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id,
+                    DatabaseName,
+                    Server.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
                 );
@@ -454,8 +692,8 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 secret.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             return true;
@@ -475,8 +713,8 @@ namespace DaaSDemo.Provisioning.Actors
             if (executeSql == null)
                 throw new ArgumentNullException(nameof(executeSql));
 
-            return await _kubeClient.ConfigMapsV1.GetByName(
-                name: KubeResources.GetJobName(executeSql, _server)
+            return await KubeClient.ConfigMapsV1.GetByName(
+                name: KubeResources.GetJobName(executeSql, Server, DatabaseName)
             );
         }
 
@@ -505,8 +743,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("Found existing ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                     existingConfigMap.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id
+                    DatabaseName,
+                    Server.Id
                 );
 
                 return existingConfigMap;
@@ -518,11 +756,11 @@ namespace DaaSDemo.Provisioning.Actors
                 Kind = "ConfigMap",
                 Metadata = new V1ObjectMeta
                 {
-                    Name = KubeResources.GetJobName(executeSql, _server),
+                    Name = KubeResources.GetJobName(executeSql, Server, DatabaseName),
                     Labels = new Dictionary<string, string>
                     {
-                        ["cloud.dimensiondata.daas.server-id"] = _server.Id.ToString(),
-                        ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName,
+                        ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
+                        ["cloud.dimensiondata.daas.database"] = DatabaseName,
                         ["cloud.dimensiondata.daas.action"] = "exec-sql"
                     }
                 },
@@ -532,7 +770,7 @@ namespace DaaSDemo.Provisioning.Actors
                 value: $"{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local,{serverService.Spec.Ports[0].Port}"
             );
             newConfigMap.AddData("database-name",
-                value: executeSql.DatabaseName
+                value: DatabaseName
             );
             newConfigMap.AddData("script.sql",
                 value: executeSql.Sql
@@ -541,14 +779,14 @@ namespace DaaSDemo.Provisioning.Actors
             V1ConfigMap createdConfigMap;
             try
             {
-                createdConfigMap = await _kubeClient.ConfigMapsV1.Create(newConfigMap);
+                createdConfigMap = await KubeClient.ConfigMapsV1.Create(newConfigMap);
             }
             catch (HttpRequestException<UnversionedStatus> createFailed)
             {
                 Log.Error("Failed to create ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     newConfigMap.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id,
+                    DatabaseName,
+                    Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
                 );
@@ -558,8 +796,8 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Successfully created ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 createdConfigMap.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             return createdConfigMap;
@@ -585,13 +823,13 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleting ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}...",
                 configMap.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             try
             {
-                await _kubeClient.ConfigMapsV1.Delete(
+                await KubeClient.ConfigMapsV1.Delete(
                     name: configMap.Metadata.Name
                 );
             }
@@ -599,8 +837,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     configMap.Metadata.Name,
-                    executeSql.DatabaseName,
-                    _server.Id,
+                    DatabaseName,
+                    Server.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
                 );
@@ -610,8 +848,8 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 configMap.Metadata.Name,
-                executeSql.DatabaseName,
-                _server.Id
+                DatabaseName,
+                Server.Id
             );
 
             return true;
@@ -625,9 +863,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Service> FindServerService()
         {
-            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+            List<V1Service> matchingServices = await KubeClient.ServicesV1.List(
                 kubeNamespace: "default",
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {_server.Id}"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {Server.Id}"
             );
 
             return matchingServices[matchingServices.Count - 1];
@@ -658,12 +896,12 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The job name.
         /// </returns>
-        string GetJobName(ExecuteSql executeSql) => $"sqlcmd-{_server.Id}-{executeSql.DatabaseName}-{executeSql.JobName}";
+        string GetJobName(ExecuteSql executeSql) => $"sqlcmd-{Server.Id}-{DatabaseName}-{executeSql.JobNameSuffix}";
 
         /// <summary>
-        ///     Well-known commands understood by the <see cref="SqlRunner"/> actor.
+        ///     Well-known signals understood by the <see cref="SqlRunner"/> actor.
         /// </summary>
-        enum Command
+        enum Signal
         {
             /// <summary>
             ///     Poll the status of an existing job.

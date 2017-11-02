@@ -748,7 +748,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 sqlRunner = Context.ActorOf(
                     Props.Create(
-                        () => new SqlRunner(Self, server)
+                        () => new SqlRunner(Self, server, "master")
                     ),
                     name: $"sqlcmd-{_serverId}-master"
                 );
@@ -757,12 +757,11 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             sqlRunner.Tell(new ExecuteSql(
-                jobName: "initialize-configuration",
-                databaseName: "master",
+                jobNameSuffix: "initialize-configuration",
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
             ));
 
-            // TODO: Schedule timeout message and then wait for either SqlExecuted, Status.Failure, Terminated, or Timeout.
+            // TODO: Wait for SqlExecuted message.
         }
 
         /// <summary>

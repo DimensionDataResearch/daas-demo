@@ -33,10 +33,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> message representing the target database server.
         /// </param>
+        /// <param name="databaseName">
+        ///     The name of the target database.
+        /// </param>
         /// <returns>
         ///     The job name.
         /// </returns>
-        public static string GetJobName(ExecuteSql executeSql, DatabaseServer server) => $"sqlcmd-{server.Id}-{executeSql.DatabaseName}-{executeSql.JobName}";
+        public static string GetJobName(ExecuteSql executeSql, DatabaseServer server, string databaseName) => $"sqlcmd-{server.Id}-{databaseName}-{executeSql.JobNameSuffix}";
 
         /// <summary>
         ///     Create a new <see cref="V1ReplicationController"/> for the specified database server.
@@ -242,24 +245,27 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1Job"/>.
+        ///     Create a new <see cref="V1Job"/> to execute the specified T-SQL.
         /// </summary>
-        /// <param name="name">
-        ///     The Job name.
+        /// <param name="executeSql">
+        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
         /// </param>
-        /// <param name="spec">
-        ///     A <see cref="V1JobSpec"/> representing the Job specification.
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target database server.
         /// </param>
-        /// <param name="labels">
-        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the Job.
+        /// <param name="databaseName">
+        ///     The name of the target database.
         /// </param>
-        /// <param name="annotations">
-        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the Job.
+        /// <param name="secretName">
+        ///     The name of the Secret used to store sensitive scripts and configuration.
+        /// </param>
+        /// <param name="configMapName">
+        ///     The name of the ConfigMap used to store regular scripts and configuration.
         /// </param>
         /// <returns>
         ///     The configured <see cref="V1Job"/>.
         /// </returns>
-        public static V1Job Job(ExecuteSql executeSql, DatabaseServer server, string secretName, string configMapName)
+        public static V1Job Job(ExecuteSql executeSql, DatabaseServer server, string databaseName, string secretName, string configMapName)
         {
             if (executeSql == null)
                 throw new ArgumentNullException(nameof(executeSql));
@@ -267,13 +273,16 @@ namespace DaaSDemo.Provisioning
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
+            if (String.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
+
             if (String.IsNullOrWhiteSpace(secretName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'secretName'.", nameof(secretName));
             
             if (String.IsNullOrWhiteSpace(configMapName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'configMapName'.", nameof(configMapName));
             
-            string jobName = GetJobName(executeSql, server);
+            string jobName = GetJobName(executeSql, server, databaseName);
 
             return Job(jobName,
                 spec: KubeSpecs.ExecuteSql(server,
@@ -283,7 +292,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
-                    ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
+                    ["cloud.dimensiondata.daas.database"] = databaseName
                 }
             );
         }
