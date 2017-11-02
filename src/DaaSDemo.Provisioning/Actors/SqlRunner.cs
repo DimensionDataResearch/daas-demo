@@ -51,7 +51,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="serverId">
         ///     The Id of the target instance of SQL Server.
         /// </param>
-        public SqlRunner(IActorRef owner, DatabaseServer server, string databaseName)
+        public SqlRunner(IActorRef owner, DatabaseServer server)
         {
             if (owner == null)
                 throw new ArgumentNullException(nameof(owner));
@@ -59,14 +59,15 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            if (String.IsNullOrWhiteSpace(databaseName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
-
             Owner = owner;
             Server = server;
-            DatabaseName = databaseName;
             KubeClient = CreateKubeApiClient();
         }
+
+        /// <summary>
+        ///     The actor's local message-stash facility.
+        /// </summary>
+        public IStash Stash { get; set; }
 
         /// <summary>
         ///     A reference to the actor that owns the <see cref="SqlRunner"/>.
@@ -84,19 +85,14 @@ namespace DaaSDemo.Provisioning.Actors
         KubeApiClient KubeClient { get; }
 
         /// <summary>
-        ///     The name of the database targeted by the <see cref="SqlRunner"/>.
+        ///     An <see cref="ExecuteSql"/> representing the current request.
         /// </summary>
-        string DatabaseName { get; }
+        ExecuteSql CurrentRequest { get; set; }
 
         /// <summary>
         ///     The current state of the Job (if any) used to execute T-SQL.
         /// </summary>
         V1Job Job { get; set; }
-
-        /// <summary>
-        ///     The actor's local message-stash facility.
-        /// </summary>
-        public IStash Stash { get; set; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -124,9 +120,15 @@ namespace DaaSDemo.Provisioning.Actors
             StopPolling();
             Stash.UnstashAll();
 
+            CurrentRequest = null;
             Job = null;
 
-            ReceiveAsync<ExecuteSql>(Execute);
+            ReceiveAsync<ExecuteSql>(async executeSql =>
+            {
+                CurrentRequest = executeSql;
+                
+                await Execute();
+            });
         }
 
         /// <summary>
@@ -167,11 +169,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task Execute(ExecuteSql executeSql)
+        async Task Execute()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
             V1Service serverService = await FindServerService();
             if (serverService == null)
             {
@@ -188,7 +187,7 @@ namespace DaaSDemo.Provisioning.Actors
                 return;
             }
 
-            Job = await FindJob(executeSql);
+            Job = await FindJob();
             if (Job != null)
             {
                 Log.Info("Found existing job {JobName}.", Job.Metadata.Name);
@@ -218,10 +217,11 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             }
 
-            V1Secret secret = await EnsureSecretPresent(executeSql);
+            V1Secret secret = await EnsureSecretPresent();
 
-            V1ConfigMap configMap = await EnsureConfigMapPresent(executeSql, serverService);
+            V1ConfigMap configMap = await EnsureConfigMapPresent(serverService);
 
+            string jobName = KubeResources.GetJobName(CurrentRequest, Server);
             try
             {
                 Job = await KubeClient.JobsV1.Create(new V1Job
@@ -230,11 +230,11 @@ namespace DaaSDemo.Provisioning.Actors
                     Kind = "Job",
                     Metadata = new V1ObjectMeta
                     {
-                        Name = GetJobName(executeSql),
+                        Name = jobName,
                         Labels = new Dictionary<string, string>
                         {
                             ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
-                            ["cloud.dimensiondata.daas.database"] = DatabaseName
+                            ["cloud.dimensiondata.daas.database"] = CurrentRequest.DatabaseName
                         }
                     },
                     Spec = KubeSpecs.ExecuteSql(Server,
@@ -248,8 +248,8 @@ namespace DaaSDemo.Provisioning.Actors
             catch (HttpRequestException<UnversionedStatus> createFailed)
             {
                 Log.Error("Failed to create Job {JobName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    $"sqlcmd-{Server.Id}-{DatabaseName}",
-                    DatabaseName,
+                    jobName,
+                    CurrentRequest.DatabaseName,
                     Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
@@ -286,7 +286,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Log.Info("Job {JobName} not found; will treat as failed.", jobName);
 
                         Owner.Tell(
-                            new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobDeleted,
+                            new SqlExecuted(jobName, Server.Id, CurrentRequest.DatabaseName, SqlExecutionResult.JobDeleted,
                                 output: "T-SQL job was deleted."
                             )
                         );
@@ -305,7 +305,7 @@ namespace DaaSDemo.Provisioning.Actors
                             );
 
                             Owner.Tell(
-                                new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.Success,
+                                new SqlExecuted(jobName, Server.Id, CurrentRequest.DatabaseName, SqlExecutionResult.Success,
                                     output: "T-SQL executed successfully." // TODO: Collect and use Pod logs here.
                                 )
                             );
@@ -319,7 +319,7 @@ namespace DaaSDemo.Provisioning.Actors
                             );
 
                             Owner.Tell(
-                                new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.Failed,
+                                new SqlExecuted(jobName, Server.Id, CurrentRequest.DatabaseName, SqlExecutionResult.Failed,
                                     output: $"Job {jobName} failed ({jobCondition.Reason}: {jobCondition.Message})."
                                 )
                             );
@@ -350,7 +350,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Log.Info("Job {JobName} not found; will treat as completed.", jobName);
 
                     Owner.Tell(
-                        new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobTimeout,
+                        new SqlExecuted(jobName, Server.Id, CurrentRequest.DatabaseName, SqlExecutionResult.JobTimeout,
                             output: "Timed out waiting for an existing T-SQL job to complete." // TODO: Collect this from pod logs.
                         )
                     );
@@ -437,7 +437,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Log.Info("Job {JobName} not found; will treat as completed.", jobName);
 
                     Owner.Tell(
-                        new SqlExecuted(jobName, Server.Id, DatabaseName, SqlExecutionResult.JobTimeout,
+                        new SqlExecuted(jobName, Server.Id, CurrentRequest.DatabaseName, SqlExecutionResult.JobTimeout,
                             output: "Timed out waiting for an existing T-SQL job to complete." // TODO: Collect this from pod logs.
                         )
                     );
@@ -509,18 +509,12 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Find the current Job (if any) used to execute the specified T-SQL.
         /// </summary>
-        /// <param name="executeSql">
-        ///     The <see cref="ExecuteSql"/> message representing the T-SQL.
-        /// </param>
         /// <returns>
         ///     The Job, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Job> FindJob(ExecuteSql executeSql)
+        async Task<V1Job> FindJob()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
-            string jobName = GetJobName(executeSql);
+            string jobName = KubeResources.GetJobName(CurrentRequest, Server);
 
             return await KubeClient.JobsV1.GetByName(jobName);
         }
@@ -528,18 +522,12 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Find the pod for the current Job (if any) used to execute the specified T-SQL.
         /// </summary>
-        /// <param name="executeSql">
-        ///     The <see cref="ExecuteSql"/> message representing the T-SQL.
-        /// </param>
         /// <returns>
         ///     The Pod, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Pod> FindJobPod(ExecuteSql executeSql)
+        async Task<V1Pod> FindJobPod()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-            
-            string jobName = GetJobName(executeSql);
+            string jobName = KubeResources.GetJobName(CurrentRequest, Server);
 
             List<V1Pod> matchingPods = await KubeClient.PodsV1.List(
                 labelSelector: $"job-name = {jobName}"
@@ -553,42 +541,30 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Find the secret used to execute T-SQL in the specified database.
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <returns>
         ///     A <see cref="V1Secret"/> representing the secret, or <c>null</c>, if the secret was not found.
         /// </returns>
-        async Task<V1Secret> FindSecret(ExecuteSql executeSql)
+        async Task<V1Secret> FindSecret()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
             return await KubeClient.SecretsV1.GetByName(
-                KubeResources.GetJobName(executeSql, Server, DatabaseName)
+                KubeResources.GetJobName(CurrentRequest, Server)
             );
         }
 
         /// <summary>
         ///     Ensure that the Kubernetes Secret exists for executing the specified T-SQL (creating it if necessary).
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the secret exists; otherwise, <c>false</c>.
         /// </returns>
-        async Task<V1Secret> EnsureSecretPresent(ExecuteSql executeSql)
+        async Task<V1Secret> EnsureSecretPresent()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
-            V1Secret existingSecret = await FindSecret(executeSql);
+            V1Secret existingSecret = await FindSecret();
             if (existingSecret != null)
             {
                 Log.Info("Found existing secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                     existingSecret.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id
                 );
 
@@ -601,11 +577,11 @@ namespace DaaSDemo.Provisioning.Actors
                 Kind = "Secret",
                 Metadata = new V1ObjectMeta
                 {
-                    Name = KubeResources.GetJobName(executeSql, Server, DatabaseName),
+                    Name = KubeResources.GetJobName(CurrentRequest, Server),
                     Labels = new Dictionary<string, string>
                     {
                         ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
-                        ["cloud.dimensiondata.daas.database"] = DatabaseName,
+                        ["cloud.dimensiondata.daas.database"] = CurrentRequest.DatabaseName,
                         ["cloud.dimensiondata.daas.action"] = "exec-sql"
                     }
                 },
@@ -615,7 +591,7 @@ namespace DaaSDemo.Provisioning.Actors
             newSecret.AddData("database-user", "sa");
             newSecret.AddData("database-password", Server.AdminPassword);
             newSecret.AddData("secrets.sql", $@"
-                :setvar DatabaseName '{DatabaseName}'
+                :setvar DatabaseName '{CurrentRequest.DatabaseName}'
                 :setvar DatabaseUser 'sa'
                 :setvar DatabasePassword '{Server.AdminPassword}'
             ");
@@ -629,7 +605,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to create Secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     newSecret.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
@@ -640,7 +616,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Successfully created secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 createdSecret.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -650,24 +626,18 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that the Kubernetes Secret does not exist for executing T-SQL in the specified database (deleting it if necessary).
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the secret does not exist; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureSecretAbsent(ExecuteSql executeSql)
+        async Task<bool> EnsureSecretAbsent()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-            
-            V1Secret secret = await FindSecret(executeSql);
+            V1Secret secret = await FindSecret();
             if (secret == null)
                 return true;
 
             Log.Info("Deleting secret {SecretName} for database {DatabaseName} in server {ServerId}...",
                 secret.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -681,7 +651,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete secret {SecretName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     secret.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
@@ -692,7 +662,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted secret {SecretName} for database {DatabaseName} in server {ServerId}.",
                 secret.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -702,48 +672,36 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Find the ConfigMap used to execute T-SQL in the specified database.
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <returns>
         ///     A <see cref="V1ConfigMap"/> representing the ConfigMap, or <c>null</c>, if the ConfigMap was not found.
         /// </returns>
-        async Task<V1ConfigMap> FindConfigMap(ExecuteSql executeSql)
+        async Task<V1ConfigMap> FindConfigMap()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
             return await KubeClient.ConfigMapsV1.GetByName(
-                name: KubeResources.GetJobName(executeSql, Server, DatabaseName)
+                name: KubeResources.GetJobName(CurrentRequest, Server)
             );
         }
 
         /// <summary>
         ///     Ensure that the Kubernetes ConfigMap exists for executing T-SQL in the specified database (creating it if necessary).
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <param name="serverService">
         ///     The Service used to communicate with the target instance of SQL Server.
         /// </param>
         /// <returns>
         ///     <c>true</c>, if the ConfigMap exists; otherwise, <c>false</c>.
         /// </returns>
-        async Task<V1ConfigMap> EnsureConfigMapPresent(ExecuteSql executeSql, V1Service serverService)
+        async Task<V1ConfigMap> EnsureConfigMapPresent(V1Service serverService)
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
             if (serverService == null)
                 throw new ArgumentNullException(nameof(serverService));
 
-            V1ConfigMap existingConfigMap = await FindConfigMap(executeSql);
+            V1ConfigMap existingConfigMap = await FindConfigMap();
             if (existingConfigMap != null)
             {
                 Log.Info("Found existing ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                     existingConfigMap.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id
                 );
 
@@ -756,11 +714,11 @@ namespace DaaSDemo.Provisioning.Actors
                 Kind = "ConfigMap",
                 Metadata = new V1ObjectMeta
                 {
-                    Name = KubeResources.GetJobName(executeSql, Server, DatabaseName),
+                    Name = KubeResources.GetJobName(CurrentRequest, Server),
                     Labels = new Dictionary<string, string>
                     {
                         ["cloud.dimensiondata.daas.server-id"] = Server.Id.ToString(),
-                        ["cloud.dimensiondata.daas.database"] = DatabaseName,
+                        ["cloud.dimensiondata.daas.database"] = CurrentRequest.DatabaseName,
                         ["cloud.dimensiondata.daas.action"] = "exec-sql"
                     }
                 },
@@ -770,10 +728,10 @@ namespace DaaSDemo.Provisioning.Actors
                 value: $"{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local,{serverService.Spec.Ports[0].Port}"
             );
             newConfigMap.AddData("database-name",
-                value: DatabaseName
+                value: CurrentRequest.DatabaseName
             );
             newConfigMap.AddData("script.sql",
-                value: executeSql.Sql
+                value: CurrentRequest.Sql
             );
 
             V1ConfigMap createdConfigMap;
@@ -785,7 +743,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to create ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     newConfigMap.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id,
                     createFailed.Response.Message,
                     createFailed.Response.Reason
@@ -796,7 +754,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Successfully created ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 createdConfigMap.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -806,24 +764,18 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Ensure that the Kubernetes ConfigMap does not exist for executing T-SQL in the specified database (deleting it if necessary).
         /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the ConfigMap does not exist; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureConfigMapAbsent(ExecuteSql executeSql)
+        async Task<bool> EnsureConfigMapAbsent()
         {
-            if (executeSql == null)
-                throw new ArgumentNullException(nameof(executeSql));
-
-            V1ConfigMap configMap = await FindConfigMap(executeSql);
+            V1ConfigMap configMap = await FindConfigMap();
             if (configMap == null)
                 return true;
 
             Log.Info("Deleting ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}...",
                 configMap.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -837,7 +789,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Error("Failed to delete ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     configMap.Metadata.Name,
-                    DatabaseName,
+                    CurrentRequest.DatabaseName,
                     Server.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
@@ -848,7 +800,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             Log.Info("Deleted ConfigMap {ConfigMapName} for database {DatabaseName} in server {ServerId}.",
                 configMap.Metadata.Name,
-                DatabaseName,
+                CurrentRequest.DatabaseName,
                 Server.Id
             );
 
@@ -886,17 +838,6 @@ namespace DaaSDemo.Provisioning.Actors
                 accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
             );
         }
-
-        /// <summary>
-        ///     Get the name of the job used to execute T-SQL.
-        /// </summary>
-        /// <param name="executeSql">
-        ///     An <see cref="ExecuteSql"/> message representing the T-SQL to execute.
-        /// </param>
-        /// <returns>
-        ///     The job name.
-        /// </returns>
-        string GetJobName(ExecuteSql executeSql) => $"sqlcmd-{Server.Id}-{DatabaseName}-{executeSql.JobNameSuffix}";
 
         /// <summary>
         ///     Well-known signals understood by the <see cref="SqlRunner"/> actor.

@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using Common.Utilities;
     using Data;
     using Data.Models;
     using KubeClient;
@@ -39,14 +40,19 @@ namespace DaaSDemo.Provisioning.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     The pseudo-identifier referring to the "master" database on the tenant server.
+        /// </summary>
+        const int MasterDatabaseId = 0;
+
+        /// <summary>
         ///     References to <see cref="TenantDatabaseManager"/> actors, keyed by database Id.
         /// </summary>
         readonly Dictionary<int, IActorRef> _databaseManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
-        ///     A reference to <see cref="SqlRunner"/> actors, keyed by database Id (0 = "master").
+        ///     State for <see cref="SqlRunner"/> actors, keyed by database Id.
         /// </summary>
-        readonly Dictionary<int, IActorRef> _sqlRunners = new Dictionary<int, IActorRef>();
+        readonly Dictionary<int, SqlRunnerState> _sqlRunners = new Dictionary<int, SqlRunnerState>();
 
         /// <summary>
         ///     The Id of the target server.
@@ -92,47 +98,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             _kubeClient = CreateKubeApiClient();
 
-            ReceiveAsync<DatabaseServer>(UpdateServerState);
-            Receive<IPAddressMappingsChanged>(mappingsChanged =>
-            {
-                _nodeExternalIPs = mappingsChanged.Mappings;
-            });
-            Receive<Terminated>(terminated =>
-            {
-                int? databaseId =
-                    _databaseManagers.Where(
-                        entry => Equals(entry.Value, terminated.ActorRef)
-                    )
-                    .Select(
-                        entry => (int?)entry.Key
-                    )
-                    .FirstOrDefault();
-
-                if (databaseId.HasValue)
-                {
-                    _databaseManagers.Remove(databaseId.Value); // Database manager terminated.
-
-                    return;
-                }
-
-                databaseId =
-                    _sqlRunners.Where(
-                        entry => Equals(entry.Value, terminated.ActorRef)
-                    )
-                    .Select(
-                        entry => (int?)entry.Key
-                    )
-                    .FirstOrDefault();
-
-                if (databaseId.HasValue)
-                {
-                    _sqlRunners.Remove(databaseId.Value); // SQL runner terminated.
-
-                    return;
-                }
-
-                Unhandled(terminated); // DeathPactException
-            });
+            Become(Ready);
         }
 
         /// <summary>
@@ -143,6 +109,21 @@ namespace DaaSDemo.Provisioning.Actors
             _kubeClient.Dispose();
 
             base.PostStop();
+        }
+
+        /// <summary>
+        ///     Called when the actor is ready to handle requests.
+        /// </summary>
+        void Ready()
+        {
+            ReceiveAsync<DatabaseServer>(UpdateServerState);
+            Receive<IPAddressMappingsChanged>(mappingsChanged =>
+            {
+                _nodeExternalIPs = mappingsChanged.Mappings;
+            });
+            Receive<Terminated>(
+                terminated => HandleTermination(terminated)
+            );
         }
 
         /// <summary>
@@ -321,6 +302,50 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             _previousState = server;
+        }
+
+        /// <summary>
+        ///     Handle the termination of a watched actor.
+        /// </summary>
+        /// <param name="terminated">
+        ///     A <see cref="Terminated"/> message representing the termination.
+        /// </param>
+        void HandleTermination(Terminated terminated)
+        {
+            if (terminated == null)
+                throw new ArgumentNullException(nameof(terminated));
+            
+            foreach ((int databaseId, IActorRef databaseManager) in _databaseManagers)
+            {
+                if (Equals(terminated.ActorRef, databaseManager))
+                {
+                    Log.Info("DatabaseManager for database {DatabaseId} in server {ServerId} has terminated.",
+                        databaseId,
+                        _serverId
+                    );
+
+                    _databaseManagers.Remove(databaseId); // Database manager terminated.
+
+                    return;
+                }
+            }
+
+            foreach ((int databaseId, SqlRunnerState runnerState) in _sqlRunners)
+            {
+                if (Equals(terminated.ActorRef, runnerState.Runner))
+                {
+                    Log.Info("SqlRunner for database {DatabaseId} in server {ServerId} has terminated.",
+                        databaseId,
+                        _serverId
+                    );
+                    
+                    _sqlRunners.Remove(databaseId); // SQL runner terminated.
+
+                    return;
+                }
+            }
+
+            Unhandled(terminated); // DeathPactException
         }
 
         /// <summary>
@@ -743,25 +768,29 @@ namespace DaaSDemo.Provisioning.Actors
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
             
-            IActorRef sqlRunner;
-            if (!_sqlRunners.TryGetValue(0, out sqlRunner))
+            SqlRunnerState runnerState;
+            if (!_sqlRunners.TryGetValue(MasterDatabaseId, out runnerState))
             {
-                sqlRunner = Context.ActorOf(
+                IActorRef sqlRunner = Context.ActorOf(
                     Props.Create(
-                        () => new SqlRunner(Self, server, "master")
+                        () => new SqlRunner(Self, server)
                     ),
                     name: $"sqlcmd-{_serverId}-master"
                 );
                 Context.Watch(sqlRunner);
-                _sqlRunners.Add(0, sqlRunner);
+
+                runnerState = new SqlRunnerState(sqlRunner);
+                _sqlRunners.Add(MasterDatabaseId, runnerState);
             }
 
-            sqlRunner.Tell(new ExecuteSql(
+            // TODO: If runnerState.IsBusy, Stash current message instead.
+
+            runnerState.Runner.Tell(new ExecuteSql(
+                databaseName: "master",
                 jobNameSuffix: "initialize-configuration",
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024)
             ));
-
-            // TODO: Wait for SqlExecuted message.
+            runnerState.IsBusy = true;
         }
 
         /// <summary>
@@ -790,5 +819,35 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The actor name.
         /// </returns>
         public static string ActorName(int tenantId) => $"server-manager.{tenantId}";
+
+        /// <summary>
+        ///     Represents the state for an <see cref="SqlRunner"/> actor.
+        /// </summary>
+        class SqlRunnerState
+        {
+            /// <summary>
+            ///     Create a new <see cref="SqlRunnerState"/>.
+            /// </summary>
+            /// <param name="runner">
+            ///     A reference to the <see cref="SqlRunner"/> actor.
+            /// </param>
+            public SqlRunnerState(IActorRef runner)
+            {
+                if (runner == null)
+                    throw new ArgumentNullException(nameof(runner));
+                
+                Runner = runner;
+            }
+
+            /// <summary>
+            ///     A reference to the <see cref="SqlRunner"/> actor.
+            /// </summary>
+            public IActorRef Runner { get; }
+
+            /// <summary>
+            ///     Is the runner currently busy?
+            /// </summary>
+            public bool IsBusy { get; set; }
+        }
     }
 }

@@ -39,7 +39,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The job name.
         /// </returns>
-        public static string GetJobName(ExecuteSql executeSql, DatabaseServer server, string databaseName) => $"sqlcmd-{server.Id}-{databaseName}-{executeSql.JobNameSuffix}";
+        public static string GetJobName(ExecuteSql executeSql, DatabaseServer server) => $"sqlcmd-{server.Id}-{executeSql.DatabaseName}-{executeSql.JobNameSuffix}";
 
         /// <summary>
         ///     Create a new <see cref="V1ReplicationController"/> for the specified database server.
@@ -265,7 +265,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="V1Job"/>.
         /// </returns>
-        public static V1Job Job(ExecuteSql executeSql, DatabaseServer server, string databaseName, string secretName, string configMapName)
+        public static V1Job Job(ExecuteSql executeSql, DatabaseServer server)
         {
             if (executeSql == null)
                 throw new ArgumentNullException(nameof(executeSql));
@@ -273,16 +273,7 @@ namespace DaaSDemo.Provisioning
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            if (String.IsNullOrWhiteSpace(databaseName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
-
-            if (String.IsNullOrWhiteSpace(secretName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'secretName'.", nameof(secretName));
-            
-            if (String.IsNullOrWhiteSpace(configMapName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'configMapName'.", nameof(configMapName));
-            
-            string jobName = GetJobName(executeSql, server, databaseName);
+            string jobName = GetJobName(executeSql, server);
 
             return Job(jobName,
                 spec: KubeSpecs.ExecuteSql(server,
@@ -292,7 +283,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
-                    ["cloud.dimensiondata.daas.database"] = databaseName
+                    ["cloud.dimensiondata.daas.database"] = executeSql.DatabaseName
                 }
             );
         }

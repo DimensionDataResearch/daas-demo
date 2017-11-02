@@ -10,23 +10,35 @@ namespace DaaSDemo.Provisioning.Messages
         /// <summary>
         ///     Create a new <see cref="ExecuteSql"/> message.
         /// </summary>
-        /// <param name="jobNameSuffix">
-        ///     A unique suffix for the name of the Job that executes the T-SQL.
+        /// <param name="databaseName">
+        ///     The name of the target database.
         /// </param>
         /// <param name="sql">
         ///     The T-SQL to execute.
         /// </param>
-        public ExecuteSql(string jobNameSuffix, string sql)
+        /// <param name="jobNameSuffix">
+        ///     A unique suffix for the name of the Job that executes the T-SQL.
+        /// </param>
+        public ExecuteSql(string databaseName, string sql, string jobNameSuffix)
         {
+            if (String.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
+
             if (String.IsNullOrWhiteSpace(jobNameSuffix))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'jobNameSuffix'.", nameof(jobNameSuffix));
             
             if (String.IsNullOrWhiteSpace(sql))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'sql'.", nameof(sql));
 
-            JobNameSuffix = jobNameSuffix;
+            DatabaseName = databaseName;
             Sql = sql;
+            JobNameSuffix = jobNameSuffix;
         }
+
+        /// <summary>
+        ///     The name of the target database.
+        /// </summary>
+        public string DatabaseName { get; }
 
         /// <summary>
         ///     A unique suffix for the name of the Job that executes the T-SQL.

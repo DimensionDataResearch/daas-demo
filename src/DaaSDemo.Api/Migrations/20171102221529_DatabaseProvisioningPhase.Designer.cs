@@ -12,9 +12,10 @@ using System;
 namespace DaaSDemo.Api.Migrations
 {
     [DbContext(typeof(Entities))]
-    partial class EntitiesModelSnapshot : ModelSnapshot
+    [Migration("20171102221529_DatabaseProvisioningPhase")]
+    partial class DatabaseProvisioningPhase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

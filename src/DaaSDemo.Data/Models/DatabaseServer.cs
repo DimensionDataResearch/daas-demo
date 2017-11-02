@@ -70,6 +70,14 @@ namespace DaaSDemo.Data.Models
         public ProvisioningStatus Status { get; set; }
 
         /// <summary>
+        ///     The server's current provisioning phase.
+        /// </summary>
+        [Required]
+        [JsonIgnore]
+        [DefaultValue(ServerProvisioningPhase.None)]
+        public ServerProvisioningPhase Phase { get; set; }
+
+        /// <summary>
         ///     Databases present on the server.
         /// </summary>
         [JsonIgnore]
