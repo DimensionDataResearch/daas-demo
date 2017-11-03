@@ -126,6 +126,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void Ready()
         {
+            Log.Info("Ready to process requests for server {ServerId} to complete.", _serverId);
+
             ReceiveAsync<DatabaseServer>(async databaseServer =>
             {
                 Log.Info("Received server configuration (Id:{ServerId}, Name:{ServerName}).",
@@ -152,6 +154,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void InitializingServerConfiguration()
         {
+            Log.Info("Waiting for initialisation of configuration for server {ServerId} to complete.", _serverId);
+
             ReceiveAsync<SqlExecuted>(async sqlExecuted =>
             {
                 if (sqlExecuted.DatabaseName != "master")

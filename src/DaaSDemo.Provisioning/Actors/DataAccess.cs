@@ -137,6 +137,8 @@ namespace DaaSDemo.Provisioning.Actors
                         Props.Create(() => new TenantServerManager(server.Id, Self)),
                         name: TenantServerManager.ActorName(server.TenantId)
                     );
+                    Context.Watch(serverManager);
+                    
                     _serverManagers.Add(server.TenantId, serverManager);
 
                     Log.Info("Created TenantServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",

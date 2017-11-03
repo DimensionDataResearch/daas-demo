@@ -152,7 +152,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             StartPolling();
 
-            ReceiveAsync<Signal>(HandleExistingJobSignal);
+            ReceiveAsync<Signal>(HandlePreviousJobSignal);
             Receive<ExecuteSql>(executeSql =>
             {
                 // Defer request until existing job is complete.
@@ -192,7 +192,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("Found existing job {JobName}.", Job.Metadata.Name);
 
-                if (Job.Status.Active  == 0)
+                if (Job.Status.Active == null || Job.Status.Active == 0)
                 {
                     Log.Info("Deleting existing job {JobName}...", Job.Metadata.Name);
 
@@ -205,9 +205,9 @@ namespace DaaSDemo.Provisioning.Actors
                 else
                 {
                     Log.Info("Existing job {JobName} still has {ActivePodCount} active pods; will wait {JobCompletionTimeout} before forcing job termination...",
-                        JobCompletionTimeout,
                         Job.Metadata.Name,
-                        Job.Status.Active
+                        Job.Status.Active,
+                        JobCompletionTimeout
                     );
 
                     // Existing job is running; wait for it to terminate.
@@ -222,6 +222,13 @@ namespace DaaSDemo.Provisioning.Actors
             V1ConfigMap configMap = await EnsureConfigMapPresent(serverService);
 
             string jobName = KubeResources.GetJobName(CurrentRequest, Server);
+
+            Log.Info("Creating T-SQL Job {JobName} for database {DatabaseName} in server {ServerId}...",
+                jobName,
+                CurrentRequest.DatabaseName,
+                Server.Id
+            );
+
             try
             {
                 Job = await KubeClient.JobsV1.Create(new V1Job
@@ -242,6 +249,12 @@ namespace DaaSDemo.Provisioning.Actors
                         configMapName: configMap.Metadata.Name
                     )
                 });
+
+                Log.Info("Created T-SQL Job {JobName} for database {DatabaseName} in server {ServerId}...",
+                    jobName,
+                    CurrentRequest.DatabaseName,
+                    Server.Id
+                );
 
                 Become(ExecutingJob);
             }
@@ -278,6 +291,10 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case Signal.PollJobStatus:
                 {
+                    Log.Info("Checking status of current T-SQL Job {JobName}...",
+                        Job.Metadata.Name
+                    );
+
                     string jobName = Job.Metadata.Name;
                     
                     Job = await KubeClient.JobsV1.GetByName(jobName);
@@ -294,7 +311,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Become(Ready);
                     }
 
-                    if (Job.Status.Active == 0)
+                    if (Job.Status.Active == 0 || Job.Status.Active == null)
                     {
                         // TODO: This is a dodgy way to process the job's conditions. There can be multiple conditions.
                         V1JobCondition jobCondition = Job.Status.Conditions[0];
@@ -327,6 +344,13 @@ namespace DaaSDemo.Provisioning.Actors
 
                         Become(Ready);
                     }
+                    else
+                    {
+                        Log.Info("Job {JobName} is still running ({ActivePodCount} active pods).",
+                            Job.Metadata.Name,
+                            Job.Status.Active
+                        );
+                    }
 
                     break;
                 }
@@ -334,7 +358,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     string jobName = Job.Metadata.Name;
 
-                    Log.Info("Timed out after waiting {JobCompletionTimeout} for Job {JobName} to complete.", JobCompletionTimeout, jobName);
+                    Log.Info("Timed out after waiting {JobCompletionTimeout} for current T-SQL Job {JobName} to complete.", JobCompletionTimeout, jobName);
                     
                     Job = await KubeClient.JobsV1.GetByName(jobName);
                     if (Job != null)
@@ -369,7 +393,7 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Handle a signal while waiting for an existing job to complete.
+        ///     Handle a signal while waiting for a previous job to complete.
         /// </summary>
         /// <param name="signal">
         ///     The signal to handle.
@@ -377,12 +401,16 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task HandleExistingJobSignal(Signal signal)
+        async Task HandlePreviousJobSignal(Signal signal)
         {
             switch (signal)
             {
                 case Signal.PollJobStatus:
                 {
+                    Log.Info("Checking status of previous T-SQL Job {JobName}...",
+                        Job.Metadata.Name
+                    );
+
                     string jobName = Job.Metadata.Name;
                     
                     Job = await KubeClient.JobsV1.GetByName(jobName);
@@ -393,7 +421,7 @@ namespace DaaSDemo.Provisioning.Actors
                         Become(ExecutingJob);
                     }
 
-                    if (Job.Status.Active == 0)
+                    if (Job.Status.Active == null || Job.Status.Active == 0)
                     {
                         if (Job.Status.Conditions[0].Type == "Complete")
                         {
@@ -412,6 +440,13 @@ namespace DaaSDemo.Provisioning.Actors
 
                         Become(ExecutingJob);
                     }
+                    else
+                    {
+                        Log.Info("Job {JobName} is still running ({ActivePodCount} active pods).",
+                            Job.Metadata.Name,
+                            Job.Status.Active
+                        );
+                    }
 
                     break;
                 }
@@ -421,7 +456,7 @@ namespace DaaSDemo.Provisioning.Actors
                     string databaseName;
                     Job.Metadata.Labels.TryGetValue("cloud.dimensiondata.daas.database", out databaseName);
 
-                    Log.Info("Timed out after waiting {JobCompletionTimeout} for Job {JobName} to complete.", JobCompletionTimeout, jobName);
+                    Log.Info("Timed out after waiting {JobCompletionTimeout} for previous Job {JobName} to complete.", JobCompletionTimeout, jobName);
                     
                     Job = await KubeClient.JobsV1.GetByName(jobName);
                     if (Job != null)
@@ -460,7 +495,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void StartPolling()
         {
-            Log.Info("Starting the polling and timeout signals...");
+            Log.Debug("Starting the polling and timeout signals...");
 
             if (_pollCancellation != null || _timeoutCancellation != null)
             {
@@ -484,7 +519,7 @@ namespace DaaSDemo.Provisioning.Actors
                 sender: Self
             );
 
-            Log.Info("The polling and timeout signals have been started.");
+            Log.Debug("The polling and timeout signals have been started.");
         }
 
         /// <summary>
@@ -495,7 +530,7 @@ namespace DaaSDemo.Provisioning.Actors
             if (_timeoutCancellation == null && _pollCancellation == null)
                 return; // Nothing to do.
 
-            Log.Info("Stopping the polling and / or timeout signals...");
+            Log.Debug("Stopping the polling and / or timeout signals...");
 
             _timeoutCancellation?.Cancel();
             _timeoutCancellation = null;
@@ -503,7 +538,7 @@ namespace DaaSDemo.Provisioning.Actors
             _pollCancellation?.Cancel();
             _pollCancellation = null;
 
-            Log.Info("The polling and / or timeout have been stopped.");
+            Log.Debug("The polling and / or timeout have been stopped.");
         }
 
         /// <summary>
