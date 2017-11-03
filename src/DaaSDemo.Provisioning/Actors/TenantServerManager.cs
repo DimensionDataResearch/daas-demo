@@ -126,7 +126,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void Ready()
         {
-            Log.Info("Ready to process requests for server {ServerId} to complete.", _serverId);
+            Log.Info("Ready to process requests for server {ServerId}.", _serverId);
 
             ReceiveAsync<DatabaseServer>(async databaseServer =>
             {
