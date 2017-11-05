@@ -3,7 +3,7 @@
 # Note that, for now, 1.12.x is the latest version of Docker officially supported by Kubernetes.
 #
 # Package version becomes "{{docker_version}}~{{docker_version_distro}}"
-docker_version: '1.12.3-0'
-docker_version_distro: 'xenial'
+docker_version: '1.12.6-0'
+docker_version_distro: 'ubuntu-trusty'
 
 docker_compose_version: '1.16.1'

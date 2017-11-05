@@ -14,7 +14,7 @@
   gather_facts: yes
   tasks:
     - name: check for compatible Unbuntu version
-      when: ansible_distribution_version | version_compare("16.04", "<")
+      when: ansible_distribution_version | version_compare("14.04", "<")
       fail:
         msg: >
           Your hosts don't appear to be running a compatible version of Unbuntu (they're running {{ ansible_distribution_version }}).
@@ -22,7 +22,7 @@
           continuing.
 
     - name: check for compatible kernel version
-      when: ansible_kernel | version_compare("4.4.0-72", "<")
+      when: ansible_kernel | version_compare("3.13.0", "<")
       fail:
         msg: >
           Your hosts don't appear to be running a compatible version of the

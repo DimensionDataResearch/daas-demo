@@ -16,7 +16,7 @@ variable "host_count"             { default = 3 }
 variable "storage_host_count"     { default = 1 }
 
 # The name of the image used to create the hosts.
-variable "image"                  { default = "Ubuntu 16.04 64-bit 2 CPU" }
+variable "image"                  { default = "Ubuntu 14.04 2 CPU" }
 
 variable "ssh_bootstrap_password" { }
 variable "ssh_public_key_file"    { default = "~/.ssh/id_rsa.pub" }
