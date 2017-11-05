@@ -27,3 +27,9 @@
   apt:
     name: python-pip
     state: present
+
+- name: install apt-transport-https
+  sudo: yes
+  apt:
+    name: apt-transport-https
+    state: present

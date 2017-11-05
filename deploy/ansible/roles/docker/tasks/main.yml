@@ -1,14 +1,20 @@
 ---
-- name: add GPG key for Docker packages
+- name: Add GPG key for Docker packages
   sudo: yes
-  apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=58118E89F3A912897C070ADBF76221572C52609D
+  apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 
 - name: add repo for Docker packages
   sudo: yes
   apt_repository:
-    repo: 'deb http://apt.dockerproject.org/repo ubuntu-trusty main'
+    repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial main'
     state: present
     update_cache: true
+
+- name: Install device-mapper packages
+  sudo: yes
+  yum:
+    name: device-mapper-libs
+    state: latest
 
 - name: detect kernel version
   command: uname -r
@@ -22,7 +28,7 @@
   with_items:
     - "linux-image-extra-{{uname_kernel_version.stdout}}"
     - linux-image-extra-virtual
-    - docker-engine
+    - docker-ce
 
 - name: enable docker
   sudo: yes

@@ -35,7 +35,7 @@ resource "ddcloud_server" "storage_host" {
 		speed				= "STANDARD"
 	}
 
-	image					= "Ubuntu 14.04 2 CPU"
+	image					= "${var.image}"
 
 	tag {
 		name                = "roles"

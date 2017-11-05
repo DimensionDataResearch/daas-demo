@@ -4,17 +4,8 @@
 - hosts: all
   roles:
     - common
-    - docker
   tags:
     - common
-
-- hosts: role=kube-host
-  vars:
-    agent_target_url: '' # Enter the target URL here (e.g. 'https://foo.bar.com/v1/scripts/XXXXX:YYY:XXX', as shown in the Rancher UI)
-  roles:
-    - rancher-agent
-  tags:
-    - rancher-agent
 
 - hosts: role=storage-host
   vars:
@@ -28,3 +19,17 @@
     - nfs
   tags:
     - storage
+
+- hosts: all
+  roles:
+    - docker
+  tags:
+    - docker
+
+- hosts: role=kube-host
+  vars:
+    agent_target_url: '' # Enter the target URL here (e.g. 'https://foo.bar.com/v1/scripts/XXXXX:YYY:XXX', as shown in the Rancher UI)
+  roles:
+    - rancher-agent
+  tags:
+    - rancher-agent
