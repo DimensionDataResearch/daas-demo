@@ -6,15 +6,9 @@
 - name: add repo for Docker packages
   sudo: yes
   apt_repository:
-    repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial main'
+    repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable'
     state: present
     update_cache: true
-
-- name: Install device-mapper packages
-  sudo: yes
-  yum:
-    name: device-mapper-libs
-    state: latest
 
 - name: detect kernel version
   command: uname -r
