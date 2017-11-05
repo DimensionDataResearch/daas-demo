@@ -33,3 +33,9 @@
   apt:
     name: apt-transport-https
     state: present
+
+- name: install CA certificates
+  sudo: yes
+  apt:
+    name: ca-certificates
+    state: present
