@@ -222,7 +222,7 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Update the server state in Kubernetes.
+        ///     Update the server state in Kubernetes to converge with desired state.
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
@@ -292,7 +292,15 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             await UpdateServerIngressDetails();
+            
+            UpdateDatabaseState();
+        }
 
+        /// <summary>
+        ///     Update the server's databases to converge with desired state.
+        /// </summary>
+        void UpdateDatabaseState()
+        {
             foreach (DatabaseInstance database in Currentstate.Databases)
             {
                 Log.Info("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
@@ -304,7 +312,7 @@ namespace DaaSDemo.Provisioning.Actors
                 if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
                 {
                     databaseManager = Context.ActorOf(
-                        Props.Create(() => new TenantDatabaseManager(_dataAccess)),
+                        Props.Create(() => new TenantDatabaseManager(Self, _dataAccess)),
                         name: TenantDatabaseManager.ActorName(database.Id)
                     );
                     Context.Watch(databaseManager);

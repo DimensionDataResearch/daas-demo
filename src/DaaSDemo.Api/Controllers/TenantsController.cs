@@ -4,6 +4,7 @@ using HTTPlease.Formatters.Json;
 using KubeNET.Swagger.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -16,7 +17,7 @@ namespace DaaSDemo.Api.Controllers
 {
     using Data;
     using Data.Models;
-    using Models;
+    using Models.Api;
 
     /// <summary>
     ///     Controller for the tenants API.
@@ -26,23 +27,35 @@ namespace DaaSDemo.Api.Controllers
         : Controller
     {
         /// <summary>
-        ///     The DaaS entity context.
-        /// </summary>
-        Entities _entities;
-
-        /// <summary>
         ///     Create a new tenants API controller.
         /// </summary>
         /// <param name="entities">
         ///     The DaaS entity context.
         /// </param>
-        public TenantsController(Entities entities)
+        /// <param name="logger">
+        ///     The controller's log facility.
+        /// </param>
+        public TenantsController(Entities entities, ILogger<TenantsController> logger)
         {
             if (entities == null)
                 throw new ArgumentNullException(nameof(entities));
+
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
             
-            _entities = entities;
+            Entities = entities;
+            Log = logger;
         }
+
+        /// <summary>
+        ///     The DaaS entity context.
+        /// </summary>
+        Entities Entities { get; }
+
+        /// <summary>
+        ///     The controller's log facility.
+        /// </summary>
+        ILogger Log { get; }
 
         /// <summary>
         ///     Get a tenant by Id.
@@ -53,7 +66,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}")]
         public IActionResult GetById(int tenantId)
         {
-            Tenant matchingTenant = _entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant matchingTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
             if (matchingTenant != null)
                 return Json(matchingTenant);
 
@@ -71,7 +84,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet]
         public IActionResult List()
         {
-            Tenant[] tenants = _entities.Tenants.OrderBy(tenant => tenant.Name).ToArray();
+            Tenant[] tenants = Entities.Tenants.OrderBy(tenant => tenant.Name).ToArray();
 
             return Json(tenants);
         }
@@ -92,8 +105,8 @@ namespace DaaSDemo.Api.Controllers
             {
                 Name = newTenant.Name
             };
-            _entities.Tenants.Add(tenant);
-            _entities.SaveChanges();
+            Entities.Tenants.Add(tenant);
+            Entities.SaveChanges();
 
             return Json(tenant);
         }
@@ -107,7 +120,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/server")]
         public IActionResult GetServer(int tenantId)
         {
-            DatabaseServer databaseServer = _entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
             if (databaseServer == null)
             {
                 return NotFound(new
@@ -133,7 +146,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId:int}/server")]
         public IActionResult CreateServer(int tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
         {
-            DatabaseServer existingServer = _entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer existingServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
             if (existingServer != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new
@@ -145,7 +158,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            Tenant ownerTenant = _entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -167,8 +180,8 @@ namespace DaaSDemo.Api.Controllers
                 Action = ProvisioningAction.Provision,
                 Status = ProvisioningStatus.Pending
             };
-            _entities.DatabaseServers.Add(databaseServer);
-            _entities.SaveChanges();
+            Entities.DatabaseServers.Add(databaseServer);
+            Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -187,7 +200,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpDelete("{tenantId:int}/server")]
         public IActionResult DestroyServer(int tenantId)
         {
-            DatabaseServer targetServer = _entities.DatabaseServers.FirstOrDefault(
+            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(
                 server => server.TenantId == tenantId
             );
 
@@ -202,7 +215,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            if (_entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
+            if (Entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new
                 {
@@ -231,7 +244,7 @@ namespace DaaSDemo.Api.Controllers
             }
 
             targetServer.Action = ProvisioningAction.Deprovision;
-            _entities.SaveChanges();
+            Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -250,7 +263,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/databases")]
         public IActionResult GetDatabases(int tenantId)
         {
-            DatabaseServer databaseServer = _entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
             if (databaseServer == null)
             {
                 return NotFound(new
@@ -261,7 +274,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            Tenant ownerTenant = _entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -273,7 +286,7 @@ namespace DaaSDemo.Api.Controllers
             }
 
             DatabaseInstanceDetail[] databases = 
-                _entities.DatabaseInstances.Where(
+                Entities.DatabaseInstances.Where(
                     database => database.DatabaseServerId == databaseServer.Id
                 )
                 .AsEnumerable()
@@ -295,7 +308,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId:int}/databases")]
         public IActionResult CreateDatabase(int tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
-            Tenant ownerTenant = _entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -306,7 +319,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer databaseServer = _entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
             if (databaseServer == null)
             {
                 return NotFound(new
@@ -320,7 +333,7 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            DatabaseInstance existingDatabase = _entities.DatabaseInstances.FirstOrDefault(
+            DatabaseInstance existingDatabase = Entities.DatabaseInstances.FirstOrDefault(
                 databaseInstance => databaseInstance.DatabaseServerId == databaseServer.Id && databaseInstance.Name == newDatabase.Name
             );
             if (existingDatabase != null)
@@ -343,8 +356,8 @@ namespace DaaSDemo.Api.Controllers
                 Action = ProvisioningAction.Provision
             };
 
-            _entities.DatabaseInstances.Add(database);
-            _entities.SaveChanges();
+            Entities.DatabaseInstances.Add(database);
+            Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {

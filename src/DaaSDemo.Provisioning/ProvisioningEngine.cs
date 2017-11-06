@@ -49,7 +49,7 @@ namespace DaaSDemo.Provisioning
         {
             _actorSystem = Boot.Up(_configuration);
 
-            DatabaseWatcher = _actorSystem.ActorOf(
+            DataAccess = _actorSystem.ActorOf(
                 Props.Create<Actors.DataAccess>(),
                 name: Actors.DataAccess.ActorName
             );
@@ -58,6 +58,6 @@ namespace DaaSDemo.Provisioning
         /// <summary>
         ///     The <see cref="Actors.DataAccess"/> actor.
         /// </summary>
-        public IActorRef DatabaseWatcher { get; private set; }
+        public IActorRef DataAccess { get; private set; }
     }
 }

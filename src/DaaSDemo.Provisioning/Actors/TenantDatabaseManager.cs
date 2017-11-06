@@ -25,6 +25,11 @@ namespace DaaSDemo.Provisioning.Actors
         : ReceiveActorEx
     {
         /// <summary>
+        ///     A reference to the <see cref="TenantServerManager"/> actor.
+        /// </summary>
+        readonly IActorRef _serverManager;
+
+        /// <summary>
         ///     A reference to the <see cref="DataAccess"/> actor.
         /// </summary>
         readonly IActorRef _dataAccess;
@@ -42,14 +47,21 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="TenantDatabaseManager"/>.
         /// </summary>
+        /// <param name="serverManager">
+        ///     A reference to the <see cref="TenantServerManager"/> actor.
+        /// </param>
         /// <param name="dataAccess">
         ///     A reference to the <see cref="DataAccess"/> actor.
         /// </param>
-        public TenantDatabaseManager(IActorRef dataAccess)
+        public TenantDatabaseManager(IActorRef serverManager, IActorRef dataAccess)
         {
+            if (serverManager == null)
+                throw new ArgumentNullException(nameof(serverManager));
+
             if (dataAccess == null)
                 throw new ArgumentNullException(nameof(dataAccess));
 
+            _serverManager = serverManager;
             _dataAccess = dataAccess;
 
             ReceiveAsync<DatabaseInstance>(async database =>

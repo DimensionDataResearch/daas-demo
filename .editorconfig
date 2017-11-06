@@ -6,10 +6,13 @@ indent_size = 4
 end_of_line = crlf
 charset = utf-8
 trim_trailing_whitespace = false
-insert_final_newline = false
+insert_final_newline = true
+
+[*.{json,yml}]
+indent_size = 2
 
 [*.sh]
 end_of_line = lf
 
-[*.{csproj,yml}]
+[*.{csproj,props,targets,tasks}]
 indent_size = 2
