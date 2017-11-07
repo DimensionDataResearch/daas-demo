@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Security;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 
@@ -134,17 +136,33 @@ namespace DaaSDemo.KubeClient
         /// </remarks>
         public static KubeApiClient CreateFromPodServiceAccount()
         {
-            var caCertificate = new X509Certificate2(
+            var kubeCACertificate = new X509Certificate2(
                 File.ReadAllBytes("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
             );
 
             HttpClientHandler clientHandler = new HttpClientHandler
             {
-                ServerCertificateCustomValidationCallback = (request, certificate, _, errors) =>
+                ServerCertificateCustomValidationCallback = (request, certificate, chain, sslPolicyErrors) =>
                 {
-                    // TODO: Work out how to verify remote certificate (X509Chain doesn't seem to work correctly on Linux).
+                    if (sslPolicyErrors != SslPolicyErrors.RemoteCertificateChainErrors)
+                        return false;
 
-                    return true;
+                    try
+                    {
+                        X509Chain kubeChain = new X509Chain();
+                        kubeChain.ChainPolicy.ExtraStore.Add(kubeCACertificate);
+                        kubeChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+                        kubeChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                        
+                        return kubeChain.Build(certificate);
+                    }
+                    catch (Exception chainException)
+                    {
+                        Debug.WriteLine(chainException);
+                        Console.WriteLine(chainException);
+
+                        return false;
+                    }
                 }
             };
 
