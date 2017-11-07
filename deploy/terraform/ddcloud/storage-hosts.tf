@@ -35,12 +35,28 @@ resource "ddcloud_server" "storage_host" {
 		speed				= "STANDARD"
 	}
 
-	image					= "Ubuntu 14.04 2 CPU"
+	image					= "${var.image}"
 
 	tag {
 		name                = "roles"
 		value				= "storage-host"
 	}
+}
+
+output "storage_host" {
+    value = [
+        "${ddcloud_server.storage_host.*.name}"
+    ]
+}
+output "storage_host_ipv4_private" {
+    value = [
+        "${ddcloud_server.storage_host.*.primary_adapter_ipv4}"
+    ]
+}
+output "storage_host_ipv4_public" {
+    value = [
+        "${ddcloud_nat.storage_host.*.public_ipv4}"
+    ]
 }
 
 # The host must be publicly accessible for provisioning.

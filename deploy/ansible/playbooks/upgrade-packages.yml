@@ -3,6 +3,10 @@
   gather_facts: no
   tasks:
 
+  - name: install aptitude
+    sudo: yes
+    command: apt-get install -y aptitude
+
   - name: clean apt
     sudo: yes
     command: apt-get clean

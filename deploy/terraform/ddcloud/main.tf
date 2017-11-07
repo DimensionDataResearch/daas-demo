@@ -15,6 +15,9 @@ variable "host_count"             { default = 3 }
 # The number of storage hosts to deploy (leave this as 1 unless you're planning on deploying something like Gluster or Ceph).
 variable "storage_host_count"     { default = 1 }
 
+# The name of the image used to create the hosts.
+variable "image"                  { default = "Ubuntu 14.04 2 CPU" }
+
 variable "ssh_bootstrap_password" { }
 variable "ssh_public_key_file"    { default = "~/.ssh/id_rsa.pub" }
 variable "admin_client_ips"       { type = "list" }

@@ -17,15 +17,14 @@
       when: ansible_distribution_version | version_compare("14.04", "<")
       fail:
         msg: >
-          Your hosts don't appear to be running a compatible version of Unbuntu.
+          Your hosts don't appear to be running a compatible version of Unbuntu (they're running {{ ansible_distribution_version }}).
           Please run the playbook playbooks/upgrade-packages.yml before
           continuing.
 
     - name: check for compatible kernel version
-      when: >
-        ansible_kernel | version_compare("3.10.0-327", "<")
+      when: ansible_kernel | version_compare("3.13.0", "<")
       fail:
         msg: >
           Your hosts don't appear to be running a compatible version of the
-          Linux kernel. Please run the playbook playbooks/upgrade-packages.yml
+          Linux kernel (they're running {{ ansible_kernel }}). Please run the playbook playbooks/upgrade-packages.yml
           before continuing.

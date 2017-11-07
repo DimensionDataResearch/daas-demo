@@ -27,3 +27,15 @@
   apt:
     name: python-pip
     state: present
+
+- name: install apt-transport-https
+  sudo: yes
+  apt:
+    name: apt-transport-https
+    state: present
+
+- name: install CA certificates
+  sudo: yes
+  apt:
+    name: ca-certificates
+    state: present
