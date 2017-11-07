@@ -1,3 +1,6 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
 namespace DaaSDemo.Models.Sql
 {
     /// <summary>
@@ -8,16 +11,19 @@ namespace DaaSDemo.Models.Sql
         /// <summary>
         ///     The Id of the tenant server on which the command is to be executed.
         /// </summary>
+        [Range(1, Int32.MaxValue)]
         public int ServerId { get; set; }
 
         /// <summary>
         ///     The Id of the database in which the command is to be executed, or 0 for the master database.
         /// </summary>
+        [Range(0, Int32.MaxValue)]
         public int DatabaseId { get; set; }
 
         /// <summary>
         ///     The T-SQL to execute.
         /// </summary>
+        [Required(AllowEmptyStrings = false)]
         public string Sql { get; set; }
 
         // TODO: Add support for parameters.

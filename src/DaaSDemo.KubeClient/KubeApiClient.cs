@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
@@ -141,10 +142,9 @@ namespace DaaSDemo.KubeClient
             {
                 ServerCertificateCustomValidationCallback = (request, certificate, _, errors) =>
                 {
-                    X509Chain chain = X509Chain.Create();
-                    chain.ChainPolicy.ExtraStore.Add(caCertificate);
-                    
-                    return chain.Build(certificate);
+                    // TODO: Work out how to verify remote certificate (X509Chain doesn't seem to work correctly on Linux).
+
+                    return true;
                 }
             };
 

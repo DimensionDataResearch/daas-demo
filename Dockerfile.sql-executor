@@ -27,6 +27,6 @@ WORKDIR /app
 COPY --from=build /out /app
 
 EXPOSE 5000
-ENV IN_KUBERNETES=0 PORT=5000 ASPNET_URLS=http://localhost:5000
+ENV IN_KUBERNETES=0 PORT=5000 ASPNETCORE_URLS=http://localhost:5000
 
 ENTRYPOINT [ "dotnet", "DaaSDemo.SqlExecutor.dll" ]

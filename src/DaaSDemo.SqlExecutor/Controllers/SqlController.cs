@@ -200,7 +200,6 @@ namespace DaaSDemo.SqlExecutor.Controllers
 
             var connectionStringBuilder = new SqlClient.SqlConnectionStringBuilder
             {
-                ["Async"] = "true",
                 DataSource = $"tcp:{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local,{serverService.Spec.Ports[0].Port}",
             };
 
