@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DaaSDemo.KubeClient
 {
@@ -114,6 +116,47 @@ namespace DaaSDemo.KubeClient
                         Authorization = new AuthenticationHeaderValue(
                             scheme: "Bearer",
                             parameter: accessToken
+                        )
+                    }
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="KubeApiClient"/> using pod-level configuration.
+        /// </summary>
+        /// <returns>
+        ///     The configured <see cref="KubeApiClient"/>.
+        /// </returns>
+        /// <remarks>
+        ///     Only works from within a container running in a Kubernetes Pod.
+        /// </remarks>
+        public static KubeApiClient CreateFromPodServiceAccount()
+        {
+            var caCertificate = new X509Certificate2(
+                File.ReadAllBytes("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+            );
+
+            HttpClientHandler clientHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (request, certificate, _, errors) =>
+                {
+                    X509Chain chain = X509Chain.Create();
+                    chain.ChainPolicy.ExtraStore.Add(caCertificate);
+                    
+                    return chain.Build(certificate);
+                }
+            };
+
+            return new KubeApiClient(
+                new HttpClient(clientHandler)
+                {
+                    BaseAddress = new Uri("https://kubernetes/"),
+                    DefaultRequestHeaders =
+                    {
+                        Authorization = new AuthenticationHeaderValue(
+                            scheme: "Bearer",
+                            parameter: File.ReadAllText("/var/run/secrets/kubernetes.io/serviceaccount/token")
                         )
                     }
                 }

@@ -53,12 +53,9 @@ namespace DaaSDemo.SqlExecutor
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {
-                    string connectionString = Configuration.GetValue<string>("Database:ConnectionString");
-
-                    entities.UseSqlServer(connectionString, sqlServer =>
-                    {
-                        sqlServer.MigrationsAssembly("DaaSDemo.Api");
-                    });
+                    entities.UseSqlServer(
+                        connectionString: Configuration.GetValue<string>("Database:ConnectionString")
+                    );
                 });
 
             services.AddMvc()
@@ -73,12 +70,25 @@ namespace DaaSDemo.SqlExecutor
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
 
-            services.AddSingleton<KubeClient.KubeApiClient>(
-                serviceProvider => KubeClient.KubeApiClient.Create(
-                    endPointUri: new Uri(Configuration["Kubernetes:ApiEndPoint"]),
-                    accessToken: Configuration["Kubernetes:Token"]
-                )
-            );
+            if (Environment.GetEnvironmentVariable("IN_KUBERNETES") == "1")
+            {
+                // When running inside Kubernetes, use pod-level service account (e.g. access token from mounted Secret).
+                services.AddSingleton<KubeClient.KubeApiClient>(
+                    serviceProvider => KubeClient.KubeApiClient.CreateFromPodServiceAccount()
+                );
+            }
+            else
+            {
+                // For debugging purposes only.
+                services.AddSingleton<KubeClient.KubeApiClient>(
+                    serviceProvider => KubeClient.KubeApiClient.Create(
+                        endPointUri: new Uri(
+                            Configuration.GetValue<string>("Kubernetes:ApiEndPoint")
+                        ),
+                        accessToken: Configuration.GetValue<string>("Kubernetes:Token")
+                    )
+                );
+            }
         }
 
         /// <summary>
