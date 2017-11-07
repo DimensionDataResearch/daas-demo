@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\lib\KubeNet\KubeNET\Fixes\*.cs" />
-    <Compile Include="..\..\lib\KubeNet\KubeNET\Swagger\Model\*.cs" />
+    <Compile Include="..\..\lib\KubeNET\KubeNET\Fixes\*.cs" />
+    <Compile Include="..\..\lib\KubeNET\KubeNET\Swagger\Model\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

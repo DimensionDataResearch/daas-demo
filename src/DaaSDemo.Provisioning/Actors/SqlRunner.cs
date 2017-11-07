@@ -297,7 +297,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     string jobName = Job.Metadata.Name;
                     
-                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    Job = await KubeClient.JobsV1.Get(jobName);
                     if (Job == null)
                     {
                         Log.Info("Job {JobName} not found; will treat as failed.", jobName);
@@ -360,7 +360,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     Log.Info("Timed out after waiting {JobCompletionTimeout} for current T-SQL Job {JobName} to complete.", JobCompletionTimeout, jobName);
                     
-                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    Job = await KubeClient.JobsV1.Get(jobName);
                     if (Job != null)
                     {
                         Log.Info("Deleting Job {JobName}...", jobName);
@@ -413,7 +413,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     string jobName = Job.Metadata.Name;
                     
-                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    Job = await KubeClient.JobsV1.Get(jobName);
                     if (Job == null)
                     {
                         Log.Info("Job {JobName} not found; will treat as completed.", jobName);
@@ -458,7 +458,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     Log.Info("Timed out after waiting {JobCompletionTimeout} for previous Job {JobName} to complete.", JobCompletionTimeout, jobName);
                     
-                    Job = await KubeClient.JobsV1.GetByName(jobName);
+                    Job = await KubeClient.JobsV1.Get(jobName);
                     if (Job != null)
                     {
                         Log.Info("Deleting Job {JobName}...", jobName);
@@ -551,7 +551,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             string jobName = KubeResources.GetJobName(CurrentRequest, Server);
 
-            return await KubeClient.JobsV1.GetByName(jobName);
+            return await KubeClient.JobsV1.Get(jobName);
         }
 
         /// <summary>
@@ -581,7 +581,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Secret> FindSecret()
         {
-            return await KubeClient.SecretsV1.GetByName(
+            return await KubeClient.SecretsV1.Get(
                 KubeResources.GetJobName(CurrentRequest, Server)
             );
         }
@@ -712,7 +712,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1ConfigMap> FindConfigMap()
         {
-            return await KubeClient.ConfigMapsV1.GetByName(
+            return await KubeClient.ConfigMapsV1.Get(
                 name: KubeResources.GetJobName(CurrentRequest, Server)
             );
         }

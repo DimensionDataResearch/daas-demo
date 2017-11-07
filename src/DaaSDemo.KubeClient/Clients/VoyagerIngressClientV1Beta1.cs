@@ -74,7 +74,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Beta1VoyagerIngress"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Beta1VoyagerIngress> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Beta1VoyagerIngress> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));

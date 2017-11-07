@@ -84,6 +84,18 @@ namespace DaaSDemo.SqlExecutor.Controllers
             var result = new CommandResult();
 
             string connectionString = await GetConnectionString(command);
+            if (connectionString == null)
+            {
+                result.ResultCode = -1;
+                result.Errors.Add(new SqlError
+                {
+                    Kind = SqlErrorKind.Infrastructure,
+                    Message = $"Unable to determine connection settings for database {command.DatabaseId} in server {command.ServerId}."
+                });
+
+                return BadRequest(result);
+            }
+
             using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))
             {
                 await sqlConnection.OpenAsync();
@@ -105,7 +117,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     }
                     catch (SqlClient.SqlException sqlException)
                     {
-                        Log.LogError(sqlException, "Unexpected error while executing T-SQL: {ErrorMessage}", sqlException.Message);
+                        Log.LogError(sqlException, "Error while executing T-SQL: {ErrorMessage}", sqlException.Message);
 
                         result.ResultCode = -1;
                         result.Errors.AddRange(
@@ -123,6 +135,17 @@ namespace DaaSDemo.SqlExecutor.Controllers
                                 }
                             )
                         );
+                    }
+                    catch (Exception unexpectedException)
+                    {
+                        Log.LogError(unexpectedException, "Unexpected error while executing T-SQL: {ErrorMessage}", unexpectedException.Message);
+
+                        result.ResultCode = -1;
+                        result.Errors.Add(new SqlError
+                        {
+                            Kind = SqlErrorKind.Infrastructure,
+                            Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
+                        });
                     }
                 }
             }
@@ -144,17 +167,36 @@ namespace DaaSDemo.SqlExecutor.Controllers
             if (command == null)
                 throw new ArgumentNullException(nameof(command));
 
+            Log.LogInformation("Determining connection string for database {DatabaseId} in server {ServerId}...",
+                command.DatabaseId,
+                command.ServerId
+            );
+
             DatabaseServer targetServer = await Entities.DatabaseServers.FirstOrDefaultAsync(
                 server => server.Id == command.ServerId
             );
             if (targetServer == null)
+            {
+                Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server not found).",
+                    command.DatabaseId,
+                    command.ServerId
+                );
+
                 return null;
+            }
 
             V1Service serverService = await KubeClient.ServicesV1.Get(
                 name: $"sql-server-{command.ServerId}-service"
             );
             if (serverService == null)
+            {
+                Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server's associated Kubernetes Service not found).",
+                    command.DatabaseId,
+                    command.ServerId
+                );
+
                 return null;
+            }
 
             var connectionStringBuilder = new SqlClient.SqlConnectionStringBuilder
             {
@@ -168,7 +210,14 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     database => database.Id == command.DatabaseId
                 );
                 if (targetDatabase == null)
+                {
+                    Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (database not found).",
+                        command.DatabaseId,
+                        command.ServerId
+                    );
+
                     return null;
+                }
                     
                 connectionStringBuilder.InitialCatalog = targetDatabase.Name;
 
@@ -190,6 +239,13 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 connectionStringBuilder.UserID = "sa";
                 connectionStringBuilder.Password = targetServer.AdminPassword;
             }
+
+            Log.LogInformation("Successfully determined connection string for database {DatabaseId} ({DatabaseName}) in server {ServerId} ({ServerSqlName}).",
+                command.DatabaseId,
+                connectionStringBuilder.InitialCatalog,
+                command.ServerId,
+                connectionStringBuilder.DataSource
+            );
 
             return connectionStringBuilder.ConnectionString;
         }

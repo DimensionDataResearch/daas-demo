@@ -74,7 +74,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1ReplicationController"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ReplicationController> GetByName(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1ReplicationController> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
