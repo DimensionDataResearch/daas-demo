@@ -136,6 +136,10 @@ namespace DaaSDemo.KubeClient
         /// </remarks>
         public static KubeApiClient CreateFromPodServiceAccount()
         {
+            string kubeServiceHost = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
+            if (String.IsNullOrWhiteSpace(kubeServiceHost))
+                throw new InvalidOperationException("KubeApiClient.CreateFromPodServiceAccount can only be called when running in a Kubernetes Pod (KUBERNETES_SERVICE_HOST environment variable is not defined).");
+
             var kubeCACertificate = new X509Certificate2(
                 File.ReadAllBytes("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
             );
@@ -169,7 +173,7 @@ namespace DaaSDemo.KubeClient
             return new KubeApiClient(
                 new HttpClient(clientHandler)
                 {
-                    BaseAddress = new Uri("https://kubernetes/"),
+                    BaseAddress = new Uri($"https://kubernetes/"),
                     DefaultRequestHeaders =
                     {
                         Authorization = new AuthenticationHeaderValue(
