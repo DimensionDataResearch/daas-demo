@@ -32,19 +32,25 @@ namespace DaaSDemo.Provisioning
                 daas.db.connection-string = ""{connectionString}""
             ");
 
-            string apiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];
-            string apiToken = appConfiguration["Kubernetes:Token"];
+            string kubeApiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];
+            string kubeApiToken = appConfiguration["Kubernetes:Token"];
             string volumeClaimName = appConfiguration["Kubernetes:VolumeClaimName"];
             Config kubeConfig = ConfigurationFactory.ParseString($@"
-                daas.kube.api-endpoint = ""{apiEndpoint}""
-                daas.kube.api-token = ""{apiToken}""
+                daas.kube.api-endpoint = ""{kubeApiEndpoint}""
+                daas.kube.api-token = ""{kubeApiToken}""
                 daas.kube.volume-claim-name = ""{volumeClaimName}""
+            ");
+
+            string sqlApiEndPoint = appConfiguration["SQL:ApiEndPoint"];
+            Config sqlConfig = ConfigurationFactory.ParseString($@"
+                daas.sql.api-endpoint = ""{sqlApiEndPoint}""
             ");
 
             return ActorSystem.Create("daas-demo",
                 BaseConfiguration
                     .WithFallback(databaseConfig)
                     .WithFallback(kubeConfig)
+                    .WithFallback(sqlConfig)
             );
         }
     }
