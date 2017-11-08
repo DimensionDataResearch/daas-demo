@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace DaaSDemo.Provisioning
@@ -17,27 +18,23 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The T-SQL.
         /// </returns>
-        public static string ConfigureServerMemory(int maxMemoryMB)
+        public static IEnumerable<string> ConfigureServerMemory(int maxMemoryMB)
         {
-            return $@"
-                Use [master];
+            yield return "Use [master];";
 
-                Go
-
+            yield return @"
                 Exec sys.sp_configure N'show advanced options', N'1'
                     Reconfigure With Override;
-                
-                Go
+            ";
 
+            yield return $@"
                 Exec sys.sp_configure N'max server memory (MB)', N'{maxMemoryMB}'
                     Reconfigure With Override;
-                
-                Go
+            ";
 
+            yield return @"
                 Exec sys.sp_configure N'show advanced options', N'0'
                     Reconfigure With Override;
-
-                Go
             ";
         }
 

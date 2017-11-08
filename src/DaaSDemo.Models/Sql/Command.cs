@@ -1,4 +1,6 @@
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace DaaSDemo.Models.Sql
@@ -24,7 +26,8 @@ namespace DaaSDemo.Models.Sql
         ///     The T-SQL to execute.
         /// </summary>
         [Required(AllowEmptyStrings = false)]
-        public string Sql { get; set; }
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public List<string> Sql { get; set; } = new List<string>();
 
         // TODO: Add support for parameters.
 

@@ -105,48 +105,63 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     result.Messages.Add(args.Message);
                 };
 
-                using (var sqlCommand = new SqlClient.SqlCommand(command.Sql, sqlConnection))
+                for (int batchIndex = 0; batchIndex < command.Sql.Count; batchIndex++)
                 {
-                    sqlCommand.CommandType = CommandType.Text;
+                    string sql = command.Sql[batchIndex];
 
-                    // TODO: Add support for parameters.
+                    Log.LogInformation("Executing T-SQL batch {BatchNumber} of {BatchCount}...",
+                        batchIndex + 1,
+                        command.Sql.Count
+                    );
 
-                    try
+                    using (var sqlCommand = new SqlClient.SqlCommand(sql, sqlConnection))
                     {
-                        result.ResultCode = await sqlCommand.ExecuteNonQueryAsync();
-                    }
-                    catch (SqlClient.SqlException sqlException)
-                    {
-                        Log.LogError(sqlException, "Error while executing T-SQL: {ErrorMessage}", sqlException.Message);
+                        sqlCommand.CommandType = CommandType.Text;
 
-                        result.ResultCode = -1;
-                        result.Errors.AddRange(
-                            sqlException.Errors.Cast<SqlClient.SqlError>().Select(
-                                error => new SqlError
-                                {
-                                    Kind = SqlErrorKind.TSql,
-                                    Message = error.Message,
-                                    Class = error.Class,
-                                    Number = error.Number,
-                                    State = error.State,
-                                    Procedure = error.Procedure,
-                                    Source = error.Source,
-                                    LineNumber = error.LineNumber
-                                }
-                            )
-                        );
-                    }
-                    catch (Exception unexpectedException)
-                    {
-                        Log.LogError(unexpectedException, "Unexpected error while executing T-SQL: {ErrorMessage}", unexpectedException.Message);
+                        // TODO: Add support for parameters.
 
-                        result.ResultCode = -1;
-                        result.Errors.Add(new SqlError
+                        try
                         {
-                            Kind = SqlErrorKind.Infrastructure,
-                            Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
-                        });
+                            result.ResultCode = await sqlCommand.ExecuteNonQueryAsync();
+                        }
+                        catch (SqlClient.SqlException sqlException)
+                        {
+                            Log.LogError(sqlException, "Error while executing T-SQL: {ErrorMessage}", sqlException.Message);
+
+                            result.ResultCode = -1;
+                            result.Errors.AddRange(
+                                sqlException.Errors.Cast<SqlClient.SqlError>().Select(
+                                    error => new SqlError
+                                    {
+                                        Kind = SqlErrorKind.TSql,
+                                        Message = error.Message,
+                                        Class = error.Class,
+                                        Number = error.Number,
+                                        State = error.State,
+                                        Procedure = error.Procedure,
+                                        Source = error.Source,
+                                        LineNumber = error.LineNumber
+                                    }
+                                )
+                            );
+                        }
+                        catch (Exception unexpectedException)
+                        {
+                            Log.LogError(unexpectedException, "Unexpected error while executing T-SQL: {ErrorMessage}", unexpectedException.Message);
+
+                            result.ResultCode = -1;
+                            result.Errors.Add(new SqlError
+                            {
+                                Kind = SqlErrorKind.Infrastructure,
+                                Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
+                            });
+                        }
                     }
+
+                    Log.LogInformation("Executed T-SQL batch {BatchNumber} of {BatchCount}.",
+                        batchIndex + 1,
+                        command.Sql.Count
+                    );
                 }
             }
 

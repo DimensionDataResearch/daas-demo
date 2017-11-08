@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.SqlExecutor.Client
 {
+    using System.Collections.Generic;
     using Models.Sql;
 
     /// <summary>
@@ -69,17 +70,23 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The command result.
         /// </returns>
-        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, string sql, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (sql == null)
+                throw new ArgumentNullException(nameof(sql));
+
+            var command = new Command
+            {
+                ServerId = serverId,
+                DatabaseId = databaseId,
+                ExecuteAsAdminUser = executeAsAdminUser
+            };
+            command.Sql.AddRange(sql);
+
             return
                 await Http.PostAsJsonAsync(Requests.Command,
-                    postBody: new Command
-                    {
-                        ServerId = serverId,
-                        DatabaseId = databaseId,
-                        Sql = sql,
-                        ExecuteAsAdminUser = executeAsAdminUser
-                    }
+                    postBody: command,
+                    cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<CommandResult, JObject>();
         }

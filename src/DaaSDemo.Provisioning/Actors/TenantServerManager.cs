@@ -194,7 +194,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                             Become(Ready);
                         }
-                        else if (replicationController.Status.ReadyReplicas == replicationController.Status.Replicas)
+                        else if (replicationController.Status.AvailableReplicas == replicationController.Status.Replicas)
                         {
                             SetProvisioningPhase(ServerProvisioningPhase.Service);
 
@@ -202,9 +202,9 @@ namespace DaaSDemo.Provisioning.Actors
                         }
                         else
                         {
-                            Log.Info("Server {ServerID} is not available yet ({ReadyReplicaCount} of {ReplicaCount} replicas are marked as ready).",
+                            Log.Info("Server {ServerID} is not available yet ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as ready).",
                                 _serverId,
-                                replicationController.Status.ReadyReplicas,
+                                replicationController.Status.AvailableReplicas ?? 0,
                                 replicationController.Status.Replicas
                             );
                         }
