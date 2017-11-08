@@ -7,9 +7,15 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reactive.Linq;
+using System.IO;
+using System.Reactive.Subjects;
+using Serilog;
 
 namespace DaaSDemo.KubeClient.Clients
 {
+    using Models;
+
     /// <summary>
     ///     The base class for Kubernetes resource API clients.
     /// </summary>
@@ -85,6 +91,87 @@ namespace DaaSDemo.KubeClient.Clients
 
                 return null;
             }
+        }
+
+        /// <summary>
+        ///     Get an <see cref="IObservable{T}"/> for <see cref="V1ResourceEvent{TResource}"/>s streamed from an HTTP GET request.
+        /// </summary>
+        /// <typeparam name="TResource">
+        ///     The resource type that the events relate to.
+        /// </typeparam>
+        /// <param name="request">
+        ///     The <see cref="HttpRequest"/> to execute.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="IObservable{T}"/>.
+        /// </returns>
+        protected IObservable<V1ResourceEvent<TResource>> ObserveEvents<TResource>(HttpRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            return ObserveLines(request).Select(
+                line => JsonConvert.DeserializeObject<V1ResourceEvent<TResource>>(line, SerializerSettings)
+            );
+        }
+
+        /// <summary>
+        ///     Get an <see cref="IObservable{T}"/> for lines streamed from an HTTP GET request.
+        /// </summary>
+        /// <param name="request">
+        ///     The <see cref="HttpRequest"/> to execute.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="IObservable{T}"/>.
+        /// </returns>
+        protected IObservable<string> ObserveLines(HttpRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            
+            return Observable.Create<string>(async (subscriber, subscriptionCancellation) =>
+            {
+                try
+                {
+                    Log.Information("Requesting...");
+
+                    using (HttpResponseMessage responseMessage = await Http.GetStreamedAsync(request, subscriptionCancellation))
+                    {
+                        responseMessage.EnsureSuccessStatusCode();
+
+                        Log.Information("Streaming from {RequestUri}...", responseMessage.RequestMessage.RequestUri);
+
+                        using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync())
+                        using (StreamReader responseReader = new StreamReader(responseStream))
+                        {
+                            string line = await responseReader.ReadLineAsync();
+                            while (line != null)
+                            {
+                                Log.Information("Got line.");
+
+                                subscriber.OnNext(line);
+
+                                line = await responseReader.ReadLineAsync();
+                            }
+                        }
+                    }
+                }
+                catch (OperationCanceledException operationCanceled)
+                {
+                    if (operationCanceled.CancellationToken == subscriptionCancellation)
+                        return; // Not an error.
+
+                    subscriber.OnError(operationCanceled);
+                }
+                catch (Exception exception)
+                {
+                    subscriber.OnError(exception);
+                }
+                finally
+                {
+                    subscriber.OnCompleted();
+                }
+            });
         }
     }
 }

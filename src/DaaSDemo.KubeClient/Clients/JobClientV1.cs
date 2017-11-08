@@ -60,6 +60,30 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
+        ///     Watch for events relating to Jobs.
+        /// </summary>
+        /// <param name="labelSelector">
+        ///     An optional Kubernetes label selector expression used to filter the Jobs.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IObservable{T}"/> representing the event stream.
+        /// </returns>
+        public IObservable<V1ResourceEvent<V1Job>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        {
+            return ObserveEvents<V1Job>(
+                Requests.Collection.WithTemplateParameters(new
+                {
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LabelSelector = labelSelector,
+                    Watch = true
+                })
+            );
+        }
+
+        /// <summary>
         ///     Get the Job with the specified name.
         /// </summary>
         /// <param name="name">
@@ -164,7 +188,7 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level Job (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/batch/v1/namespaces/{Namespace}/jobs?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Job (v1) request.

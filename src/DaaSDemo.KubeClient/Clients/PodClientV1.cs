@@ -60,6 +60,30 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
+        ///     Watch for events relating to Pods.
+        /// </summary>
+        /// <param name="labelSelector">
+        ///     An optional Kubernetes label selector expression used to filter the Pods.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IObservable{T}"/> representing the event stream.
+        /// </returns>
+        public IObservable<V1ResourceEvent<V1Pod>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        {
+            return ObserveEvents<V1Pod>(
+                Requests.Collection.WithTemplateParameters(new
+                {
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LabelSelector = labelSelector,
+                    Watch = true
+                })
+            );
+        }
+
+        /// <summary>
         ///     Get the Pod with the specified name.
         /// </summary>
         /// <param name="name">
@@ -193,12 +217,12 @@ namespace DaaSDemo.KubeClient.Clients
         /// <summary>
         ///     Request templates for the Pods (v1) API.
         /// </summary>
-        static class Requests
+        public static class Requests
         {
             /// <summary>
             ///     A collection-level Pod (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Pod (v1) request.
