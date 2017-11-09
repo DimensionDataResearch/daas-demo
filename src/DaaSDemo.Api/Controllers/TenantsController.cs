@@ -192,6 +192,69 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
+        ///     Reconfigure / repair a tenant's database server.
+        /// </summary>
+        /// <param name="tenantId">
+        ///     The tenant Id.
+        /// </param>
+        [HttpPost("{tenantId:int}/server/reconfigure")]
+        public IActionResult ReconfigureServer(int tenantId)
+        {
+            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(
+                server => server.TenantId == tenantId
+            );
+
+            if (targetServer == null)
+            {
+                return NotFound(new
+                {
+                    Id = (string)null,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    Message = $"No database server found for tenant {tenantId}."
+                });
+            }
+
+            if (Entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
+            {
+                return StatusCode(StatusCodes.Status400BadRequest, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    RequestedAction = ProvisioningAction.Reconfigure,
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot de-provision database server {targetServer.Id} because it still hosts one or more databases. First de-provision these databases and then retry the operation."
+                });
+            }
+
+            if (targetServer.Action != ProvisioningAction.None)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    RequestedAction = ProvisioningAction.Reconfigure,
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot de-provision database server {targetServer.Id} because an action is already in progress for this server."
+                });
+            }
+
+            targetServer.Action = ProvisioningAction.Reconfigure;
+            Entities.SaveChanges();
+
+            return StatusCode(StatusCodes.Status202Accepted, new
+            {
+                Id = tenantId,
+                Message = $"Database server {targetServer.Id} queued for reconfiguration.",
+                EntityType = "DatabaseServer"
+            });
+        }
+
+        /// <summary>
         ///     Deprovision a tenant's database server.
         /// </summary>
         /// <param name="tenantId">

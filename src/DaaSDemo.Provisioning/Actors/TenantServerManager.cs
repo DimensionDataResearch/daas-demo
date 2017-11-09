@@ -182,7 +182,6 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     case Signal.PollReplicationController:
                     {
-                        // TODO: Check if replication controller is available yet.
                         V1ReplicationController replicationController = await FindReplicationController();
                         if (replicationController == null)
                         {
@@ -196,7 +195,13 @@ namespace DaaSDemo.Provisioning.Actors
                         }
                         else if (replicationController.Status.AvailableReplicas == replicationController.Status.Replicas)
                         {
-                            SetProvisioningPhase(ServerProvisioningPhase.Service);
+                            Log.Info("Server {ServerID} is now available ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as ready).",
+                                _serverId,
+                                replicationController.Status.AvailableReplicas ?? 0,
+                                replicationController.Status.Replicas
+                            );
+
+                            StartProvisioningPhase(ServerProvisioningPhase.Service);
 
                             Become(Ready);
                         }
@@ -261,6 +266,29 @@ namespace DaaSDemo.Provisioning.Actors
                     try
                     {
                         await ProvisionServer();
+                    }
+                    catch (Exception provisioningFailed)
+                    {
+                        Log.Error(provisioningFailed, "Failed to provision server {ServerId}.",
+                            CurrentState.Id
+                        );
+
+                        _dataAccess.Tell(
+                            new ServerProvisioningFailed(_serverId)
+                        );
+
+                        return;
+                    }
+
+                    break;
+                }
+                case ProvisioningAction.Reconfigure:
+                {
+                    Log.Info("Reconfiguring server {ServerId}...", CurrentState.Id);
+
+                    try
+                    {
+                        await ReconfigureServer();
                     }
                     catch (Exception provisioningFailed)
                     {
@@ -392,6 +420,8 @@ namespace DaaSDemo.Provisioning.Actors
                 case ServerProvisioningPhase.None:
                 {
                     await EnsureReplicationControllerPresent();
+                    
+                    StartProvisioningPhase(ServerProvisioningPhase.ReplicationController);
 
                     goto case ServerProvisioningPhase.ReplicationController;
                 }
@@ -407,17 +437,72 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     await InitialiseServerConfiguration();
 
+                    StartProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
+
                     goto case ServerProvisioningPhase.InitializeConfiguration;
                 }
                 case ServerProvisioningPhase.InitializeConfiguration:
                 {
                     await EnsureIngressPresent();
 
+                    StartProvisioningPhase(ServerProvisioningPhase.Ingress);
+
                     goto case ServerProvisioningPhase.Ingress;
                 }
                 case ServerProvisioningPhase.Ingress:
                 {
-                    SetProvisioningPhase(ServerProvisioningPhase.None);
+                    StartProvisioningPhase(ServerProvisioningPhase.None);
+
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Reconfigure an instance of SQL Server.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task ReconfigureServer()
+        {
+            switch (CurrentState.Phase)
+            {
+                case ServerProvisioningPhase.None:
+                {
+                    await EnsureReplicationControllerPresent();
+                    
+                    StartReconfigurationPhase(ServerProvisioningPhase.ReplicationController);
+
+                    goto case ServerProvisioningPhase.ReplicationController;
+                }
+                case ServerProvisioningPhase.ReplicationController:
+                {
+                    await EnsureServicePresent();
+
+                    Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
+
+                    break;
+                }
+                case ServerProvisioningPhase.Service:
+                {
+                    await InitialiseServerConfiguration();
+                    
+                    StartReconfigurationPhase(ServerProvisioningPhase.InitializeConfiguration);
+
+                    goto case ServerProvisioningPhase.InitializeConfiguration;
+                }
+                case ServerProvisioningPhase.InitializeConfiguration:
+                {
+                    await EnsureIngressPresent();
+                    
+                    StartReconfigurationPhase(ServerProvisioningPhase.Ingress);
+
+                    goto case ServerProvisioningPhase.Ingress;
+                }
+                case ServerProvisioningPhase.Ingress:
+                {
+                    StartReconfigurationPhase(ServerProvisioningPhase.None);
 
                     break;
                 }
@@ -438,11 +523,15 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     await EnsureReplicationControllerAbsent();
 
+                    StartDeprovisioningPhase(ServerProvisioningPhase.ReplicationController);
+
                     goto case ServerProvisioningPhase.ReplicationController;
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
                     await EnsureServiceAbsent();
+
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Service);
 
                     goto case ServerProvisioningPhase.Service;
                 }
@@ -450,11 +539,13 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     await EnsureIngressAbsent();
 
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Ingress);
+
                     goto case ServerProvisioningPhase.Ingress;
                 }
                 case ServerProvisioningPhase.Ingress:
                 {
-                    SetProvisioningPhase(ServerProvisioningPhase.None);
+                    StartDeprovisioningPhase(ServerProvisioningPhase.None);
 
                     break;
                 }
@@ -523,8 +614,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1ReplicationController> EnsureReplicationControllerPresent()
         {
-            SetProvisioningPhase(ServerProvisioningPhase.ReplicationController);
-
             V1ReplicationController existingController = await FindReplicationController();
             if (existingController != null)
             {
@@ -562,8 +651,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> EnsureReplicationControllerAbsent()
         {
-            SetDeprovisioningPhase(ServerProvisioningPhase.ReplicationController);
-
             V1ReplicationController controller = await FindReplicationController();
             if (controller == null)
                 return true;
@@ -608,8 +695,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Service> EnsureServicePresent()
         {
-            SetProvisioningPhase(ServerProvisioningPhase.Service);
-
             V1Service existingService = await FindService();
             if (existingService != null)
             {
@@ -645,8 +730,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> EnsureServiceAbsent()
         {
-            SetDeprovisioningPhase(ServerProvisioningPhase.Service);
-
             V1Service service = await FindService();
             if (service == null)
                 return true;
@@ -688,8 +771,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Beta1VoyagerIngress> EnsureIngressPresent()
         {
-            SetProvisioningPhase(ServerProvisioningPhase.Ingress);
-
             V1Beta1VoyagerIngress ingress = await FindIngress();
             if (ingress != null)
             {
@@ -725,8 +806,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> EnsureIngressAbsent()
         {
-            SetDeprovisioningPhase(ServerProvisioningPhase.Ingress);
-
             V1Beta1VoyagerIngress ingress = await FindIngress();
             if (ingress == null)
                 return true;
@@ -801,6 +880,12 @@ namespace DaaSDemo.Provisioning.Actors
                             new ServerProvisioned(_serverId)
                         );
                     }
+                    else if (CurrentState.Status == ProvisioningStatus.Reconfiguring)
+                    {
+                        _dataAccess.Tell(
+                            new ServerReconfigured(_serverId)
+                        );
+                    }
                 }
                 else
                 {
@@ -854,7 +939,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task InitialiseServerConfiguration()
         {
-            SetProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
+            StartProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
 
             Log.Info("Initialising configuration for server {ServerId}...", _serverId);
             
@@ -941,12 +1026,30 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="phase">
         ///     The current provisioning phase.
         /// </param>
-        void SetProvisioningPhase(ServerProvisioningPhase phase)
+        void StartProvisioningPhase(ServerProvisioningPhase phase)
         {
             CurrentState.Phase = phase;
             _dataAccess.Tell(
                 new ServerProvisioning(_serverId, phase)
             );
+
+            Log.Info("Completed provisioning phase {Phase} for server {ServerId}.", phase, _serverId);
+        }
+
+        /// <summary>
+        ///     Set and persist the current reconfiguration phase.
+        /// </summary>
+        /// <param name="phase">
+        ///     The current reconfiguration phase.
+        /// </param>
+        void StartReconfigurationPhase(ServerProvisioningPhase phase)
+        {
+            CurrentState.Phase = phase;
+            _dataAccess.Tell(
+                new ServerReconfiguring(_serverId, phase)
+            );
+
+            Log.Info("Completed reconfiguration phase {Phase} for server {ServerId}.", phase, _serverId);
         }
 
         /// <summary>
@@ -955,12 +1058,14 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="phase">
         ///     The current de-provisioning phase.
         /// </param>
-        void SetDeprovisioningPhase(ServerProvisioningPhase phase)
+        void StartDeprovisioningPhase(ServerProvisioningPhase phase)
         {
             CurrentState.Phase = phase;
             _dataAccess.Tell(
                 new ServerDeprovisioning(_serverId, phase)
             );
+
+            Log.Info("Completed de-provisioning phase {Phase} for server {ServerId}.", phase, _serverId);
         }
 
         /// <summary>
