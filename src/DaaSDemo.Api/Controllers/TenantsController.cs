@@ -382,8 +382,8 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
-            if (databaseServer == null)
+            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            if (targetServer == null)
             {
                 return NotFound(new
                 {
@@ -393,11 +393,24 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
+            if (targetServer.Status != ProvisioningStatus.Ready)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot create a database in server {targetServer.Id} because an action is already in progress for this server."
+                });
+            }
+
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             DatabaseInstance existingDatabase = Entities.DatabaseInstances.FirstOrDefault(
-                databaseInstance => databaseInstance.DatabaseServerId == databaseServer.Id && databaseInstance.Name == newDatabase.Name
+                databaseInstance => databaseInstance.DatabaseServerId == targetServer.Id && databaseInstance.Name == newDatabase.Name
             );
             if (existingDatabase != null)
             {
@@ -406,7 +419,7 @@ namespace DaaSDemo.Api.Controllers
                     Id = existingDatabase.Id,
                     Name = existingDatabase.Name,
                     EntityType = "Database",
-                    Message = $"Database '{existingDatabase.Name}' already exists on server '{databaseServer.Name}'."
+                    Message = $"Database '{existingDatabase.Name}' already exists on server '{targetServer.Name}'."
                 });
             }
 
@@ -415,7 +428,7 @@ namespace DaaSDemo.Api.Controllers
                 Name = newDatabase.Name,
                 DatabaseUser = newDatabase.DatabaseUser,
                 DatabasePassword = newDatabase.DatabasePassword,
-                DatabaseServerId = databaseServer.Id,
+                DatabaseServerId = targetServer.Id,
                 Action = ProvisioningAction.Provision
             };
 
@@ -426,7 +439,7 @@ namespace DaaSDemo.Api.Controllers
             {
                 Id = database.Id,
                 Name = database.Name,
-                Message = $"Database '{database.Name}' queued for creation on server '{databaseServer.Name}'."
+                Message = $"Database '{database.Name}' queued for creation on server '{targetServer.Name}'."
             });
         }
     }
