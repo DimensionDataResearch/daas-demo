@@ -34,6 +34,7 @@ namespace DaaSDemo.KubeClient
             SecretsV1 = new SecretClientV1(this);
             ConfigMapsV1 = new ConfigMapClientV1(this);
             PodsV1 = new PodClientV1(this);
+            DeploymentsV1Beta1 = new DeploymentClientV1Beta1(this);
             ReplicationControllersV1 = new ReplicationControllerClientV1(this);
             ServicesV1 = new ServiceClientV1(this);
             JobsV1 = new JobClientV1(this);
@@ -69,6 +70,11 @@ namespace DaaSDemo.KubeClient
         ///     The client for the Pods (v1) API.
         /// </summary>
         public PodClientV1 PodsV1 { get; }
+
+        /// <summary>
+        ///     The client for the Deployments (v1beta1) API.
+        /// </summary>
+        public DeploymentClientV1Beta1 DeploymentsV1Beta1 { get; }
 
         /// <summary>
         ///     The client for the ReplicationControllers (v1) API.
