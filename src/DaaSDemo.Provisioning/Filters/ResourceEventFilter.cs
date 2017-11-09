@@ -203,11 +203,11 @@ namespace DaaSDemo.Provisioning.Filters
         {
             if (metadata == null)
                 throw new ArgumentNullException(nameof(metadata));
-            
+
             return new ResourceEventFilter
             {
                 Name = metadata.Name,
-                LabelSelectors = metadata.Labels.ToImmutableDictionary()
+                LabelSelectors = metadata.Labels != null ? metadata.Labels.ToImmutableDictionary() : Empty.LabelSelectors
             };
         }
 
@@ -229,7 +229,7 @@ namespace DaaSDemo.Provisioning.Filters
                 throw new ArgumentNullException(nameof(labelSelectors));
             
             if (resourceLabels == null)
-                throw new ArgumentNullException(nameof(resourceLabels));
+                return labelSelectors.Count == 0;
             
             foreach (string label in labelSelectors.Keys)
             {
