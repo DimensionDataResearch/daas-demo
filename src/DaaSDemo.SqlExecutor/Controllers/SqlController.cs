@@ -118,7 +118,12 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     {
                         sqlCommand.CommandType = CommandType.Text;
 
-                        // TODO: Add support for parameters.
+                        foreach (Parameter parameter in command.Parameters)
+                        {
+                            sqlCommand.Parameters.Add(
+                                parameter.ToSqlParameter()
+                            );
+                        }
 
                         try
                         {
