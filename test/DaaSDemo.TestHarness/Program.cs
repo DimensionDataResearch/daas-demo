@@ -79,7 +79,9 @@ namespace DaaSDemo.TestHarness
                         });
                     });
 
-                    Thread.Sleep(10000);
+                    Log.Information("Running; press enter to terminate.");
+
+                    Console.ReadLine();
 
                     await system.Terminate();
                 }
