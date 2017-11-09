@@ -34,6 +34,7 @@ namespace DaaSDemo.Provisioning
             return new V1ReplicationControllerSpec
             {
                 Replicas = 1,
+                MinReadySeconds = 30,
                 Selector = new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName

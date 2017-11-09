@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: sql-executor
+spec:
+  replicas: 1
+  selector:
+    k8s-app: sql-executor
+  template:
+    metadata:
+      labels:
+        k8s-app: sql-executor
+    spec:
+      serviceAccountName: sql-executor
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: sql-executor
+        image: tintoy.azurecr.io/daas/sql-executor:1.0.0-dev
+        imagePullPolicy: Always
+        env:
+          - name: PORT
+            value: '5000'
+          - name: ASPNETCORE_URLS
+            value: 'http://*:5000'
+          - name: IN_KUBERNETES
+            value: '1'
+          - name: ASPNETCORE_DATABASE__CONNECTIONSTRING
+            valueFrom:
+              secretKeyRef:
+                name: sql-executor
+                key: connection_string
+        ports:
+          - containerPort: 5000
+      
+      imagePullSecrets:
+          - name: daas-registry

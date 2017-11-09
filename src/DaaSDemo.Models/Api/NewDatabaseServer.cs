@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace DaaSDemo.Api.Models
+namespace DaaSDemo.Models.Api
 {
     /// <summary>
     ///     Model for creation of a new <see cref="Data.Models.DatabaseServer"/>.
