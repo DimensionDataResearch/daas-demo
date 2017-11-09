@@ -60,6 +60,30 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
+        ///     Watch for events relating to Services.
+        /// </summary>
+        /// <param name="labelSelector">
+        ///     An optional Kubernetes label selector expression used to filter the Services.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IObservable{T}"/> representing the event stream.
+        /// </returns>
+        public IObservable<V1ResourceEvent<V1Service>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        {
+            return ObserveEvents<V1Service>(
+                Requests.Collection.WithTemplateParameters(new
+                {
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LabelSelector = labelSelector,
+                    Watch = true
+                })
+            );
+        }
+
+        /// <summary>
         ///     Get the Service with the specified name.
         /// </summary>
         /// <param name="name">
@@ -155,7 +179,7 @@ namespace DaaSDemo.KubeClient.Clients
             /// <summary>
             ///     A collection-level Service (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
 
             /// <summary>
             ///     A get-by-name Service (v1) request.
