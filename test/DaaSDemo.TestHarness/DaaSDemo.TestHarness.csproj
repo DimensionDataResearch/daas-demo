@@ -10,10 +10,13 @@
     <ProjectReference Include="..\..\src\DaaSDemo.Data\DaaSDemo.Data.csproj" />
     <ProjectReference Include="..\..\src\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
     <ProjectReference Include="..\..\src\DaaSDemo.Models\DaaSDemo.Models.csproj" />
+    <ProjectReference Include="..\..\src\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj" />
     <ProjectReference Include="..\..\src\DaaSDemo.SqlExecutor.Client\DaaSDemo.SqlExecutor.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Akka" Version="1.3.1" />
+    <PackageReference Include="Akka.Logger.Serilog" Version="1.3.0" />
     <PackageReference Include="HTTPlease" Version="1.0.0-rc1-0232" />
     <PackageReference Include="Serilog" Version="2.5.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />

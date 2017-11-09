@@ -1,4 +1,6 @@
-﻿using HTTPlease;
+﻿using Akka.Actor;
+using Akka.Actor.Dsl;
+using HTTPlease;
 using KubeNET.Swagger.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,9 +16,13 @@ using Serilog;
 
 namespace DaaSDemo.TestHarness
 {
+    using Akka.Configuration;
     using KubeClient;
     using KubeClient.Clients;
     using KubeClient.Models;
+    using Provisioning.Actors;
+    using Provisioning.Filters;
+    using Provisioning.Messages;
 
     /// <summary>
     ///     A general-purpose test harness.
@@ -31,8 +37,6 @@ namespace DaaSDemo.TestHarness
         /// </returns>
         static async Task AsyncMain()
         {
-            await Task.Yield(); // Remove this if our test is genuinely async.
-
             Uri endPointUri = new Uri(
                 Environment.GetEnvironmentVariable("KUBE_API_ENDPOINT")
             );
@@ -40,32 +44,45 @@ namespace DaaSDemo.TestHarness
 
             using (KubeApiClient kubeClient = KubeApiClient.Create(endPointUri, accessToken))
             {   
-                Log.Information("Preparing to stream from {ApiEndPoint}...",
-                    kubeClient.Http.BaseAddress
-                );
-
-                // AF: Note - watching ReplicationControllers does not work via Rancher API proxy (but does work via kubectl proxy).
-                IObservable<V1ResourceEvent<V1ReplicationController>> events = kubeClient.ReplicationControllersV1.WatchAll();
-                IDisposable subscription = events.Subscribe(
-                    onNext: eventData =>
-                    {
-                        Log.Information("Got {EventKind} event:\n{@Resource}", eventData.EventType, eventData.Resource);
-                    },
-                    onCompleted: () =>
-                    {
-                        Log.Information("End of stream.");
-                    },
-                    onError: error =>
-                    {
-                        Log.Error(error, "Error from event stream: {ErrorMessage}", error);
+                Config config = ConfigurationFactory.ParseString(@"
+                    akka {
+                        loglevel = INFO,
+                        loggers = [""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""],
+                        suppress-json-serializer-warning = true
                     }
-                );
+                ");
+                using (ActorSystem system = ActorSystem.Create("test-harness", config))
+                {
+                    IActorRef eventBusActor = system.ActorOf(Props.Create(
+                        () => new ReplicationControllerEvents(kubeClient)
+                    ));
+                    
+                    IActorRef listener = system.ActorOf(actor =>
+                    {
+                        actor.OnPreStart = context =>
+                        {
+                            Log.Information("Subscribing...");
 
-                Thread.Sleep(
-                    TimeSpan.FromSeconds(30)
-                );
+                            eventBusActor.Tell(SubscribeResourceEvents.Create(
+                                filter: ResourceEventFilter.Empty
+                            ));
 
-                subscription.Dispose();
+                            Log.Information("Subscribed.");
+                        };
+
+                        actor.Receive<V1ResourceEvent<V1ReplicationController>>((resourceEvent, context) =>
+                        {
+                            Log.Information("Recieved {EventType} event for ReplicationController {ResourceName}.",
+                                resourceEvent.EventType,
+                                resourceEvent.Resource?.Metadata?.Name
+                            );
+                        });
+                    });
+
+                    Thread.Sleep(10000);
+
+                    await system.Terminate();
+                }
             }
         }
 

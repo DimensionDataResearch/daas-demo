@@ -3,14 +3,13 @@ using KubeNET.Swagger.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reactive.Linq;
-using System.IO;
-using System.Reactive.Subjects;
-using Serilog;
 
 namespace DaaSDemo.KubeClient.Clients
 {
@@ -133,13 +132,9 @@ namespace DaaSDemo.KubeClient.Clients
             {
                 try
                 {
-                    Log.Information("Requesting...");
-
                     using (HttpResponseMessage responseMessage = await Http.GetStreamedAsync(request, subscriptionCancellation))
                     {
                         responseMessage.EnsureSuccessStatusCode();
-
-                        Log.Information("Streaming from {RequestUri}...", responseMessage.RequestMessage.RequestUri);
 
                         using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync())
                         using (StreamReader responseReader = new StreamReader(responseStream))
@@ -147,8 +142,6 @@ namespace DaaSDemo.KubeClient.Clients
                             string line = await responseReader.ReadLineAsync();
                             while (line != null)
                             {
-                                Log.Information("Got line.");
-
                                 subscriber.OnNext(line);
 
                                 line = await responseReader.ReadLineAsync();
