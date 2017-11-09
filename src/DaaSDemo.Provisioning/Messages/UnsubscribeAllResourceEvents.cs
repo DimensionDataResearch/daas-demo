@@ -1,6 +1,5 @@
 namespace DaaSDemo.Provisioning.Messages
 {
-
     /// <summary>
     ///     Unsubscribe from events for all resources.
     /// </summary>

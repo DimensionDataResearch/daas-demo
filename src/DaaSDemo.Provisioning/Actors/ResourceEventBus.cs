@@ -5,6 +5,7 @@ using System;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using Filters;
     using KubeClient.Models;
 
     // TODO: Custom message types for the various event types.
@@ -14,8 +15,15 @@ namespace DaaSDemo.Provisioning.Actors
     /// <summary>
     ///		Event bus for Kubernetes resource events.
     /// </summary>
-    public abstract class ResourceEventBus<TResource>
-        : ActorEventBus<V1ResourceEvent<TResource>, string>
+    /// <typeparam name="TResource">
+    ///     The type of resource that events relate to.
+    /// </typeparam>
+    /// <typeparam name="TFilter">
+    ///     The type used to describe event filters.
+    /// </typeparam>
+    public abstract class ResourceEventBus<TResource, TFilter>
+        : ActorEventBus<V1ResourceEvent<TResource>, TFilter>
+            where TFilter : EventFilter
     {
         /// <summary>
         ///		Create a new <see cref="ResourceEventBus"/>.
@@ -36,21 +44,29 @@ namespace DaaSDemo.Provisioning.Actors
         protected abstract V1ObjectMeta GetMetadata(TResource resource);
 
         /// <summary>
-        ///		Determine whether <paramref name="resourceName"/> is a sub-classification of <paramref name="resourceNameFilter"/>.
+        ///     Create a filter that exactly matches the specified resource metadata.
         /// </summary>
-        /// <param name="resourceNameFilter">
+        /// <param name="metadata">
+        ///     The resource metadata to match.
+        /// </param>
+        /// <returns>
+        ///     A <typeparamref name="TFilter"/> describing the filter.
+        /// </returns>
+        protected abstract TFilter CreateExactMatchFilter(V1ObjectMeta metadata);
+
+        /// <summary>
+        ///		Determine whether <paramref name="child"/> is a sub-classification of <paramref name="parent"/>.
+        /// </summary>
+        /// <param name="parent">
         ///		The parent classifier.
         /// </param>
-        /// <param name="resourceName">
+        /// <param name="child">
         ///		The child classifier.
         /// </param>
         /// <returns>
-        ///		<c>true</c>, if <paramref name="resourceName"/> equals <paramref name="resourceNameFilter"/> / <paramref name="resourceName"/> is empty; otherwise, <c>false</c>.
+        ///		<c>true</c>, if <paramref name="child"/> equals <paramref name="parent"/> / <paramref name="child"/> is empty; otherwise, <c>false</c>.
         /// </returns>
-        protected sealed override bool IsSubClassification(string resourceNameFilter, string resourceName)
-        {
-            return resourceName == resourceNameFilter || resourceName == String.Empty; // String.Empty means match any resource.
-        }
+        protected override bool IsSubClassification(TFilter parent, TFilter child) => false;
 
         /// <summary>
         ///		Get a classifier for the specified <see cref="JobStore"/> event.
@@ -61,12 +77,14 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///		The event classifier.
         /// </returns>
-        protected sealed override string GetClassifier(V1ResourceEvent<TResource> resourceEvent)
+        protected sealed override TFilter GetClassifier(V1ResourceEvent<TResource> resourceEvent)
         {
             if (resourceEvent == null)
                 throw new ArgumentNullException(nameof(resourceEvent));
 
-            return GetMetadata(resourceEvent.Resource).Name;
+            return CreateExactMatchFilter(
+                GetMetadata(resourceEvent.Resource)
+            );
         }
 
         /// <summary>
@@ -75,21 +93,23 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="resourceEvent">
         ///		The <see cref="JobStore"/> event.
         /// </param>
-        /// <param name="resourceNameFilter">
+        /// <param name="resourceFilter">
         ///		The event classifier.
         /// </param>
         /// <returns>
-        ///		<c>true</c>, if <paramref name="resourceName"/> equals <paramref name="resourceNameFilter"/> / <paramref name="resourceName"/> is empty; otherwise, <c>false</c>.
+        ///		<c>true</c>, if the event matches the filter; otherwise, <c>false</c>.
         /// </returns>
-        protected override bool Classify(V1ResourceEvent<TResource> resourceEvent, string resourceNameFilter)
+        protected override bool Classify(V1ResourceEvent<TResource> resourceEvent, TFilter resourceFilter)
         {
             if (resourceEvent == null)
                 throw new ArgumentNullException(nameof(resourceEvent));
 
-            if (resourceNameFilter == null)
-                throw new ArgumentNullException(nameof(resourceNameFilter));
+            if (resourceFilter == null)
+                throw new ArgumentNullException(nameof(resourceFilter));
 
-            return GetMetadata(resourceEvent.Resource).Name == resourceNameFilter;
+            return resourceFilter.IsMatch(
+                GetMetadata(resourceEvent.Resource)
+            );
         }
 
         /// <summary>

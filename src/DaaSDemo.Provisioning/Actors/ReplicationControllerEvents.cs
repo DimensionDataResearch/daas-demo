@@ -1,12 +1,20 @@
 using Akka.Actor;
 using KubeNET.Swagger.Model;
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using Common.Utilities;
+    using Filters;
     using KubeClient;
     using KubeClient.Models;
     using Messages;
+
+    // TODO: Consider adding reference-count for subscriptions and only watch for events from the Kubernetes API while there are active subscribers.
+    // TODO: Consider implementing messages to pause / resume watching for events.
 
     /// <summary>
     ///     Actor that publishes events relating to Kubernetes ReplicationControllers in the default namespace.
@@ -39,13 +47,13 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 EventBus.Publish(resourceEvent);
             });
-            Receive<SubscribeResourceEvents>(subscribe =>
+            Receive<SubscribeResourceEvents<ResourceEventFilter>>(subscribe =>
             {
-                EventBus.Subscribe(Sender, subscribe.ResourceName);
+                EventBus.Subscribe(Sender, subscribe.Filter);
             });
-            Receive<UnsubscribeResourceEvents>(unsubscribe =>
+            Receive<UnsubscribeResourceEvents<ResourceEventFilter>>(unsubscribe =>
             {
-                EventBus.Unsubscribe(Sender, unsubscribe.ResourceName);
+                EventBus.Unsubscribe(Sender, unsubscribe.Filter);
             });
             Receive<UnsubscribeAllResourceEvents>(_ =>
             {
@@ -103,24 +111,35 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The underlying event bus.
         /// </summary>
         class ResourceEventBus
-            : ResourceEventBus<V1ReplicationController>
+            : ResourceEventBus<V1ReplicationController, ResourceEventFilter>
         {
             /// <summary>
             ///     Get the metadata for the specified resource.
             /// </summary>
-            /// <param name="resource">
-            ///     The target resource.
+            /// <param name="replicationController">
+            ///     A <see cref="V1ReplicationController"/> representing the target ReplicationController.
             /// </param>
             /// <returns>
             ///     The resource metadata.
             /// </returns>
-            protected override V1ObjectMeta GetMetadata(V1ReplicationController resource)
+            protected override V1ObjectMeta GetMetadata(V1ReplicationController replicationController)
             {
-                if (resource == null)
-                    throw new ArgumentNullException(nameof(resource));
+                if (replicationController == null)
+                    throw new ArgumentNullException(nameof(replicationController));
                 
-                return resource.Metadata;
+                return replicationController.Metadata;
             }
+
+            /// <summary>
+            ///     Create a filter that exactly matches the specified ReplicationController metadata.
+            /// </summary>
+            /// <param name="metadata">
+            ///     The ReplicationController metadata to match.
+            /// </param>
+            /// <returns>
+            ///     A <see cref="ResourceEventFilter"/> describing the filter.
+            /// </returns>
+            protected override ResourceEventFilter CreateExactMatchFilter(V1ObjectMeta metadata) => ResourceEventFilter.FromMetatadata(metadata);
         }
     }
 }

@@ -2,28 +2,58 @@ using System;
 
 namespace DaaSDemo.Provisioning.Messages
 {
+    using Filters;
+
     /// <summary>
-    ///     Unsubscribe from events (optionally, for the specified resource).
+    ///     Unsubscribe from resource events.
     /// </summary>
-    public class UnsubscribeResourceEvents
+    /// <typeparam name="TFilter">
+    ///     The type that describes event filters.
+    /// </typeparam>
+    public class UnsubscribeResourceEvents<TFilter>
+        where TFilter : EventFilter
     {
         /// <summary>
         ///     Create a new <see cref="UnsubscribeResourceEvents"/> message.
         /// </summary>
-        /// <param name="resourceName">
-        ///     An optional resource name (if specified, only unsubscribe from events relating to this resource).
+        /// <param name="filter">
+        ///     A <typeparamref name="TFilter"/> representing the filter for events.
         /// </param>
-        public UnsubscribeResourceEvents(string resourceName = null)
+        public UnsubscribeResourceEvents(TFilter filter)
         {
-            ResourceName = resourceName ?? String.Empty;
+            if (filter == null)
+                throw new ArgumentNullException(nameof(filter));
+
+            Filter = filter;            
         }
 
         /// <summary>
-        ///     The name of a specific target resource.
+        ///     A <typeparamref name="TFilter"/> representing the filter for events.
         /// </summary>
-        /// <remarks>
-        ///     If <see cref="String.Empty"/>, then all resource events will be subscribed to.
-        /// </remarks>
-        public string ResourceName { get; }
+        public TFilter Filter { get; }
+    }
+
+    /// <summary>
+    ///     Factory for <see cref="UnsubscribeResourceEvents{TFilter}"/> messages.
+    /// </summary>
+    public static class UnsubscribeResourceEvents
+    {
+        /// <summary>
+        ///     Create a new <see cref="UnsubscribeResourceEvents{TFilter}"/> message.
+        /// </summary>
+        /// <typeparam name="TFilter">
+        ///     The type that describes event filters.
+        /// </typeparam>
+        /// <param name="filter">
+        ///     A <typeparamref name="TFilter"/> representing the filter for events.
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="UnsubscribeResourceEvents{TFilter}"/> message.
+        /// </returns>
+        public static UnsubscribeResourceEvents<TFilter> Create<TFilter>(TFilter filter)
+            where TFilter : EventFilter
+        {
+            return new UnsubscribeResourceEvents<TFilter>(filter);
+        }
     }
 }
