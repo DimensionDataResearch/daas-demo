@@ -114,7 +114,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task ScanTenants()
         {
-            Log.Info("Scanning tenants...");
+            Log.Debug("Scanning tenants...");
 
             DatabaseServer[] servers;
             using (Entities entities = CreateEntityContext())
@@ -124,7 +124,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             foreach (DatabaseServer server in servers)
             {
-                Log.Info("Discovered database server {ServerId} (Name:{ServerName}) owned by tenant {TenantId}.",
+                Log.Debug("Discovered database server {ServerId} (Name:{ServerName}) owned by tenant {TenantId}.",
                     server.Id,
                     server.Name,
                     server.TenantId
@@ -148,11 +148,11 @@ namespace DaaSDemo.Provisioning.Actors
                     );
                 }
 
-                Log.Info("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
+                Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
                 serverManager.Tell(server);
             }
 
-            Log.Info("Tenant scan complete.");
+            Log.Debug("Tenant scan complete.");
         }
 
         /// <summary>
@@ -163,7 +163,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task ScanIPAddressMappings()
         {
-            Log.Info("Scanning IP address mappings...");
+            Log.Debug("Scanning IP address mappings...");
 
             IPAddressMapping[] mappings;
             using (Entities entities = CreateEntityContext())
@@ -216,7 +216,7 @@ namespace DaaSDemo.Provisioning.Actors
                 Log.Info("Published changes to node IP address mappings.");
             }
 
-            Log.Info("IP address mapping scan complete.");
+            Log.Debug("IP address mapping scan complete.");
         }
 
         /// <summary>
@@ -232,7 +232,12 @@ namespace DaaSDemo.Provisioning.Actors
         {
             if (serverProvisioningNotification == null)
                 throw new ArgumentNullException(nameof(serverProvisioningNotification));
-            
+
+            Log.Debug("Updating provisioning status for server {ServerId} due to {NotificationType} notification...",
+                serverProvisioningNotification.ServerId,
+                serverProvisioningNotification.GetType().Name
+            );
+
             using (Entities entities = CreateEntityContext())
             {
                 DatabaseServer server = await entities.DatabaseServers.FindAsync(serverProvisioningNotification.ServerId);
@@ -244,6 +249,13 @@ namespace DaaSDemo.Provisioning.Actors
 
                     return;
                 }
+
+                Log.Debug("Existing provisioning status for server {ServerId} is {Action}:{Status}:{Phase}.",
+                    server.Id,
+                    server.Action,
+                    server.Status,
+                    server.Phase
+                );
 
                 if (serverProvisioningNotification.Status.HasValue)
                 {
@@ -271,8 +283,17 @@ namespace DaaSDemo.Provisioning.Actors
                 if (serverProvisioningNotification.Phase.HasValue)
                     server.Phase = serverProvisioningNotification.Phase.Value;
 
+                Log.Debug("New provisioning status for server {ServerId} is {Action}:{Status}:{Phase}.",
+                    server.Id,
+                    server.Action,
+                    server.Status,
+                    server.Phase
+                );
+
                 await entities.SaveChangesAsync();
             }
+
+            Log.Debug("Updated provisioning status for server {ServerId}.", serverProvisioningNotification.ServerId);
         }
 
         /// <summary>
