@@ -402,7 +402,7 @@ namespace DaaSDemo.Api.Controllers
                     EntityType = "DatabaseServer",
                     Action = targetServer.Action,
                     Status = targetServer.Status,
-                    Message = $"Cannot create a database in server {targetServer.Id} because an action is already in progress for this server."
+                    Message = $"Cannot create a database in server {targetServer.Id} because a server-level action is already in progress."
                 });
             }
 
@@ -440,6 +440,89 @@ namespace DaaSDemo.Api.Controllers
                 Id = database.Id,
                 Name = database.Name,
                 Message = $"Database '{database.Name}' queued for creation on server '{targetServer.Name}'."
+            });
+        }
+
+        /// <summary>
+        ///     Delete a tenant's database.
+        /// </summary>
+        /// <param name="tenantId">
+        ///     The tenant Id.
+        /// </param>
+        /// <param name="databaseId">
+        ///     The database Id.
+        /// </param>
+        [HttpDelete("{tenantId:int}/databases/{databaseId}")]
+        public IActionResult DeleteDatabase(int tenantId, int databaseId)
+        {
+            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            if (ownerTenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = tenantId,
+                    EntityType = "Tenant",
+                    Message = $"No tenant found with Id {tenantId}"
+                });
+            }
+
+            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            if (targetServer == null)
+            {
+                return NotFound(new
+                {
+                    Id = tenantId,
+                    EntityType = "DatabaseServer",
+                    Message = $"No database server found for tenant with Id {tenantId}"
+                });
+            }
+
+            DatabaseInstance targetDatabase = Entities.DatabaseInstances.FirstOrDefault(database => database.Id == databaseId);
+            if (targetDatabase == null)
+            {
+                return NotFound(new
+                {
+                    Id = databaseId,
+                    EntityType = "Database",
+                    Message = $"No database server found with Id {databaseId}"
+                });
+            }
+
+            if (targetServer.Status != ProvisioningStatus.Ready)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "DatabaseServer",
+                    Action = targetServer.Action,
+                    Status = targetServer.Status,
+                    Message = $"Cannot delete database {targetDatabase.Name} in server {targetServer.Id} because a server-level action is already in progress."
+                });
+            }
+
+            if (targetDatabase.Status != ProvisioningStatus.Ready)
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    Id = targetServer.Id,
+                    TenantId = tenantId,
+                    EntityType = "Database",
+                    Action = targetDatabase.Action,
+                    Status = targetDatabase.Status,
+                    Message = $"Cannot delete database {targetDatabase.Name} in server {targetServer.Id} an action is already in progress for this database."
+                });
+            }
+
+            targetDatabase.Action = ProvisioningAction.Deprovision;
+            Entities.SaveChanges();
+
+            return StatusCode(StatusCodes.Status202Accepted, new
+            {
+                Id = targetDatabase.Id,
+                Name = targetDatabase.Name,
+                EntityType = "Database",
+                Message = $"Database '{targetDatabase.Name}' queued for deletion on server '{targetServer.Name}'."
             });
         }
     }

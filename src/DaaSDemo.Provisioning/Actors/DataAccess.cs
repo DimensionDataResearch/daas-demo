@@ -254,6 +254,12 @@ namespace DaaSDemo.Provisioning.Actors
 
                         break;
                     }
+                    case ProvisioningStatus.Deprovisioned:
+                    {
+                        entities.DatabaseInstances.Remove(database);
+
+                        break;
+                    }
                 }
 
                 await entities.SaveChangesAsync();

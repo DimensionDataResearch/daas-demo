@@ -393,7 +393,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             foreach (DatabaseInstance database in CurrentState.Databases)
             {
-                Log.Info("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
+                Log.Debug("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
                     database.Name,
                     database.Id
                 );
@@ -408,8 +408,9 @@ namespace DaaSDemo.Provisioning.Actors
                     Context.Watch(databaseManager);
                     _databaseManagers.Add(database.Id, databaseManager);
 
-                    Log.Info("Created TenantDatabaseManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
+                    Log.Info("Created TenantDatabaseManager {ActorName} for database {DatabaseId} in server {ServerId} (Tenant:{TenantId}).",
                         databaseManager.Path.Name,
+                        database.Id,
                         CurrentState.Id,
                         CurrentState.TenantId
                     );

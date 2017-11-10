@@ -3,6 +3,7 @@ using Akka.Actor;
 using HTTPlease;
 using KubeNET.Swagger.Model;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -18,10 +19,7 @@ namespace DaaSDemo.Provisioning.Actors
     using Data.Models;
     using Messages;
     using Models.Sql;
-    using Newtonsoft.Json.Linq;
     using SqlExecutor.Client;
-
-    // TODO: Use SQL Executor API
 
     /// <summary>
     ///     Actor that manages a specific tenant database.
@@ -69,22 +67,22 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 CurrentState = database;
 
-                Log.Info("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
-                    database.Id,
-                    database.Name
+                Log.Debug("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
+                    CurrentState.Id,
+                    CurrentState.Name
                 );
 
                 switch (database.Action)
                 {
                     case ProvisioningAction.Provision:
                     {
-                        await Provision(database);
+                        await Provision();
 
                         break;
                     }
                     case ProvisioningAction.Deprovision:
                     {
-                        if (await Deprovision(database))
+                        if (await Deprovision())
                             Context.Stop(Self);
 
                         break;
@@ -113,36 +111,35 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Provision the database.
         /// </summary>
-        /// <param name="database">
-        ///     A <see cref="DatabaseInstance"/> representing the target database.
-        /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task Provision(DatabaseInstance database)
+        async Task Provision()
         {
-            if (database == null)
-                throw new ArgumentNullException(nameof(database));
+            Log.Info("Provisioning database {DatabaseId} in server {ServerId}...",
+                CurrentState.Id,
+                CurrentState.DatabaseServerId
+            );
 
             _dataAccess.Tell(
-                new DatabaseProvisioning(database.Id)
+                new DatabaseProvisioning(CurrentState.Id)
             );
 
             if (!await DatabaseExists())
             {
                 try
                 {
-                    await CreateDatabase(database);
+                    await CreateDatabase();
                 }
                 catch (Exception createDatabaseFailed)
                 {
                     Log.Error(createDatabaseFailed, "Unexpected error creating database {DatabaseName} (Id:{DatabaseId}).",
-                        database.Name,
-                        database.Id
+                        CurrentState.Name,
+                        CurrentState.Id
                     );
 
                     _dataAccess.Tell(
-                        new DatabaseProvisioningFailed(database.Id)
+                        new DatabaseProvisioningFailed(CurrentState.Id)
                     );
 
                     return;
@@ -151,49 +148,48 @@ namespace DaaSDemo.Provisioning.Actors
             else
             {
                 Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
-                    database.Id,
-                    database.Name
+                    CurrentState.Id,
+                    CurrentState.Name
                 );
             }
 
             _dataAccess.Tell(
-                new DatabaseProvisioned(database.Id)
+                new DatabaseProvisioned(CurrentState.Id)
             );
         }
 
         /// <summary>
         ///     De-rovision the database.
         /// </summary>
-        /// <param name="database">
-        ///     A <see cref="DatabaseInstance"/> representing the target database.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the database was successfully de-provisioned; otherwise, <c>false<c/>.
         /// </returns>
-        async Task<bool> Deprovision(DatabaseInstance database)
+        async Task<bool> Deprovision()
         {
-            if (database == null)
-                throw new ArgumentNullException(nameof(database));
+            Log.Info("De-provisioning database {DatabaseId} in server {ServerId}...",
+                CurrentState.Id,
+                CurrentState.DatabaseServerId
+            );
 
             _dataAccess.Tell(
-                new DatabaseDeprovisioning(database.Id)
+                new DatabaseDeprovisioning(CurrentState.Id)
             );
 
             if (await DatabaseExists())
             {
                 try
                 {
-                    await DropDatabase(database);
+                    await DropDatabase();
                 }
                 catch (Exception dropDatabaseFailed)
                 {
                     Log.Error(dropDatabaseFailed, "Unexpected error dropping database {DatabaseName} (Id:{DatabaseId}).",
-                        database.Name,
-                        database.Id
+                        CurrentState.Name,
+                        CurrentState.Id
                     );
 
                     _dataAccess.Tell(
-                        new DatabaseDeprovisioningFailed(database.Id)
+                        new DatabaseDeprovisioningFailed(CurrentState.Id)
                     );
 
                     return false;
@@ -202,13 +198,13 @@ namespace DaaSDemo.Provisioning.Actors
             else
             {
                 Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
-                    database.Id,
-                    database.Name
+                    CurrentState.Id,
+                    CurrentState.Name
                 );
             }
 
             _dataAccess.Tell(
-                new DatabaseDeprovisioned(database.Id)
+                new DatabaseDeprovisioned(CurrentState.Id)
             );
 
             return true;
@@ -248,22 +244,16 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create the database.
         /// </summary>
-        /// <param name="database">
-        ///     A <see cref="DatabaseInstance"/> representing the target database.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the database was created successfully; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> CreateDatabase(DatabaseInstance database)
+        async Task<bool> CreateDatabase()
         {
-            if (database == null)
-                throw new ArgumentNullException(nameof(database));
-
             Log.Info("Creating database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
-                database.Name,
-                database.Id,
-                database.DatabaseServer.Name,
-                database.DatabaseServer.Id
+                CurrentState.Name,
+                CurrentState.Id,
+                CurrentState.DatabaseServer.Name,
+                CurrentState.DatabaseServer.Id
             );
 
             CommandResult result = await _sqlClient.ExecuteCommand(
@@ -296,20 +286,20 @@ namespace DaaSDemo.Provisioning.Actors
                 }
 
                 Log.Info("Failed to create database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                    database.Name,
-                    database.Id,
-                    database.DatabaseServer.Name,
-                    database.DatabaseServer.Id
+                    CurrentState.Name,
+                    CurrentState.Id,
+                    CurrentState.DatabaseServer.Name,
+                    CurrentState.DatabaseServer.Id
                 );
 
                 return false;
             }
 
             Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                database.Name,
-                database.Id,
-                database.DatabaseServer.Name,
-                database.DatabaseServer.Id
+                CurrentState.Name,
+                CurrentState.Id,
+                CurrentState.DatabaseServer.Name,
+                CurrentState.DatabaseServer.Id
             );
             
             return true;
@@ -318,22 +308,16 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Drop the database.
         /// </summary>
-        /// <param name="database">
-        ///     A <see cref="DatabaseInstance"/> representing the target database.
-        /// </param>
         /// <returns>
         ///     <c>true</c>, if the database was dropped successfully; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> DropDatabase(DatabaseInstance database)
+        async Task<bool> DropDatabase()
         {
-            if (database == null)
-                throw new ArgumentNullException(nameof(database));
-
             Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
-                database.Name,
-                database.Id,
-                database.DatabaseServer.Name,
-                database.DatabaseServer.Id
+                CurrentState.Name,
+                CurrentState.Id,
+                CurrentState.DatabaseServer.Name,
+                CurrentState.DatabaseServer.Id
             );
 
             CommandResult result = await _sqlClient.ExecuteCommand(
@@ -366,20 +350,20 @@ namespace DaaSDemo.Provisioning.Actors
                 }
 
                 Log.Info("Failed to drop database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                    database.Name,
-                    database.Id,
-                    database.DatabaseServer.Name,
-                    database.DatabaseServer.Id
+                    CurrentState.Name,
+                    CurrentState.Id,
+                    CurrentState.DatabaseServer.Name,
+                    CurrentState.DatabaseServer.Id
                 );
 
                 return false;
             }
 
             Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                database.Name,
-                database.Id,
-                database.DatabaseServer.Name,
-                database.DatabaseServer.Id
+                CurrentState.Name,
+                CurrentState.Id,
+                CurrentState.DatabaseServer.Name,
+                CurrentState.DatabaseServer.Id
             );
             
             return true;
