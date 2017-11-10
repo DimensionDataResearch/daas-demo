@@ -13,6 +13,8 @@ namespace DaaSDemo.Provisioning.Actors
     using Data.Models;
     using Messages;
 
+    // TODO: Supervision policy for TenantServerManager actors (incremental back-off, fail after 5 attempts).
+
     /// <summary>
     ///     Actor that provides access to the master DaaS database.
     /// </summary>
@@ -25,14 +27,9 @@ namespace DaaSDemo.Provisioning.Actors
         public static readonly string ActorName = "data-access";
 
         /// <summary>
-        ///     <see cref="TenantServerManager"/> actors, keyed by tenant Id.
+        ///     References to management actors for tenant servers, keyed by tenant Id.
         /// </summary>
         readonly Dictionary<int, IActorRef> _serverManagers = new Dictionary<int, IActorRef>();
-
-        /// <summary>
-        ///     Mappings from node internal IP addresses to external IP addresses.
-        /// </summary>
-        ImmutableDictionary<string, string> _nodeIPAddressMappings = ImmutableDictionary<string, string>.Empty;
 
         /// <summary>
         ///     Create a new <see cref="DataAccess"/>.

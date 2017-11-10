@@ -31,9 +31,6 @@ namespace DaaSDemo.Provisioning.Actors
     /// </summary>
     /// <remarks>
     ///     Management of the server's databases is delegated to a child <see cref="TenantDatabaseManager"/> actor.
-    /// 
-    ///     TODO: Implement IsServerInstanceReady (check ReplicationController.AvailableReplicas)
-    ///           and poll for state until AvailableReplicas is equal to Replicas before proceeding.
     /// </remarks>
     public class TenantServerManager
         : ReceiveActorEx, IWithUnboundedStash
@@ -159,11 +156,11 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Called when the actor is waiting for the server's ReplicationController to indicate that all replicas are Ready.
+        ///     Called when the actor is waiting for the server's ReplicationController to indicate that all replicas are Available.
         /// </summary>
         void WaitForServerAvailable()
         {
-            Log.Info("Waiting for server {ServerId}'s ReplicationController to become Ready...", _serverId);
+            Log.Info("Waiting for server {ServerId}'s ReplicationController to become Available...", _serverId);
 
             StartPolling(Signal.PollReplicationController);
 
@@ -259,7 +256,7 @@ namespace DaaSDemo.Provisioning.Actors
             });
             Receive<DatabaseServer>(_ =>
             {
-                Log.Debug("Ignoring DatabaseServer state message (waiting for server's ReplicationController to be ready).'");
+                Log.Debug("Ignoring DatabaseServer state message (waiting for server's ReplicationController to become Available).'");
             });
             Receive<Terminated>(
                 terminated => HandleTermination(terminated)
@@ -286,7 +283,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     catch (HttpRequestException<UnversionedStatus> provisioningFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to provision server {ServerId} ({ErrorCode}): {ErrorMessage}",
+                        Log.Error(provisioningFailed, "Failed to provision server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
                             provisioningFailed.Response.Reason,
                             provisioningFailed.Response.Message
@@ -317,21 +314,21 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         await ReconfigureServer();
                     }
-                    catch (HttpRequestException<UnversionedStatus> provisioningFailed)
+                    catch (HttpRequestException<UnversionedStatus> reconfigurationFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to reconfigure server {ServerId} ({ErrorCode}): {ErrorMessage}",
+                        Log.Error(reconfigurationFailed, "Failed to reconfigure server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
-                            provisioningFailed.Response.Reason,
-                            provisioningFailed.Response.Message
+                            reconfigurationFailed.Response.Reason,
+                            reconfigurationFailed.Response.Message
                         );
 
                         FailCurrentAction();
 
                         return;
                     }
-                    catch (Exception provisioningFailed)
+                    catch (Exception reconfigurationFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to reconfigure server {ServerId}.",
+                        Log.Error(reconfigurationFailed, "Failed to reconfigure server {ServerId}.",
                             CurrentState.Id
                         );
 
@@ -350,21 +347,21 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         await DeprovisionServer();
                     }
-                    catch (HttpRequestException<UnversionedStatus> provisioningFailed)
+                    catch (HttpRequestException<UnversionedStatus> deprovisioningFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to de-provision server {ServerId} ({ErrorCode}): {ErrorMessage}",
+                        Log.Error(deprovisioningFailed, "Failed to de-provision server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
-                            provisioningFailed.Response.Reason,
-                            provisioningFailed.Response.Message
+                            deprovisioningFailed.Response.Reason,
+                            deprovisioningFailed.Response.Message
                         );
 
                         FailCurrentAction();
 
                         return;
                     }
-                    catch (Exception provisioningFailed)
+                    catch (Exception deprovisioningFailed)
                     {
-                        Log.Error(provisioningFailed, "Failed to de-provision server {ServerId}.",
+                        Log.Error(deprovisioningFailed, "Failed to de-provision server {ServerId}.",
                             CurrentState.Id
                         );
 
@@ -468,6 +465,8 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
+                    StartProvisioningPhase(ServerProvisioningPhase.ReplicationController);
+
                     await EnsureReplicationControllerPresent();
                     
                     goto case ServerProvisioningPhase.Service;
@@ -504,15 +503,13 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Reconfigure an instance of SQL Server.
+        ///     Reconfigure / repair an instance of SQL Server.
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
         async Task ReconfigureServer()
         {
-            // TODO: Tidy this up - move every phase's case statement into the following case statement and handle the fallout.
-
             switch (CurrentState.Phase)
             {
                 case ServerProvisioningPhase.None:
@@ -739,7 +736,7 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that internal and external Service resources exist for the specified database server.
+        ///     Ensure that an internally-facing Service resource exists for the specified database server.
         /// </summary>
         /// <returns>
         ///     The Service resource, as a <see cref="V1Service"/>.
@@ -772,7 +769,7 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that the internally-facing Service resource exists for the specified database server.
+        ///     Ensure that an externally-facing Service resource exists for the specified database server.
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.

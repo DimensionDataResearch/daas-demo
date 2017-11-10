@@ -1,6 +1,7 @@
 using HTTPlease;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Security;
 using System.Threading;
@@ -8,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.SqlExecutor.Client
 {
-    using System.Collections.Generic;
     using Models.Sql;
 
     /// <summary>

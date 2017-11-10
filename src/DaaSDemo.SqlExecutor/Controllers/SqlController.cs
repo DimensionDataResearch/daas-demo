@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -16,7 +17,6 @@ namespace DaaSDemo.SqlExecutor.Controllers
     using Data.Models;
     using KubeClient;
     using Models.Sql;
-    using Newtonsoft.Json.Linq;
 
     /// <summary>
     ///     Controller for the T-SQL execution API.
