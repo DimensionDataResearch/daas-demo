@@ -1,5 +1,6 @@
 using Akka.Actor;
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
 namespace DaaSDemo.Provisioning
@@ -47,12 +48,26 @@ namespace DaaSDemo.Provisioning
         /// </summary>
         public void Start()
         {
+            if (_actorSystem != null)
+                throw new InvalidOperationException("Cannot start the provisioning engine because it is already running.");
+
             _actorSystem = Boot.Up(_configuration);
 
             DataAccess = _actorSystem.ActorOf(
                 Props.Create<Actors.DataAccess>(),
                 name: Actors.DataAccess.ActorName
             );
+        }
+
+        /// <summary>
+        ///     Asynchronously stop the provisioning engine.
+        /// </summary>
+        public async Task Stop()
+        {
+            if (_actorSystem == null)
+                return;
+
+            await _actorSystem.Terminate();
         }
 
         /// <summary>

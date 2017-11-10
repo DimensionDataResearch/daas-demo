@@ -83,12 +83,18 @@ namespace DaaSDemo.Api
         /// <param name="app">
         ///     The application pipeline builder.
         /// </param>
-        public void Configure(IApplicationBuilder app, ProvisioningEngine provisioningEngine)
+        public void Configure(IApplicationBuilder app, ProvisioningEngine provisioningEngine, IApplicationLifetime appLifetime)
         {
-            provisioningEngine.Start(); // TODO: Await provisioning engine shut-down before app pipeline terminates.
+            provisioningEngine.Start();
 
             app.UseDeveloperExceptionPage();
-            app.UseMvc();   
+            app.UseMvc();
+
+            appLifetime.ApplicationStopping.Register(() =>
+            {
+                provisioningEngine.Stop().Wait();
+            });
+            appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
         }
     }
 }
