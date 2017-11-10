@@ -12,11 +12,13 @@ namespace DaaSDemo.Models.Api
         /// </summary>
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
+        [RegularExpression("[a-zA-Z][a-zA-Z0-9._]{2,}", ErrorMessage = "Server names can only contain letters, numbers, '.', and '_'.")]
         public string Name { get; set; }
 
         /// <summary>
         ///     The server's administrative ("sa" user) password.
         /// </summary>
+        [MinLength(5)]
         [Required(AllowEmptyStrings = false)]
         public string AdminPassword { get; set; }
     }

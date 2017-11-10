@@ -16,6 +16,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
     using Data.Models;
     using KubeClient;
     using Models.Sql;
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     ///     Controller for the T-SQL execution API.
@@ -174,45 +175,157 @@ namespace DaaSDemo.SqlExecutor.Controllers
         }
 
         /// <summary>
-        ///     Determine the connection string for the specified <see cref="Command"/>.
+        ///     Execute T-SQL as a query.
         /// </summary>
-        /// <param name="command">
-        ///     The <see cref="Command"/> being executed.
+        /// <param name="query">
+        ///     A <see cref="Query"/> from the request body, representing the T-SQL to execute.
+        /// </param>
+        [HttpPost("query")]
+        public async Task<IActionResult> ExecuteQuery([FromBody] Query query)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var queryResult = new QueryResult();
+
+            string connectionString = await GetConnectionString(query);
+            if (connectionString == null)
+            {
+                queryResult.ResultCode = -1;
+                queryResult.Errors.Add(new SqlError
+                {
+                    Kind = SqlErrorKind.Infrastructure,
+                    Message = $"Unable to determine connection settings for database {query.DatabaseId} in server {query.ServerId}."
+                });
+
+                return BadRequest(queryResult);
+            }
+
+            using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))
+            {
+                await sqlConnection.OpenAsync();
+
+                sqlConnection.InfoMessage += (sender, args) =>
+                {
+                    queryResult.Messages.Add(args.Message);
+                };
+
+                for (int batchIndex = 0; batchIndex < query.Sql.Count; batchIndex++)
+                {
+                    string sql = query.Sql[batchIndex];
+
+                    Log.LogInformation("Executing T-SQL batch {BatchNumber} of {BatchCount}...",
+                        batchIndex + 1,
+                        query.Sql.Count
+                    );
+
+                    using (var sqlCommand = new SqlClient.SqlCommand(sql, sqlConnection))
+                    {
+                        sqlCommand.CommandType = CommandType.Text;
+
+                        foreach (Parameter parameter in query.Parameters)
+                        {
+                            sqlCommand.Parameters.Add(
+                                parameter.ToSqlParameter()
+                            );
+                        }
+
+                        try
+                        {
+                            using (SqlClient.SqlDataReader reader = await sqlCommand.ExecuteReaderAsync())
+                            {
+                                await ReadResults(reader, queryResult);
+
+                                while (await reader.NextResultAsync())
+                                    await ReadResults(reader, queryResult);
+                            }
+
+                            queryResult.ResultCode = 0;
+                        }
+                        catch (SqlClient.SqlException sqlException)
+                        {
+                            Log.LogError(sqlException, "Error while executing T-SQL: {ErrorMessage}", sqlException.Message);
+
+                            queryResult.ResultCode = -1;
+                            queryResult.Errors.AddRange(
+                                sqlException.Errors.Cast<SqlClient.SqlError>().Select(
+                                    error => new SqlError
+                                    {
+                                        Kind = SqlErrorKind.TSql,
+                                        Message = error.Message,
+                                        Class = error.Class,
+                                        Number = error.Number,
+                                        State = error.State,
+                                        Procedure = error.Procedure,
+                                        Source = error.Source,
+                                        LineNumber = error.LineNumber
+                                    }
+                                )
+                            );
+                        }
+                        catch (Exception unexpectedException)
+                        {
+                            Log.LogError(unexpectedException, "Unexpected error while executing T-SQL: {ErrorMessage}", unexpectedException.Message);
+
+                            queryResult.ResultCode = -1;
+                            queryResult.Errors.Add(new SqlError
+                            {
+                                Kind = SqlErrorKind.Infrastructure,
+                                Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
+                            });
+                        }
+                    }
+
+                    Log.LogInformation("Executed T-SQL batch {BatchNumber} of {BatchCount}.",
+                        batchIndex + 1,
+                        query.Sql.Count
+                    );
+                }
+            }
+
+            return Ok(queryResult);
+        }
+
+        /// <summary>
+        ///     Determine the connection string for the specified <see cref="SqlRequest"/>.
+        /// </summary>
+        /// <param name="request">
+        ///     The <see cref="SqlRequest"/> being executed.
         /// </param>
         /// <returns>
         ///     The connection string, or <c>null</c> if the connection string could not be determined.
         /// </returns>
-        async Task<string> GetConnectionString(Command command)
+        async Task<string> GetConnectionString(SqlRequest request)
         {
-            if (command == null)
-                throw new ArgumentNullException(nameof(command));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
 
             Log.LogInformation("Determining connection string for database {DatabaseId} in server {ServerId}...",
-                command.DatabaseId,
-                command.ServerId
+                request.DatabaseId,
+                request.ServerId
             );
 
             DatabaseServer targetServer = await Entities.DatabaseServers.FirstOrDefaultAsync(
-                server => server.Id == command.ServerId
+                server => server.Id == request.ServerId
             );
             if (targetServer == null)
             {
                 Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server not found).",
-                    command.DatabaseId,
-                    command.ServerId
+                    request.DatabaseId,
+                    request.ServerId
                 );
 
                 return null;
             }
 
             V1Service serverService = await KubeClient.ServicesV1.Get(
-                name: $"sql-server-{command.ServerId}-service"
+                name: $"sql-server-{request.ServerId}-service"
             );
             if (serverService == null)
             {
                 Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server's associated Kubernetes Service not found).",
-                    command.DatabaseId,
-                    command.ServerId
+                    request.DatabaseId,
+                    request.ServerId
                 );
 
                 return null;
@@ -223,16 +336,16 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 DataSource = $"tcp:{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local,{serverService.Spec.Ports[0].Port}",
             };
 
-            if (command.DatabaseId != MasterDatabaseId)
+            if (request.DatabaseId != MasterDatabaseId)
             {
                 DatabaseInstance targetDatabase = await Entities.DatabaseInstances.FirstOrDefaultAsync(
-                    database => database.Id == command.DatabaseId
+                    database => database.Id == request.DatabaseId
                 );
                 if (targetDatabase == null)
                 {
                     Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (database not found).",
-                        command.DatabaseId,
-                        command.ServerId
+                        request.DatabaseId,
+                        request.ServerId
                     );
 
                     return null;
@@ -240,7 +353,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     
                 connectionStringBuilder.InitialCatalog = targetDatabase.Name;
 
-                if (command.ExecuteAsAdminUser)
+                if (request.ExecuteAsAdminUser)
                 {
                     connectionStringBuilder.UserID = "sa";
                     connectionStringBuilder.Password = targetServer.AdminPassword;
@@ -260,13 +373,55 @@ namespace DaaSDemo.SqlExecutor.Controllers
             }
 
             Log.LogInformation("Successfully determined connection string for database {DatabaseId} ({DatabaseName}) in server {ServerId} ({ServerSqlName}).",
-                command.DatabaseId,
+                request.DatabaseId,
                 connectionStringBuilder.InitialCatalog,
-                command.ServerId,
+                request.ServerId,
                 connectionStringBuilder.DataSource
             );
 
             return connectionStringBuilder.ConnectionString;
+        }
+
+        /// <summary>
+        ///     Populate a <see cref="QueryResult"/> with result-sets from the specified <see cref="SqlClient.SqlDataReader"/>.
+        /// </summary>
+        /// <param name="reader">
+        ///     The <see cref="SqlClient.SqlDataReader"/> to read from.
+        /// </param>
+        /// <param name="queryResult">
+        ///     The <see cref="QueryResult"/> to populate.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task ReadResults(SqlClient.SqlDataReader reader, QueryResult queryResult)
+        {
+            if (reader == null)
+                throw new ArgumentNullException(nameof(reader));
+            
+            if (queryResult == null)
+                throw new ArgumentNullException(nameof(queryResult));
+            
+            ResultSet resultSet = new ResultSet();
+            queryResult.ResultSets.Add(resultSet);
+            while (await reader.ReadAsync())
+            {
+                var row = new ResultRow();
+                resultSet.Rows.Add(row);
+
+                for (int fieldIndex = 0; fieldIndex < reader.FieldCount; fieldIndex++)
+                {
+                    string fieldName = reader.GetName(fieldIndex);
+                    if (!reader.IsDBNull(fieldIndex))
+                    {
+                        row.Columns[fieldName] = new JValue(
+                            reader.GetValue(fieldIndex)
+                        );
+                    }
+                    else
+                        row.Columns[fieldName] = null;
+                }
+            }
         }
     }
 }

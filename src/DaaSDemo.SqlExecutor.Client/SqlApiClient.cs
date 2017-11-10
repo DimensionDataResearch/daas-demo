@@ -61,6 +61,9 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <param name="sql">
         ///     The T-SQL to execute.
         /// </param>
+        /// <param name="parameters">
+        ///     The query parameters (if any).
+        /// </param>
         /// <param name="executeAsAdminUser">
         ///     Execute the command as the server's admin user ("sa")?
         /// </param>
@@ -70,7 +73,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The command result.
         /// </returns>
-        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));
@@ -82,6 +85,8 @@ namespace DaaSDemo.SqlExecutor.Client
                 ExecuteAsAdminUser = executeAsAdminUser
             };
             command.Sql.AddRange(sql);
+            if (parameters != null)
+                command.Parameters.AddRange(parameters);
 
             return
                 await Http.PostAsJsonAsync(Requests.Command,
@@ -89,6 +94,53 @@ namespace DaaSDemo.SqlExecutor.Client
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<CommandResult, JObject>();
+        }
+
+        /// <summary>
+        ///     Request execution of T-SQL as a query (i.e. non-query).
+        /// </summary>
+        /// <param name="serverId">
+        ///     The Id of the target SQL server.
+        /// </param>
+        /// <param name="databaseId">
+        ///     The Id of the target database (or <see cref="MasterDatabaseId"/> for the "master" database).
+        /// </param>
+        /// <param name="sql">
+        ///     The T-SQL to execute.
+        /// </param>
+        /// <param name="parameters">
+        ///     The query parameters (if any).
+        /// </param>
+        /// <param name="executeAsAdminUser">
+        ///     Execute the query as the server's admin user ("sa")?
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     A <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     The query result.
+        /// </returns>
+        public async Task<QueryResult> ExecuteQuery(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (sql == null)
+                throw new ArgumentNullException(nameof(sql));
+
+            var query = new Query
+            {
+                ServerId = serverId,
+                DatabaseId = databaseId,
+                ExecuteAsAdminUser = executeAsAdminUser
+            };
+            query.Sql.AddRange(sql);
+            if (parameters != null)
+                query.Parameters.AddRange(parameters);
+
+            return
+                await Http.PostAsJsonAsync(Requests.Query,
+                    postBody: query,
+                    cancellationToken: cancellationToken
+                )
+                .ReadContentAsAsync<QueryResult, JObject>();
         }
 
         /// <summary>
@@ -124,6 +176,11 @@ namespace DaaSDemo.SqlExecutor.Client
             ///     Invoke T-SQL as a command.
             /// </summary>
             public static HttpRequest Command = Api.WithRelativeUri("command");
-        }     
+
+            /// <summary>
+            ///     Invoke T-SQL as a query.
+            /// </summary>
+            public static HttpRequest Query = Api.WithRelativeUri("query");
+        }
     }
 }

@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Data;
 using System.Data.SqlClient;
@@ -29,12 +30,23 @@ namespace DaaSDemo.Models.Sql
         public int Size { get; set; }
 
         /// <summary>
+        ///     The parameter value.
+        /// </summary>
+        public JValue Value { get; set; }
+
+        /// <summary>
         ///     Create a <see cref="SqlParameter"/> from the <see cref="Parameter"/>.
         /// </summary>
         /// <returns>
         ///     The <see cref="SqlParameter"/>.
         /// </returns>
-        public SqlParameter ToSqlParameter() => new SqlParameter(Name, DataType, Size);
+        public SqlParameter ToSqlParameter()
+        {
+            return new SqlParameter(Name, DataType, Size)
+            {
+                Value = Value.Value ?? DBNull.Value
+            };
+        }
 
         /// <summary>
         ///     Create a <see cref="Parameter"/> from the specified <see cref="SqlParameter"/>.
@@ -54,7 +66,10 @@ namespace DaaSDemo.Models.Sql
             {
                 Name = sqlParameter.ParameterName,
                 DataType = sqlParameter.SqlDbType,
-                Size = sqlParameter.Size
+                Size = sqlParameter.Size,
+                Value = (sqlParameter.Value == null || sqlParameter.Value is DBNull)
+                    ? JValue.CreateNull()
+                    : new JValue(sqlParameter.Value)
             };
         }
     }

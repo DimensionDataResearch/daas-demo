@@ -44,19 +44,31 @@ namespace DaaSDemo.Provisioning
         /// <param name="databaseName">
         ///     The database name.
         /// </param>
+        /// <param name="userName">
+        ///     The database user name.
+        /// </param>
+        /// <param name="password">
+        ///     The database password.
+        /// </param>
         /// <returns>
         ///     The T-SQL.
         /// </returns>
-        public static string CreateDatabase(string databaseName)
+        public static IEnumerable<string> CreateDatabase(string databaseName, string userName, string password)
         {
             if (String.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
-            
-            return $@"
-                Use [master]
-                
-                Go
 
+            if (String.IsNullOrWhiteSpace(userName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userName'.", nameof(userName));
+            
+            if (String.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'password'.", nameof(password));
+
+            // Escape password.
+            // AF: It sucks, but CREATE LOGIN doesn't allow you to pass a parameter or variable for the password.
+            password = password.Replace("'", "''");
+            
+            yield return $@"
                 Create Database [{databaseName}]
                 On Primary
                 (
@@ -72,12 +84,13 @@ namespace DaaSDemo.Provisioning
                     Size = 8192KB,
                     FileGrowth = 65536KB
                 )
-                
-                Go
+            ";
 
+            yield return $@"
                 Use [{databaseName}]
-                Go
+            ";
 
+            yield return $@"
                 If Not Exists
                 (
                     Select name
@@ -91,8 +104,28 @@ namespace DaaSDemo.Provisioning
                     Alter Database [{databaseName}]
                     Modify FileGroup [PRIMARY] Default
                 End
+            ";
 
-                Go
+            yield return @"
+                Use [master]
+            ";
+
+            yield return $@"
+                Create Login [{userName}]
+                With
+                    Password=N'{password}',
+                    DEFAULT_DATABASE=[{databaseName}],
+                    CHECK_EXPIRATION=OFF,
+                    CHECK_POLICY=ON
+            ";
+
+            yield return $@"
+                Use [{databaseName}]
+            ";
+
+            yield return $@"
+                Create User [{userName}]
+                    For Login [{userName}]
             ";
         }
 
@@ -105,30 +138,20 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The T-SQL.
         /// </returns>
-        public static string DropDatabase(string databaseName)
+        public static IEnumerable<string> DropDatabase(string databaseName)
         {
             if (String.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
             
-            return $@"
-                Use [master]
-                
-                Go
-
+            yield return $@"
                 Alter Database
                     [{databaseName}]
                 Set
                     SINGLE_USER With Rollback Immediate
+            ";
 
-                Go
-
-                Use [master]
-                
-                Go
-
+            yield return $@"
                 Drop Database [{databaseName}]
-
-                Go
             ";
         }
     }

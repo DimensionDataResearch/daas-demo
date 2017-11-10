@@ -6,9 +6,9 @@ using System.ComponentModel.DataAnnotations;
 namespace DaaSDemo.Models.Sql
 {
     /// <summary>
-    ///     Request body when executing a T-SQL command (i.e. a non-query).
+    ///     Request body when executing a T-SQL query.
     /// </summary>
-    public class Command
+    public class Query
         : SqlRequest
     {
     }

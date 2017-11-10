@@ -17,6 +17,11 @@ namespace DaaSDemo.Provisioning.Actors
     using Data;
     using Data.Models;
     using Messages;
+    using Models.Sql;
+    using Newtonsoft.Json.Linq;
+    using SqlExecutor.Client;
+
+    // TODO: Use SQL Executor API
 
     /// <summary>
     ///     Actor that manages a specific tenant database.
@@ -35,14 +40,9 @@ namespace DaaSDemo.Provisioning.Actors
         readonly IActorRef _dataAccess;
 
         /// <summary>
-        ///     The connection to the tenant's SQL Server instance.
+        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL executor API.
         /// </summary>
-        SqlConnection _connection;
-
-        /// <summary>
-        ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
-        /// </summary>
-        DatabaseInstance _currentState;
+        SqlApiClient _sqlClient;
 
         /// <summary>
         ///     Create a new <see cref="TenantDatabaseManager"/>.
@@ -63,10 +63,11 @@ namespace DaaSDemo.Provisioning.Actors
 
             _serverManager = serverManager;
             _dataAccess = dataAccess;
+            _sqlClient = CreateSqlApiClient();
 
             ReceiveAsync<DatabaseInstance>(async database =>
             {
-                _currentState = database;
+                CurrentState = database;
 
                 Log.Info("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
                     database.Id,
@@ -93,16 +94,19 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
+        ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
+        /// </summary>
+        DatabaseInstance CurrentState { get; set; }
+
+        /// <summary>
         ///     Called when the actor is stopped.
         /// </summary>
         protected override void PostStop()
         {
-            if (_connection != null)
+            if (_sqlClient != null)
             {
-                _connection.Close();
-                _connection.Dispose();
-
-                _connection = null;
+                _sqlClient.Dispose();
+                _sqlClient = null;
             }
         }
 
@@ -124,7 +128,7 @@ namespace DaaSDemo.Provisioning.Actors
                 new DatabaseProvisioning(database.Id)
             );
 
-            if (!DatabaseExists())
+            if (!await DatabaseExists())
             {
                 try
                 {
@@ -175,7 +179,7 @@ namespace DaaSDemo.Provisioning.Actors
                 new DatabaseDeprovisioning(database.Id)
             );
 
-            if (!DatabaseExists())
+            if (await DatabaseExists())
             {
                 try
                 {
@@ -211,40 +215,34 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that the database connection is open.
-        /// </summary>
-        void EnsureConnection()
-        {
-            if (_connection == null)
-            {
-                _connection = new SqlConnection(
-                    _currentState.GetConnectionString()
-                );
-            }
-
-            if (_connection.State == ConnectionState.Closed)
-                _connection.Open();
-        }
-
-        /// <summary>
         ///     Check if the target database exists.
         /// </summary>
         /// <returns>
         ///     <c>true</c>, if the database exists; otherwise, <c>false</c>.
         /// </returns>
-        bool DatabaseExists()
+        async Task<bool> DatabaseExists()
         {
-            EnsureConnection();
-
-            using (SqlCommand command = new SqlCommand("Select name from sys.databases Where name = @DatabaseName", _connection))
-            {
-                command.Parameters.Add("DatabaseName", SqlDbType.NVarChar, size: 100).Value = _currentState.Name;
-
-                using (SqlDataReader reader = command.ExecuteReader())
+            QueryResult result = await _sqlClient.ExecuteQuery(
+                serverId: CurrentState.DatabaseServerId,
+                databaseId: SqlApiClient.MasterDatabaseId,
+                sql: new string[]
                 {
-                    return reader.Read();
-                }
-            }
+                    "Select name from sys.databases Where name = @DatabaseName"
+                },
+                parameters: new Parameter[]
+                {
+                    new Parameter
+                    {
+                        Name = "DatabaseName",
+                        DataType = SqlDbType.NVarChar,
+                        Size = 50,
+                        Value = new JValue(CurrentState.Name)
+                    }
+                },
+                executeAsAdminUser: true
+            );
+
+            return result.ResultSets[0].Rows.Count != 0;
         }
 
         /// <summary>
@@ -254,9 +252,9 @@ namespace DaaSDemo.Provisioning.Actors
         ///     A <see cref="DatabaseInstance"/> representing the target database.
         /// </param>
         /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
+        ///     <c>true</c>, if the database was created successfully; otherwise, <c>false</c>.
         /// </returns>
-        async Task CreateDatabase(DatabaseInstance database)
+        async Task<bool> CreateDatabase(DatabaseInstance database)
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
@@ -268,11 +266,43 @@ namespace DaaSDemo.Provisioning.Actors
                 database.DatabaseServer.Id
             );
 
-            EnsureConnection();
+            CommandResult result = await _sqlClient.ExecuteCommand(
+                serverId: CurrentState.DatabaseServerId,
+                databaseId: SqlApiClient.MasterDatabaseId,
+                sql: ManagementSql.CreateDatabase(CurrentState.Name, CurrentState.DatabaseUser, CurrentState.DatabasePassword),
+                executeAsAdminUser: true
+            );
 
-            using (SqlCommand createDatabase = new SqlCommand(ManagementSql.CreateDatabase(database.Name), _connection))
+            for (int messageIndex = 0; messageIndex < result.Messages.Count; messageIndex++)
             {
-                await createDatabase.ExecuteNonQueryAsync();
+                Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
+                    messageIndex,
+                    CurrentState.DatabaseServerId,
+                    result.Messages[messageIndex]
+                );
+            }
+
+            if (!result.Success)
+            {
+                foreach (SqlError error in result.Errors)
+                {
+                    Log.Warning("Error encountered while creating database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
+                        CurrentState.Id,
+                        CurrentState.Name,
+                        CurrentState.DatabaseServerId,
+                        error.Kind,
+                        error.Message
+                    );
+                }
+
+                Log.Info("Failed to create database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+                    database.Name,
+                    database.Id,
+                    database.DatabaseServer.Name,
+                    database.DatabaseServer.Id
+                );
+
+                return false;
             }
 
             Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
@@ -281,6 +311,8 @@ namespace DaaSDemo.Provisioning.Actors
                 database.DatabaseServer.Name,
                 database.DatabaseServer.Id
             );
+            
+            return true;
         }
 
         /// <summary>
@@ -290,9 +322,9 @@ namespace DaaSDemo.Provisioning.Actors
         ///     A <see cref="DatabaseInstance"/> representing the target database.
         /// </param>
         /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
+        ///     <c>true</c>, if the database was dropped successfully; otherwise, <c>false</c>.
         /// </returns>
-        async Task DropDatabase(DatabaseInstance database)
+        async Task<bool> DropDatabase(DatabaseInstance database)
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
@@ -304,11 +336,43 @@ namespace DaaSDemo.Provisioning.Actors
                 database.DatabaseServer.Id
             );
 
-            EnsureConnection();
+            CommandResult result = await _sqlClient.ExecuteCommand(
+                serverId: CurrentState.DatabaseServerId,
+                databaseId: SqlApiClient.MasterDatabaseId,
+                sql: ManagementSql.DropDatabase(CurrentState.Name),
+                executeAsAdminUser: true
+            );
 
-            using (SqlCommand dropDatabase = new SqlCommand(ManagementSql.DropDatabase(database.Name), _connection))
+            for (int messageIndex = 0; messageIndex < result.Messages.Count; messageIndex++)
             {
-                await dropDatabase.ExecuteNonQueryAsync();
+                Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
+                    messageIndex,
+                    CurrentState.DatabaseServerId,
+                    result.Messages[messageIndex]
+                );
+            }
+
+            if (!result.Success)
+            {
+                foreach (SqlError error in result.Errors)
+                {
+                    Log.Warning("Error encountered while dropping database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
+                        CurrentState.Id,
+                        CurrentState.Name,
+                        CurrentState.DatabaseServerId,
+                        error.Kind,
+                        error.Message
+                    );
+                }
+
+                Log.Info("Failed to drop database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+                    database.Name,
+                    database.Id,
+                    database.DatabaseServer.Name,
+                    database.DatabaseServer.Id
+                );
+
+                return false;
             }
 
             Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
@@ -316,6 +380,23 @@ namespace DaaSDemo.Provisioning.Actors
                 database.Id,
                 database.DatabaseServer.Name,
                 database.DatabaseServer.Id
+            );
+            
+            return true;
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="SqlApiClient"/> for communicating with the SQL Executor API.
+        /// </summary>
+        /// <returns>
+        ///     The configured <see cref="SqlApiClient"/>.
+        /// </returns>
+        SqlApiClient CreateSqlApiClient()
+        {
+            return SqlApiClient.Create(
+                endPointUri: new Uri(
+                    Context.System.Settings.Config.GetString("daas.sql.api-endpoint")
+                )
             );
         }
 

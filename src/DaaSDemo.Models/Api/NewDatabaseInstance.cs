@@ -10,20 +10,25 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The database name.
         /// </summary>
+        [MinLength(3)]
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
+        [RegularExpression("[a-zA-Z][a-zA-Z0-9._]{2,}", ErrorMessage = "Database names can only contain letters, numbers, '.', and '_'.")]
         public string Name { get; set; }
 
         /// <summary>
         ///     The name of the database-level user.
         /// </summary>
+        [MinLength(3)]
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
+        [RegularExpression("[a-zA-Z][a-zA-Z0-9_]{2,}", ErrorMessage = "User names can only contain letters, numbers, and '_'.")]
         public string DatabaseUser { get; set; }
 
         /// <summary>
         ///     The password for the database-level user.
         /// </summary>
+        [MinLength(5)]
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
         public string DatabasePassword { get; set; }
