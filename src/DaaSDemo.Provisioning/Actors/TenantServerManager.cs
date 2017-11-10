@@ -1145,12 +1145,17 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         KubeApiClient CreateKubeApiClient()
         {
-            return KubeApiClient.Create(
-                endPointUri: new Uri(
-                    Context.System.Settings.Config.GetString("daas.kube.api-endpoint")
-                ),
-                accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
-            );
+            if (Environment.GetEnvironmentVariable("IN_KUBERNETES") != "1")
+            {
+                return KubeApiClient.Create(
+                    endPointUri: new Uri(
+                        Context.System.Settings.Config.GetString("daas.kube.api-endpoint")
+                    ),
+                    accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
+                );
+            }
+            else
+                return KubeApiClient.CreateFromPodServiceAccount();
         }
 
         /// <summary>
