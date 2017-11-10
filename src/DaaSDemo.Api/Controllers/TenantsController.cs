@@ -66,9 +66,9 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}")]
         public IActionResult GetById(int tenantId)
         {
-            Tenant matchingTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
-            if (matchingTenant != null)
-                return Json(matchingTenant);
+            Tenant tenant = Entities.GetTenantById(tenantId);
+            if (tenant != null)
+                return Json(tenant);
 
             return NotFound(new
             {
@@ -84,9 +84,9 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet]
         public IActionResult List()
         {
-            Tenant[] tenants = Entities.Tenants.OrderBy(tenant => tenant.Name).ToArray();
-
-            return Json(tenants);
+            return Json(
+                Entities.GetAllTenants()
+            );
         }
 
         /// <summary>
@@ -101,11 +101,9 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var tenant = new Tenant
-            {
-                Name = newTenant.Name
-            };
-            Entities.Tenants.Add(tenant);
+            var tenant = Entities.AddTenant(
+                name: newTenant.Name
+            );
             Entities.SaveChanges();
 
             return Json(tenant);
@@ -120,7 +118,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/server")]
         public IActionResult GetServer(int tenantId)
         {
-            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer databaseServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (databaseServer == null)
             {
                 return NotFound(new
@@ -146,7 +144,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId:int}/server")]
         public IActionResult CreateServer(int tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
         {
-            DatabaseServer existingServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer existingServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (existingServer != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new
@@ -158,7 +156,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -172,15 +170,12 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var databaseServer = new DatabaseServer
-            {
-                Name = newDatabaseServer.Name,
-                AdminPassword = newDatabaseServer.AdminPassword,
-                TenantId = tenantId,
-                Action = ProvisioningAction.Provision,
-                Status = ProvisioningStatus.Pending
-            };
-            Entities.DatabaseServers.Add(databaseServer);
+            var databaseServer = Entities.AddDatabaseServer(
+                tenantId: tenantId,
+                name: newDatabaseServer.Name,
+                adminPassword: newDatabaseServer.AdminPassword,
+                action: ProvisioningAction.Provision
+            );
             Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -200,10 +195,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId:int}/server/reconfigure")]
         public IActionResult ReconfigureServer(int tenantId)
         {
-            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(
-                server => server.TenantId == tenantId
-            );
-
+            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -212,20 +204,6 @@ namespace DaaSDemo.Api.Controllers
                     TenantId = tenantId,
                     EntityType = "DatabaseServer",
                     Message = $"No database server found for tenant {tenantId}."
-                });
-            }
-
-            if (Entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
-            {
-                return StatusCode(StatusCodes.Status400BadRequest, new
-                {
-                    Id = targetServer.Id,
-                    TenantId = tenantId,
-                    EntityType = "DatabaseServer",
-                    RequestedAction = ProvisioningAction.Reconfigure,
-                    Action = targetServer.Action,
-                    Status = targetServer.Status,
-                    Message = $"Cannot de-provision database server {targetServer.Id} because it still hosts one or more databases. First de-provision these databases and then retry the operation."
                 });
             }
 
@@ -239,7 +217,7 @@ namespace DaaSDemo.Api.Controllers
                     RequestedAction = ProvisioningAction.Reconfigure,
                     Action = targetServer.Action,
                     Status = targetServer.Status,
-                    Message = $"Cannot de-provision database server {targetServer.Id} because an action is already in progress for this server."
+                    Message = $"Cannot reconfigure database server {targetServer.Id} because another server-level action is already in progress."
                 });
             }
 
@@ -263,10 +241,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpDelete("{tenantId:int}/server")]
         public IActionResult DestroyServer(int tenantId)
         {
-            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(
-                server => server.TenantId == tenantId
-            );
-
+            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -278,7 +253,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            if (Entities.DatabaseInstances.Any(database => database.DatabaseServerId == targetServer.Id))
+            if (Entities.DoesServerHaveDatabases(targetServer.Id))
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new
                 {
@@ -326,7 +301,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/databases")]
         public IActionResult GetDatabases(int tenantId)
         {
-            DatabaseServer databaseServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer databaseServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (databaseServer == null)
             {
                 return NotFound(new
@@ -337,7 +312,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -348,11 +323,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseInstanceDetail[] databases = 
-                Entities.DatabaseInstances.Where(
-                    database => database.DatabaseServerId == databaseServer.Id
-                )
-                .AsEnumerable()
+            DatabaseInstanceDetail[] databases = Entities.GetDatabaseInstancesByServer(databaseServer.Id)
                 .Select(database => new DatabaseInstanceDetail(database))
                 .ToArray();
             
@@ -371,7 +342,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId:int}/databases")]
         public IActionResult CreateDatabase(int tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
-            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -382,7 +353,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -409,9 +380,7 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            DatabaseInstance existingDatabase = Entities.DatabaseInstances.FirstOrDefault(
-                databaseInstance => databaseInstance.DatabaseServerId == targetServer.Id && databaseInstance.Name == newDatabase.Name
-            );
+            DatabaseInstance existingDatabase = Entities.GetDatabaseInstanceByName(newDatabase.Name, targetServer.Id);
             if (existingDatabase != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new
@@ -423,16 +392,14 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            var database = new DatabaseInstance
-            {
-                Name = newDatabase.Name,
-                DatabaseUser = newDatabase.DatabaseUser,
-                DatabasePassword = newDatabase.DatabasePassword,
-                DatabaseServerId = targetServer.Id,
-                Action = ProvisioningAction.Provision
-            };
+            DatabaseInstance database = Entities.AddDatabaseInstance(
+                name: newDatabase.Name,
+                serverId: targetServer.Id,
+                databaseUser: newDatabase.DatabaseUser,
+                databasePassword: newDatabase.DatabasePassword,
+                action: ProvisioningAction.Provision
+            );
 
-            Entities.DatabaseInstances.Add(database);
             Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -455,7 +422,7 @@ namespace DaaSDemo.Api.Controllers
         [HttpDelete("{tenantId:int}/databases/{databaseId}")]
         public IActionResult DeleteDatabase(int tenantId, int databaseId)
         {
-            Tenant ownerTenant = Entities.Tenants.FirstOrDefault(tenant => tenant.Id == tenantId);
+            Tenant ownerTenant = Entities.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -466,7 +433,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer targetServer = Entities.DatabaseServers.FirstOrDefault(server => server.TenantId == tenantId);
+            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -477,7 +444,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseInstance targetDatabase = Entities.DatabaseInstances.FirstOrDefault(database => database.Id == databaseId);
+            DatabaseInstance targetDatabase = Entities.GetDatabaseInstanceById(databaseId);
             if (targetDatabase == null)
             {
                 return NotFound(new
@@ -510,7 +477,7 @@ namespace DaaSDemo.Api.Controllers
                     EntityType = "Database",
                     Action = targetDatabase.Action,
                     Status = targetDatabase.Status,
-                    Message = $"Cannot delete database {targetDatabase.Name} in server {targetServer.Id} an action is already in progress for this database."
+                    Message = $"Cannot delete database {targetDatabase.Name} in server {targetServer.Id} because a database-level action is already in progress."
                 });
             }
 
