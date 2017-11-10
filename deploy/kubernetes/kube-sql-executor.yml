@@ -3,7 +3,7 @@ kind: ReplicationController
 metadata:
   name: sql-executor
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     k8s-app: sql-executor
   template:
