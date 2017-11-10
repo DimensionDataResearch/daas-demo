@@ -12,8 +12,8 @@ using System;
 namespace DaaSDemo.Api.Migrations
 {
     [DbContext(typeof(Entities))]
-    [Migration("20171027004242_DatabaseProvisioningState")]
-    partial class DatabaseProvisioningState
+    [Migration("20171110012302_InitialSchema")]
+    partial class InitialSchema
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -71,6 +71,8 @@ namespace DaaSDemo.Api.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200);
+
+                    b.Property<int>("Phase");
 
                     b.Property<int>("Status");
 

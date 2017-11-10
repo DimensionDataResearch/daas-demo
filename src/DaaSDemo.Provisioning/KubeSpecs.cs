@@ -106,7 +106,7 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Build a <see cref="V1ServiceSpec"/> for the specified server.
+        ///     Build an internally-facing <see cref="V1ServiceSpec"/> for the specified server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
@@ -114,7 +114,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="V1ServiceSpec"/>.
         /// </returns>
-        public static V1ServiceSpec Service(DatabaseServer server)
+        public static V1ServiceSpec InternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -123,6 +123,41 @@ namespace DaaSDemo.Provisioning
 
             return new V1ServiceSpec
             {
+                Ports = new List<V1ServicePort>
+                {
+                    new V1ServicePort
+                    {
+                        Name = "sql-server",
+                        Port = 1433,
+                        Protocol = "TCP"
+                    }
+                },
+                Selector = new Dictionary<string, string>
+                {
+                    ["k8s-app"] = baseName
+                }
+            };
+        }
+
+        /// <summary>
+        ///     Build an externally-facing <see cref="V1ServiceSpec"/> for the specified server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1ServiceSpec"/>.
+        /// </returns>
+        public static V1ServiceSpec ExternalService(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = KubeResources.GetBaseName(server);
+
+            return new V1ServiceSpec
+            {
+                Type = "NodePort",
                 Ports = new List<V1ServicePort>
                 {
                     new V1ServicePort
@@ -167,7 +202,7 @@ namespace DaaSDemo.Provisioning
                             Port = (11433 + server.Id).ToString(), // Cheaty!
                             Backend = new V1beta1IngressBackend
                             {
-                                ServiceName = $"{baseName}-service",
+                                ServiceName = $"{baseName}-service-internal",
                                 ServicePort = "1433"
                             }
                         }

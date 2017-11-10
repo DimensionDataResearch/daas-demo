@@ -16,7 +16,7 @@ namespace DaaSDemo.Data.Models
         ReplicationController = 1,
 
         /// <summary>
-        ///     The server's Service resource.
+        ///     The server's Service resources.
         /// </summary>
         Service = 2,
 

@@ -318,10 +318,10 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 return null;
             }
 
-            V1Service serverService = await KubeClient.ServicesV1.Get(
-                name: $"sql-server-{request.ServerId}-service"
+            List<V1Service> matchingServices = await KubeClient.ServicesV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal"
             );
-            if (serverService == null)
+            if (matchingServices.Count == 0)
             {
                 Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server's associated Kubernetes Service not found).",
                     request.DatabaseId,
@@ -330,6 +330,8 @@ namespace DaaSDemo.SqlExecutor.Controllers
 
                 return null;
             }
+
+            V1Service serverService = matchingServices[matchingServices.Count - 1];
 
             var connectionStringBuilder = new SqlClient.SqlConnectionStringBuilder
             {

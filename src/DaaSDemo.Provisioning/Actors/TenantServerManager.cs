@@ -233,7 +233,6 @@ namespace DaaSDemo.Provisioning.Actors
                                 replicationController.Status.Replicas
                             );
 
-
                             // We're done with the ReplicationController now that it's marked as Available; move on to the Service.
                             SetProvisioningPhase(ServerProvisioningPhase.Service);
                             Become(Ready);
@@ -448,7 +447,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServicePresent();
+                    await EnsureServicesPresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
@@ -464,6 +463,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.InitializeConfiguration:
                 {
+                    // TODO: Ingress is now redundant because we're using a NodePort service.
                     await EnsureIngressPresent();
 
                     SetProvisioningPhase(ServerProvisioningPhase.Ingress);
@@ -493,7 +493,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServicePresent();
+                    await EnsureServicesPresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
@@ -538,7 +538,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServiceAbsent();
+                    await EnsureServicesAbsent();
 
                     SetDeprovisioningPhase(ServerProvisioningPhase.Service);
 
@@ -583,18 +583,26 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Find the server's associated Service (if it exists).
         /// </summary>
         /// <returns>
-        ///     The Service, or <c>null</c> if it was not found.
+        ///     The Services, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Service> FindService()
+        async Task<(V1Service internalService, V1Service externalService)> FindService()
         {
+            V1Service internalService = null;
+            V1Service externalService = null;
+
             List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
             );
+            if (matchingServices.Count > 0)
+                internalService = matchingServices[matchingServices.Count - 1];
 
-            if (matchingServices.Count == 0)
-                return null;
+            matchingServices = await _kubeClient.ServicesV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
+            );
+            if (matchingServices.Count > 0)
+                externalService = matchingServices[matchingServices.Count - 1];
 
-            return matchingServices[matchingServices.Count - 1];
+            return (internalService, externalService);
         }
 
         /// <summary>
@@ -697,79 +705,120 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that a Service resource exists for the specified database server.
+        ///     Ensure that internal and external Service resources exist for the specified database server.
         /// </summary>
         /// <returns>
         ///     The Service resource, as a <see cref="V1Service"/>.
         /// </returns>
-        async Task<V1Service> EnsureServicePresent()
+        async Task EnsureServicesPresent()
         {
-            V1Service existingService = await FindService();
-            if (existingService != null)
+            (V1Service existingInternalService, V1Service existingExternalService) = await FindService();
+            if (existingInternalService == null)
             {
-                Log.Info("Found existing service {ServiceName} for server {ServerId}.",
-                    existingService.Metadata.Name,
+                Log.Info("Creating internal service for server {ServerId}...",
                     CurrentState.Id
                 );
 
-                return existingService;
+                V1Service createdService = await _kubeClient.ServicesV1.Create(
+                    KubeResources.InternalService(CurrentState)
+                );
+
+                Log.Info("Successfully created internal service {ServiceName} for server {ServerId}.",
+                    createdService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing internal service {ServiceName} for server {ServerId}.",
+                    existingInternalService.Metadata.Name,
+                    CurrentState.Id
+                );
             }
 
-            Log.Info("Creating service for server {ServerId}...",
-                CurrentState.Id
-            );
+            if (existingExternalService == null)
+            {
+                Log.Info("Creating external service for server {ServerId}...",
+                    CurrentState.Id
+                );
 
-            V1Service createdService = await _kubeClient.ServicesV1.Create(
-                KubeResources.Service(CurrentState)
-            );
+                V1Service createdService = await _kubeClient.ServicesV1.Create(
+                    KubeResources.ExternalService(CurrentState)
+                );
 
-            Log.Info("Successfully created service {ServiceName} for server {ServerId}.",
-                createdService.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return createdService;
+                Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
+                    createdService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing external service {ServiceName} for server {ServerId}.",
+                    existingExternalService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
         }
 
         /// <summary>
         ///     Ensure that a Service resource does not exist for the specified database server.
         /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if the service is now absent; otherwise, <c>false</c>.
-        /// </returns>
-        async Task<bool> EnsureServiceAbsent()
+        async Task EnsureServicesAbsent()
         {
-            V1Service service = await FindService();
-            if (service == null)
-                return true;
-
-            Log.Info("Deleting service {ServiceName} for server {ServerId}...",
-                service.Metadata.Name,
-                CurrentState.Id
-            );
-
-            UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
-                name: service.Metadata.Name
-            );
-
-            if (result.Status != "Success" && result.Reason != "NotFound")
+            (V1Service existingInternalService, V1Service existingExternalService) = await FindService();
+            if (existingInternalService != null)
             {
-                Log.Error("Failed to delete service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    service.Metadata.Name,
-                    CurrentState.Id,
-                    result.Message,
-                    result.Reason
+                Log.Info("Deleting internal service {ServiceName} for server {ServerId}...",
+                    existingInternalService.Metadata.Name,
+                    CurrentState.Id
                 );
 
-                return false;
+                UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
+                    name: existingInternalService.Metadata.Name
+                );
+
+                if (result.Status != "Success" && result.Reason != "NotFound")
+                {
+                    Log.Error("Failed to delete internal service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                        existingInternalService.Metadata.Name,
+                        CurrentState.Id,
+                        result.Message,
+                        result.Reason
+                    );
+                }
+
+                Log.Info("Deleted internal service {ServiceName} for server {ServerId}.",
+                    existingInternalService.Metadata.Name,
+                    CurrentState.Id
+                );
             }
 
-            Log.Info("Deleted service {ServiceName} for server {ServerId}.",
-                service.Metadata.Name,
-                CurrentState.Id
-            );
+            if (existingExternalService != null)
+            {
+                Log.Info("Deleting external service {ServiceName} for server {ServerId}...",
+                    existingExternalService.Metadata.Name,
+                    CurrentState.Id
+                );
 
-            return true;
+                UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
+                    name: existingExternalService.Metadata.Name
+                );
+
+                if (result.Status != "Success" && result.Reason != "NotFound")
+                {
+                    Log.Error("Failed to delete external service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                        existingExternalService.Metadata.Name,
+                        CurrentState.Id,
+                        result.Message,
+                        result.Reason
+                    );
+                }
+
+                Log.Info("Deleted external service {ServiceName} for server {ServerId}.",
+                    existingExternalService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
         }
 
         /// <summary>
@@ -780,6 +829,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<V1Beta1VoyagerIngress> EnsureIngressPresent()
         {
+            // TODO: Ingress is now redundant because we're using a NodePort service.
+
             V1Beta1VoyagerIngress ingress = await FindIngress();
             if (ingress != null)
             {
@@ -881,10 +932,10 @@ namespace DaaSDemo.Provisioning.Actors
                         // Capture current ingress details to enable subsequent provisioning actions (if any).
                         CurrentState.IngressIP = ingressIP;
                         CurrentState.IngressPort = ingressPort;
-                    }
 
-                    if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
-                        CompleteCurrentAction();
+                        if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
+                            CompleteCurrentAction();
+                    }
                 }
                 else
                 {
@@ -912,23 +963,12 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Get the (external) IP and port on which the database server is accessible.
+        ///     Get the host and port on which the database server is accessible.
         /// </summary>
         /// <returns>
-        ///     The IP and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
+        ///     The host and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
         /// </returns>
-        async Task<(string hostIP, int? hostPort)> GetServerIngress()
-        {
-            (string hostIP, int? hostPort) = await _kubeClient.GetServerIngressEndPoint(CurrentState);
-            if (String.IsNullOrWhiteSpace(hostIP))
-                return (hostIP: null, hostPort: null);
-
-            string hostExternalIP;
-            if (!_nodeExternalIPs.TryGetValue(hostIP, out hostExternalIP))
-                return (hostIP: null, hostPort: null); // If we can't map to the corresponding external IP address, don't bother.
-
-            return (hostExternalIP, hostPort);
-        }
+        Task<(string host, int? hostPort)> GetServerIngress() => _kubeClient.GetServerIngressEndPoint(CurrentState);
 
         /// <summary>
         ///     Execute T-SQL to initialise the server configuration.

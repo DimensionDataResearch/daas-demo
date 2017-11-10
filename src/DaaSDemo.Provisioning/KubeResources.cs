@@ -107,7 +107,7 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1Service"/> for the specified database server.
+        ///     Create a new internally-facing <see cref="V1Service"/> for the specified database server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
@@ -115,7 +115,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="V1Service"/>.
         /// </returns>
-        public static V1Service Service(DatabaseServer server)
+        public static V1Service InternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -123,12 +123,41 @@ namespace DaaSDemo.Provisioning
             string baseName = GetBaseName(server);
             
             return Service(
-                name: $"{baseName}-service",
-                spec: KubeSpecs.Service(server),
+                name: $"{baseName}-service-internal",
+                spec: KubeSpecs.InternalService(server),
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.service-type"] = "internal"
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new externally-facing <see cref="V1Service"/> for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1Service"/>.
+        /// </returns>
+        public static V1Service ExternalService(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = GetBaseName(server);
+            
+            return Service(
+                name: $"{baseName}-service-external",
+                spec: KubeSpecs.ExternalService(server),
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = baseName,
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.service-type"] = "external"
                 }
             );
         }

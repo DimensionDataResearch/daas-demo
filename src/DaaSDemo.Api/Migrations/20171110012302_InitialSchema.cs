@@ -10,15 +10,31 @@ namespace DaaSDemo.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "IPAddressMappings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    ExternalIP = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    InternalIP = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_IPAddressMappings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DatabaseInstance",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    Action = table.Column<int>(type: "int", nullable: false),
                     DatabasePassword = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     DatabaseServerId = table.Column<int>(type: "int", nullable: false),
                     DatabaseUser = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false)
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -45,10 +61,13 @@ namespace DaaSDemo.Api.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
+                    Action = table.Column<int>(type: "int", nullable: false),
                     AdminPassword = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IngressIP = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IngressPort = table.Column<int>(type: "int", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Phase = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     TenantId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -81,6 +100,16 @@ namespace DaaSDemo.Api.Migrations
                 name: "IX_DatabaseServer_TenantId",
                 table: "DatabaseServer",
                 column: "TenantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IPAddressMappings_ExternalIP",
+                table: "IPAddressMappings",
+                column: "ExternalIP");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IPAddressMappings_InternalIP",
+                table: "IPAddressMappings",
+                column: "InternalIP");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tenant_DatabaseServerId",
@@ -117,6 +146,9 @@ namespace DaaSDemo.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "DatabaseInstance");
+
+            migrationBuilder.DropTable(
+                name: "IPAddressMappings");
 
             migrationBuilder.DropTable(
                 name: "DatabaseServer");
