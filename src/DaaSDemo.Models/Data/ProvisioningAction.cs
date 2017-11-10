@@ -1,4 +1,4 @@
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     A provisioning action to be performed for a resource.

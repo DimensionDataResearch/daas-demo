@@ -1,4 +1,4 @@
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     Represents a phase in server provisioning / reconfiguration / de-provisioning.

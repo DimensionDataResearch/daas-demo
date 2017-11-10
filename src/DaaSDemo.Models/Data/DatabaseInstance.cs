@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     A database instance owned by a tenant.

@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     Detailed information about a database instance.

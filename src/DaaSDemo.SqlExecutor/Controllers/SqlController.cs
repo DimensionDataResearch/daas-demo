@@ -14,7 +14,7 @@ using SqlClient = System.Data.SqlClient;
 namespace DaaSDemo.SqlExecutor.Controllers
 {
     using Data;
-    using Data.Models;
+    using Models.Data;
     using KubeClient;
     using Models.Sql;
 

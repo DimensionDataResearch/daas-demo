@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
 
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     Represents a database tenant.

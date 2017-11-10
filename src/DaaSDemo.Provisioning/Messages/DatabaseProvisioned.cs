@@ -1,6 +1,6 @@
 namespace DaaSDemo.Provisioning.Messages
 {
-    using Data.Models;
+    using Models.Data;
 
     /// <summary>
     ///     Message indicating that a database has been provisioned.

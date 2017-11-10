@@ -1,6 +1,6 @@
 namespace DaaSDemo.Provisioning.Messages
 {
-    using Data.Models;
+    using Models.Data;
     
     /// <summary>
     ///     Message indicating that an error was encountered while provisioning a database server.

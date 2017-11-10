@@ -1,6 +1,6 @@
 namespace DaaSDemo.Provisioning.Messages
 {
-    using Data.Models;
+    using Models.Data;
 
     /// <summary>
     ///     Message indicating the the ingress (external IP / port) details for a database server have changed.

@@ -19,10 +19,10 @@ namespace DaaSDemo.Provisioning.Actors
 {
     using Common.Utilities;
     using Data;
-    using Data.Models;
     using KubeClient;
     using KubeClient.Models;
     using Messages;
+    using Models.Data;
     using Models.Sql;
     using SqlExecutor.Client;
 

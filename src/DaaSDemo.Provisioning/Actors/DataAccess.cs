@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 namespace DaaSDemo.Provisioning.Actors
 {
     using Data;
-    using Data.Models;
     using Messages;
+    using Models.Data;
 
     // TODO: Supervision policy for TenantServerManager actors (incremental back-off, fail after 5 attempts).
 

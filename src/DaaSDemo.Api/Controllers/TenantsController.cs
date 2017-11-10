@@ -16,8 +16,8 @@ using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 namespace DaaSDemo.Api.Controllers
 {
     using Data;
-    using Data.Models;
     using Models.Api;
+    using Models.Data;
 
     /// <summary>
     ///     Controller for the tenants API.

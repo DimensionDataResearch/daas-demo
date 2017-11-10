@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning
 {
-    using Data.Models;
     using KubeClient;
+    using Models.Data;
 
     /// <summary>
     ///     Extension methods for <see cref="KubeApiClient"/>.

@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 namespace DaaSDemo.Provisioning.Actors
 {
     using Data;
-    using Data.Models;
     using Messages;
+    using Models.Data;
     using Models.Sql;
     using SqlExecutor.Client;
 

@@ -1,4 +1,4 @@
-namespace DaaSDemo.Data.Models
+namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     The provisioning status of a resource.

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DaaSDemo.Data
 {
-    using Models;
+    using Models.Data;
 
     /// <summary>
     ///     Database context for entities used by the Database-as-a-Service demo.

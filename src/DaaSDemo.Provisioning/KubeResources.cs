@@ -4,9 +4,9 @@ using System.Collections.Generic;
 
 namespace DaaSDemo.Provisioning
 {
-    using Data.Models;
     using KubeClient.Models;
     using Messages;
+    using Models.Data;
 
     /// <summary>
     ///     Factory methods for common Kubernetes resources.
