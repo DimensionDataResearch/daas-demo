@@ -35,12 +35,13 @@ namespace DaaSDemo.Models.Data
         /// <summary>
         ///     The external IP address that the server is listening on.
         /// </summary>
-        public string IngressIP { get ; set; }
+        [MaxLength(100)]
+        public string PublicFQDN { get ; set; }
 
         /// <summary>
         ///     The external port that the server is listening on.
         /// </summary>
-        public int? IngressPort { get; set; }
+        public int? PublicPort { get; set; }
 
         /// <summary>
         ///     The Id of the tenant that owns the database server.
@@ -90,6 +91,6 @@ namespace DaaSDemo.Models.Data
         /// <returns>
         ///     The connection string.
         /// </returns>
-        public string GetMasterConnectionString() => $"Data Source={IngressIP},{IngressPort};Initial Catalog=master;User=sa;Password={AdminPassword}";
+        public string GetMasterConnectionString() => $"Data Source={PublicFQDN},{PublicPort};Initial Catalog=master;User=sa;Password={AdminPassword}";
     }
 }

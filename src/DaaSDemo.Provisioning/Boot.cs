@@ -34,10 +34,12 @@ namespace DaaSDemo.Provisioning
 
             string kubeApiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];
             string kubeApiToken = appConfiguration["Kubernetes:Token"];
+            string clusterPublicDomainName = appConfiguration["Kubernetes:ClusterPublicFQDN"];
             string volumeClaimName = appConfiguration["Kubernetes:VolumeClaimName"];
             Config kubeConfig = ConfigurationFactory.ParseString($@"
                 daas.kube.api-endpoint = ""{kubeApiEndpoint}""
                 daas.kube.api-token = ""{kubeApiToken}""
+                daas.kube.cluster-public-fqdn = ""{clusterPublicDomainName}""
                 daas.kube.volume-claim-name = ""{volumeClaimName}""
             ");
 

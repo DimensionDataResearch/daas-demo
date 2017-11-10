@@ -71,6 +71,11 @@ namespace DaaSDemo.Provisioning.Actors
         readonly SqlApiClient _sqlClient;
 
         /// <summary>
+        ///     The Kubernetes cluster's fully-qualified domain name.
+        /// </summary>
+        string _clusterPublicDomainName;
+
+        /// <summary>
         ///     Cancellation for the current poll timer (if any).
         /// </summary>
         ICancelable _pollCancellation;
@@ -99,8 +104,6 @@ namespace DaaSDemo.Provisioning.Actors
 
             _kubeClient = CreateKubeApiClient();
             _sqlClient = CreateSqlApiClient();
-
-            Become(Ready);
         }
 
         /// <summary>
@@ -117,6 +120,16 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Previous state (if known) from the database.
         /// </summary>
         DatabaseServer PreviousState { get; set; }
+
+        /// <summary>
+        ///     Called when the actor is started.
+        /// </summary>
+        protected override void PreStart()
+        {
+            _clusterPublicDomainName = Context.System.Settings.Config.GetString("daas.kube.cluster-public-fqdn");
+
+            Become(Ready);
+        }
 
         /// <summary>
         ///     Called when the actor has stopped.
@@ -877,63 +890,41 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task UpdateServerIngressDetails()
         {
-            (string ingressIP, int? ingressPort) = await GetServerIngress();
-            if (!String.IsNullOrWhiteSpace(ingressIP))
+            int? externalPort = await _kubeClient.GetServerPublicPort(CurrentState);
+            if (externalPort != null)
             {
-                if (ingressPort != null)
+                if (_clusterPublicDomainName != CurrentState.PublicFQDN || externalPort != CurrentState.PublicPort)
                 {
-                    if (ingressIP != CurrentState.IngressIP || ingressPort != CurrentState.IngressPort)
-                    {
-                        Log.Info("Server {ServerName} is accessible at {HostIP}:{HostPort}",
-                            CurrentState.Name,
-                            ingressIP,
-                            ingressPort.Value
-                        );
+                    Log.Info("Server {ServerName} is accessible at {ClusterPublicFQDN}:{PublicPortPort}",
+                        CurrentState.Name,
+                        _clusterPublicDomainName,
+                        externalPort.Value
+                    );
 
-                        _dataAccess.Tell(
-                            new ServerIngressChanged(_serverId, ingressIP, ingressPort)
-                        );
+                    _dataAccess.Tell(
+                        new ServerIngressChanged(_serverId, _clusterPublicDomainName, externalPort)
+                    );
 
-                        // Capture current ingress details to enable subsequent provisioning actions (if any).
-                        CurrentState.IngressIP = ingressIP;
-                        CurrentState.IngressPort = ingressPort;
-                    }
-
-                    if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
-                        CompleteCurrentAction();
+                    // Capture current ingress details to enable subsequent provisioning actions (if any).
+                    CurrentState.PublicFQDN = _clusterPublicDomainName;
+                    CurrentState.PublicPort = externalPort;
                 }
-                else
-                {
-                    Log.Debug("Cannot determine host port for server {ServerName}.", CurrentState.Name);
 
-                    if (CurrentState.IngressIP != null)
-                    {
-                        _dataAccess.Tell(
-                            new ServerIngressChanged(_serverId, CurrentState.IngressIP, ingressPort: null)
-                        );
-                    }
-                }
+                if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
+                    CompleteCurrentAction();
             }
             else
             {
-                Log.Debug("Cannot determine host IP for server {ServerName}.", CurrentState.Name);
+                Log.Debug("Cannot determine public port for server {ServerName}.", CurrentState.Name);
 
-                if (CurrentState.IngressIP != null)
+                if (CurrentState.PublicFQDN != null)
                 {
                     _dataAccess.Tell(
-                        new ServerIngressChanged(_serverId, ingressIP: null, ingressPort: null)
+                        new ServerIngressChanged(_serverId, publicFQDN: null, publicPort: null)
                     );
                 }
             }
         }
-
-        /// <summary>
-        ///     Get the host and port on which the database server is accessible.
-        /// </summary>
-        /// <returns>
-        ///     The host and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
-        /// </returns>
-        Task<(string host, int? hostPort)> GetServerIngress() => _kubeClient.GetServerIngressEndPoint(CurrentState);
 
         /// <summary>
         ///     Execute T-SQL to initialise the server configuration.

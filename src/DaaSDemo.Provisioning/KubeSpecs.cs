@@ -51,7 +51,6 @@ namespace DaaSDemo.Provisioning
                     },
                     Spec = new V1PodSpec
                     {
-                        ActiveDeadlineSeconds = 60 * 2,
                         TerminationGracePeriodSeconds = 60,
                         Containers = new List<V1Container>
                         {

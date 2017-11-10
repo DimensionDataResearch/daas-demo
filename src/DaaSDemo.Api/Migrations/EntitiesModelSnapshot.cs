@@ -63,15 +63,16 @@ namespace DaaSDemo.Api.Migrations
                     b.Property<string>("AdminPassword")
                         .IsRequired();
 
-                    b.Property<string>("IngressIP");
-
-                    b.Property<int?>("IngressPort");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200);
 
                     b.Property<int>("Phase");
+
+                    b.Property<string>("PublicFQDN")
+                        .HasMaxLength(100);
+
+                    b.Property<int?>("PublicPort");
 
                     b.Property<int>("Status");
 
@@ -91,15 +92,11 @@ namespace DaaSDemo.Api.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<int?>("DatabaseServerId");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200);
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DatabaseServerId");
 
                     b.HasIndex("Name");
 
@@ -120,13 +117,6 @@ namespace DaaSDemo.Api.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("DaaSDemo.Models.Data.Tenant", b =>
-                {
-                    b.HasOne("DaaSDemo.Models.Data.DatabaseServer", "DatabaseServer")
-                        .WithMany()
-                        .HasForeignKey("DatabaseServerId");
                 });
 #pragma warning restore 612, 618
         }

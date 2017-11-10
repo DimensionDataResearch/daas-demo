@@ -15,15 +15,15 @@ namespace DaaSDemo.Provisioning
     public static class KubeClientExtensions
     {
         /// <summary>
-        ///     Get the (node) IP and port on which the database server is accessible.
+        ///     Get the public TCP port number on which the database server is accessible.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> describing the server.
         /// </param>
         /// <returns>
-        ///     The host and port, or <c>null</c> and <c>null</c> if the ingress for the server cannot be found.
+        ///     The port, or <c>null</c> if the externally-facing service for the server cannot be found.
         /// </returns>
-        public static async Task<(string host, int? hostPort)> GetServerIngressEndPoint(this KubeApiClient client, DatabaseServer server)
+        public static async Task<int?> GetServerPublicPort(this KubeApiClient client, DatabaseServer server)
         {
             if (client == null)
                 throw new ArgumentNullException(nameof(client));
@@ -35,14 +35,11 @@ namespace DaaSDemo.Provisioning
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)
-                return (null, null);
+                return null;
 
             V1Service externalService = matchingServices[matchingServices.Count - 1];
 
-            return (
-                host: "kr-cluster.tintoy.io", // TODO: Make this configurable.
-                hostPort: externalService.Spec.Ports[0].NodePort
-            );
+            return externalService.Spec.Ports[0].NodePort;
         }
     }
 }

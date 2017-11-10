@@ -70,9 +70,9 @@ namespace DaaSDemo.Models.Data
         ///     Does the database's server have ingress details available?
         /// </summary>
         /// <returns>
-        ///     <c>true</c>, if <see cref="DatabaseServer"/> is not <c>null</c>, and has both <see cref="DatabaseServer.IngressIP"/> and <see cref="DatabaseServer.IngressPort"/>; otherwise, <c>false</c>.
+        ///     <c>true</c>, if <see cref="DatabaseServer"/> is not <c>null</c>, and has both <see cref="DatabaseServer.PublicFQDN"/> and <see cref="DatabaseServer.PublicPort"/>; otherwise, <c>false</c>.
         /// </returns>
-        public bool DoesServerHaveIngress() => DatabaseServer?.IngressIP != null && DatabaseServer?.IngressPort != null;
+        public bool DoesServerHaveIngress() => DatabaseServer?.PublicFQDN != null && DatabaseServer?.PublicPort != null;
 
         /// <summary>
         ///     Get the connection string for the database.
@@ -80,6 +80,6 @@ namespace DaaSDemo.Models.Data
         /// <returns>
         ///     The connection string.
         /// </returns>
-        public string GetConnectionString() => $"Data Source={DatabaseServer?.IngressIP},{DatabaseServer?.IngressPort};Initial Catalog={Name};User=sa;Password={DatabaseServer?.AdminPassword}";
+        public string GetConnectionString() => $"Data Source={DatabaseServer?.PublicFQDN},{DatabaseServer?.PublicPort};Initial Catalog={Name};User=sa;Password={DatabaseServer?.AdminPassword}";
     }
 }

@@ -13,17 +13,17 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server whose ingress details have changed.
         /// </param>
-        /// <param name="ingressIP">
-        ///     The server's ingress (external) IP address.
+        /// <param name="publicFQDN">
+        ///     The server's public fully-qualified domain name.
         /// </param>
-        /// <param name="ingressPort">
-        ///     The server's ingress (external) TCP port.
+        /// <param name="publicPort">
+        ///     The server's public TCP port.
         /// </param>
-        public ServerIngressChanged(int serverId, string ingressIP, int? ingressPort)
+        public ServerIngressChanged(int serverId, string publicFQDN, int? publicPort)
         {
             ServerId = serverId;
-            IngressIP = ingressIP;
-            IngressPort = ingressPort;
+            PublicFQDN = publicFQDN;
+            PublicPort = publicPort;
         }
 
         /// <summary>
@@ -34,11 +34,11 @@ namespace DaaSDemo.Provisioning.Messages
         /// <summary>
         ///     The server's ingress (external) IP address.
         /// </summary>
-        public string IngressIP { get; }
+        public string PublicFQDN { get; }
 
         /// <summary>
         ///     The server's ingress (external) TCP port.
         /// </summary>
-        public int? IngressPort { get; }
+        public int? PublicPort { get; }
     }
 }

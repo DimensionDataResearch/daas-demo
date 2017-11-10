@@ -291,8 +291,8 @@ namespace DaaSDemo.Provisioning.Actors
                     return;
                 }
 
-                server.IngressIP = serverIngressChanged.IngressIP;
-                server.IngressPort = serverIngressChanged.IngressPort;
+                server.PublicFQDN = serverIngressChanged.PublicFQDN;
+                server.PublicPort = serverIngressChanged.PublicPort;
 
                 await entities.SaveChangesAsync();
             }

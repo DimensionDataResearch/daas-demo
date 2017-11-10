@@ -24,17 +24,5 @@ namespace DaaSDemo.Models.Data
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
         public string Name { get; set; }
-
-        /// <summary>
-        ///     The Id of the tenant's database server (if any).
-        /// </summary>
-        public int? DatabaseServerId { get; set; }
-
-        /// <summary>
-        ///     The tenant's database server (if any).
-        /// </summary>
-        [ForeignKey("DatabaseServerId")]
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public DatabaseServer DatabaseServer { get; set; }
     }
 }
