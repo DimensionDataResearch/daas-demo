@@ -51,6 +51,7 @@ namespace DaaSDemo.Provisioning
                     },
                     Spec = new V1PodSpec
                     {
+                        ActiveDeadlineSeconds = 60 * 2,
                         TerminationGracePeriodSeconds = 60,
                         Containers = new List<V1Container>
                         {
@@ -58,6 +59,17 @@ namespace DaaSDemo.Provisioning
                             {
                                 Name = baseName,
                                 Image = "microsoft/mssql-server-linux:2017-GA",
+                                Resources = new V1ResourceRequirements
+                                {
+                                    Requests = new Dictionary<string, string>
+                                    {
+                                        ["memory"] = "4Gi" // SQL Server for Linux requires at least 4 GB of RAM
+                                    },
+                                    Limits = new Dictionary<string, string>
+                                    {
+                                        ["memory"] = "6Gi" // If you're using more than 6 GB of RAM, then you should probably host stand-alone
+                                    }
+                                },
                                 Env = new List<V1EnvVar>
                                 {
                                     new V1EnvVar
