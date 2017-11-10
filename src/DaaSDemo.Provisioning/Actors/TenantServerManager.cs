@@ -74,11 +74,6 @@ namespace DaaSDemo.Provisioning.Actors
         readonly SqlApiClient _sqlClient;
 
         /// <summary>
-        ///     External IP addresses for Kubernetes nodes, keyed by the node's internal IP.
-        /// </summary>
-        ImmutableDictionary<string, string> _nodeExternalIPs = ImmutableDictionary<string, string>.Empty;
-
-        /// <summary>
         ///     Cancellation for the current poll timer (if any).
         /// </summary>
         ICancelable _pollCancellation;
@@ -157,10 +152,6 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState = databaseServer;
 
                 await UpdateServerState();
-            });
-            Receive<IPAddressMappingsChanged>(mappingsChanged =>
-            {
-                _nodeExternalIPs = mappingsChanged.Mappings;
             });
             Receive<Terminated>(
                 terminated => HandleTermination(terminated)
@@ -269,10 +260,6 @@ namespace DaaSDemo.Provisioning.Actors
             Receive<DatabaseServer>(_ =>
             {
                 Log.Debug("Ignoring DatabaseServer state message (waiting for server's ReplicationController to be ready).'");
-            });
-            Receive<IPAddressMappingsChanged>(mappingsChanged =>
-            {
-                _nodeExternalIPs = mappingsChanged.Mappings;
             });
             Receive<Terminated>(
                 terminated => HandleTermination(terminated)

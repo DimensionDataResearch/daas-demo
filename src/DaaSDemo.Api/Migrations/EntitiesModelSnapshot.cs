@@ -86,28 +86,6 @@ namespace DaaSDemo.Api.Migrations
                     b.ToTable("DatabaseServer");
                 });
 
-            modelBuilder.Entity("DaaSDemo.Data.Models.IPAddressMapping", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd();
-
-                    b.Property<string>("ExternalIP")
-                        .IsRequired()
-                        .HasMaxLength(16);
-
-                    b.Property<string>("InternalIP")
-                        .IsRequired()
-                        .HasMaxLength(16);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExternalIP");
-
-                    b.HasIndex("InternalIP");
-
-                    b.ToTable("IPAddressMappings");
-                });
-
             modelBuilder.Entity("DaaSDemo.Data.Models.Tenant", b =>
                 {
                     b.Property<int>("Id")

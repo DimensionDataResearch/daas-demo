@@ -10,20 +10,6 @@ namespace DaaSDemo.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "IPAddressMappings",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn),
-                    ExternalIP = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
-                    InternalIP = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_IPAddressMappings", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "DatabaseInstance",
                 columns: table => new
                 {
@@ -102,16 +88,6 @@ namespace DaaSDemo.Api.Migrations
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_IPAddressMappings_ExternalIP",
-                table: "IPAddressMappings",
-                column: "ExternalIP");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_IPAddressMappings_InternalIP",
-                table: "IPAddressMappings",
-                column: "InternalIP");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Tenant_DatabaseServerId",
                 table: "Tenant",
                 column: "DatabaseServerId");
@@ -146,9 +122,6 @@ namespace DaaSDemo.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "DatabaseInstance");
-
-            migrationBuilder.DropTable(
-                name: "IPAddressMappings");
 
             migrationBuilder.DropTable(
                 name: "DatabaseServer");

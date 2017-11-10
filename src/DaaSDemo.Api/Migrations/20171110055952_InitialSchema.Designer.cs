@@ -12,7 +12,7 @@ using System;
 namespace DaaSDemo.Api.Migrations
 {
     [DbContext(typeof(Entities))]
-    [Migration("20171110012302_InitialSchema")]
+    [Migration("20171110055952_InitialSchema")]
     partial class InitialSchema
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,28 +85,6 @@ namespace DaaSDemo.Api.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("DatabaseServer");
-                });
-
-            modelBuilder.Entity("DaaSDemo.Data.Models.IPAddressMapping", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd();
-
-                    b.Property<string>("ExternalIP")
-                        .IsRequired()
-                        .HasMaxLength(16);
-
-                    b.Property<string>("InternalIP")
-                        .IsRequired()
-                        .HasMaxLength(16);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExternalIP");
-
-                    b.HasIndex("InternalIP");
-
-                    b.ToTable("IPAddressMappings");
                 });
 
             modelBuilder.Entity("DaaSDemo.Data.Models.Tenant", b =>

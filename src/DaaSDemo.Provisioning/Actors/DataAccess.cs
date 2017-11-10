@@ -49,12 +49,6 @@ namespace DaaSDemo.Provisioning.Actors
 
                         break;
                     }
-                    case Command.ScanIPAddressMappings:
-                    {
-                        await ScanIPAddressMappings();
-
-                        break;
-                    }
                     default:
                     {
                         Unhandled(command);
@@ -89,14 +83,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         protected override void PreStart()
         {
-            Context.System.Scheduler.ScheduleTellRepeatedly(
-                initialDelay: TimeSpan.FromSeconds(10),
-                interval: TimeSpan.FromSeconds(30),
-                receiver: Self,
-                message: Command.ScanIPAddressMappings,
-                sender: Self
-            );
-
             Context.System.Scheduler.ScheduleTellRepeatedly(
                 initialDelay: TimeSpan.Zero,
                 interval: TimeSpan.FromSeconds(5),
@@ -153,70 +139,6 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             Log.Debug("Tenant scan complete.");
-        }
-
-        /// <summary>
-        ///     Scan the database for changes to IP address mappings for Kubernetes nodes.
-        /// </summary>
-        /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
-        /// </returns>
-        async Task ScanIPAddressMappings()
-        {
-            Log.Debug("Scanning IP address mappings...");
-
-            IPAddressMapping[] mappings;
-            using (Entities entities = CreateEntityContext())
-            {
-                mappings = await entities.IPAddressMappings.ToArrayAsync();
-            }
-
-            if (mappings.Length == 0)
-                Log.Warning("No IP address mappings have been registered for the cluster's nodes.");
-
-            ImmutableDictionary<string, string> previousMappings = _nodeIPAddressMappings;
-            ImmutableDictionary<string, string> currentMappings = mappings.ToImmutableDictionary(
-                mapping => mapping.InternalIP,
-                mapping => mapping.ExternalIP
-            );
-
-            HashSet<string> internalIPs = new HashSet<string>(previousMappings.Keys);
-            internalIPs.UnionWith(currentMappings.Keys);
-
-            bool haveMappingsChanged = false;
-            foreach (string internalIP in internalIPs)
-            {
-                string previousExternalIP;
-                previousMappings.TryGetValue(internalIP, out previousExternalIP);
-
-                string externalIP;
-                currentMappings.TryGetValue(internalIP, out externalIP);
-                
-                if (!String.Equals(externalIP, previousExternalIP, StringComparison.OrdinalIgnoreCase))
-                {
-                    haveMappingsChanged = true;
-
-                    break;
-                }
-            }
-
-            if (haveMappingsChanged)
-            {
-                Log.Info("One or more node IP address mappings have changed; publishing changes...");
-
-                _nodeIPAddressMappings = currentMappings;
-                
-                foreach (IActorRef serverManager in _serverManagers.Values)
-                {
-                    serverManager.Tell(
-                        new IPAddressMappingsChanged(currentMappings)
-                    );
-                }
-
-                Log.Info("Published changes to node IP address mappings.");
-            }
-
-            Log.Debug("IP address mapping scan complete.");
         }
 
         /// <summary>
@@ -397,12 +319,7 @@ namespace DaaSDemo.Provisioning.Actors
             /// <summary>
             ///     Scan the database for changes to tenants (their servers and databases).
             /// </summary>
-            ScanTenants = 1,
-
-            /// <summary>
-            ///     Scan the database for changes to IP address mappings (for Kubernetes nodes).
-            /// </summary>
-            ScanIPAddressMappings = 2
+            ScanTenants = 1
         }
     }
 }

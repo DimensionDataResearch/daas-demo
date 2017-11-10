@@ -45,11 +45,6 @@ namespace DaaSDemo.Data
         public DbSet<DatabaseInstance> DatabaseInstances { get; set; }
 
         /// <summary>
-        ///     The set of known IP address mappings.
-        /// </summary>
-        public DbSet<IPAddressMapping> IPAddressMappings { get; set; }
-
-        /// <summary>
         ///     Called when the entity model is being created.
         /// </summary>
         /// <param name="model">
@@ -65,11 +60,6 @@ namespace DaaSDemo.Data
 
             model.Entity<DatabaseInstance>()
                 .HasIndex(database => database.Name);
-
-            model.Entity<IPAddressMapping>()
-                .HasIndex(mapping => mapping.InternalIP);
-            model.Entity<IPAddressMapping>()
-                .HasIndex(mapping => mapping.ExternalIP);
         }
     }
 }
