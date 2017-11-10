@@ -128,43 +128,46 @@ namespace DaaSDemo.KubeClient.Clients
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
             
-            return Observable.Create<string>(async (subscriber, subscriptionCancellation) =>
-            {
-                try
+            return
+                Observable.Create<string>(async (subscriber, subscriptionCancellation) =>
                 {
-                    using (HttpResponseMessage responseMessage = await Http.GetStreamedAsync(request, subscriptionCancellation))
+                    try
                     {
-                        responseMessage.EnsureSuccessStatusCode();
-
-                        using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync())
-                        using (StreamReader responseReader = new StreamReader(responseStream))
+                        using (HttpResponseMessage responseMessage = await Http.GetStreamedAsync(request, subscriptionCancellation))
                         {
-                            string line = await responseReader.ReadLineAsync();
-                            while (line != null)
-                            {
-                                subscriber.OnNext(line);
+                            responseMessage.EnsureSuccessStatusCode();
 
-                                line = await responseReader.ReadLineAsync();
+                            using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync())
+                            using (StreamReader responseReader = new StreamReader(responseStream))
+                            {
+                                string line = await responseReader.ReadLineAsync();
+                                while (line != null)
+                                {
+                                    subscriber.OnNext(line);
+
+                                    line = await responseReader.ReadLineAsync();
+                                }
                             }
                         }
                     }
-                }
-                catch (OperationCanceledException operationCanceled)
-                {
-                    if (operationCanceled.CancellationToken == subscriptionCancellation)
-                        return; // Not an error.
+                    catch (OperationCanceledException operationCanceled)
+                    {
+                        if (operationCanceled.CancellationToken == subscriptionCancellation)
+                            return; // Not an error.
 
-                    subscriber.OnError(operationCanceled);
-                }
-                catch (Exception exception)
-                {
-                    subscriber.OnError(exception);
-                }
-                finally
-                {
-                    subscriber.OnCompleted();
-                }
-            });
+                        subscriber.OnError(operationCanceled);
+                    }
+                    catch (Exception exception)
+                    {
+                        subscriber.OnError(exception);
+                    }
+                    finally
+                    {
+                        subscriber.OnCompleted();
+                    }
+                })
+                .Publish() // All subscribers share the same connection
+                .RefCount(); // Connection is opened as the first client connects and closed as the last client disconnects.
         }
     }
 }
