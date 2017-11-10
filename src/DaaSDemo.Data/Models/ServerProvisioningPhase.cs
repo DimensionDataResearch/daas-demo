@@ -28,6 +28,11 @@ namespace DaaSDemo.Data.Models
         /// <summary>
         ///     The server's Ingress resource.
         /// </summary>
-        Ingress = 4
+        Ingress = 4,
+
+        /// <summary>
+        ///     The server's current action has been completed.
+        /// </summary>
+        Done = 5
     }
 }

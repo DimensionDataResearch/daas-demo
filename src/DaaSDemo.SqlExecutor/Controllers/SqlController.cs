@@ -94,7 +94,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     Message = $"Unable to determine connection settings for database {command.DatabaseId} in server {command.ServerId}."
                 });
 
-                return BadRequest(result);
+                return Ok(result);
             }
 
             using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))
@@ -198,7 +198,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                     Message = $"Unable to determine connection settings for database {query.DatabaseId} in server {query.ServerId}."
                 });
 
-                return BadRequest(queryResult);
+                return Ok(queryResult);
             }
 
             using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))

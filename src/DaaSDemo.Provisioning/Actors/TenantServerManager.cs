@@ -447,7 +447,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServicesPresent();
+                    await EnsureInternalServicePresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
@@ -463,8 +463,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.InitializeConfiguration:
                 {
-                    // TODO: Ingress is now redundant because we're using a NodePort service.
-                    await EnsureIngressPresent();
+                    await EnsureExternalServicePresent();
 
                     SetProvisioningPhase(ServerProvisioningPhase.Ingress);
 
@@ -481,6 +480,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task ReconfigureServer()
         {
+            // TODO: Tidy this up - move every phase's case statement into the following case statement and handle the fallout.
+
             switch (CurrentState.Phase)
             {
                 case ServerProvisioningPhase.None:
@@ -493,7 +494,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServicesPresent();
+                    await EnsureInternalServicePresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
@@ -509,7 +510,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.InitializeConfiguration:
                 {
-                    await EnsureIngressPresent();
+                    await EnsureExternalServicePresent();
                     
                     SetReconfigurationPhase(ServerProvisioningPhase.Ingress);
 
@@ -538,7 +539,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.ReplicationController:
                 {
-                    await EnsureServicesAbsent();
+                    await EnsureInternalServiceAbsent();
 
                     SetDeprovisioningPhase(ServerProvisioningPhase.Service);
 
@@ -546,7 +547,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.Service:
                 {
-                    await EnsureIngressAbsent();
+                    await EnsureExternalServiceAbsent();
 
                     SetDeprovisioningPhase(ServerProvisioningPhase.Ingress);
 
@@ -580,47 +581,37 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Find the server's associated Service (if it exists).
+        ///     Find the server's associated internally-facing Service (if it exists).
         /// </summary>
         /// <returns>
-        ///     The Services, or <c>null</c> if it was not found.
+        ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<(V1Service internalService, V1Service externalService)> FindService()
+        async Task<V1Service> FindInternalService()
         {
-            V1Service internalService = null;
-            V1Service externalService = null;
-
             List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
             );
-            if (matchingServices.Count > 0)
-                internalService = matchingServices[matchingServices.Count - 1];
+            if (matchingServices.Count == 0)
+                return null;
 
-            matchingServices = await _kubeClient.ServicesV1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
-            );
-            if (matchingServices.Count > 0)
-                externalService = matchingServices[matchingServices.Count - 1];
-
-            return (internalService, externalService);
+            return matchingServices[matchingServices.Count - 1];
         }
 
         /// <summary>
-        ///     Determine whether the server's associated Ingress exists.
+        ///     Find the server's associated externally-facing Service (if it exists).
         /// </summary>
         /// <returns>
-        ///     <c>true</c>, if the Ingress exists; otherwise, <c>false</c>.
+        ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Beta1VoyagerIngress> FindIngress()
+        async Task<V1Service> FindExternalService()
         {
-            List<V1Beta1VoyagerIngress> matchingIngresses = await _kubeClient.VoyagerIngressesV1Beta1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
+            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
             );
-
-            if (matchingIngresses.Count == 0)
+            if (matchingServices.Count == 0)
                 return null;
 
-            return matchingIngresses[matchingIngresses.Count - 1];
+            return matchingServices[matchingServices.Count - 1];
         }
 
         /// <summary>
@@ -710,9 +701,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The Service resource, as a <see cref="V1Service"/>.
         /// </returns>
-        async Task EnsureServicesPresent()
+        async Task EnsureInternalServicePresent()
         {
-            (V1Service existingInternalService, V1Service existingExternalService) = await FindService();
+            V1Service existingInternalService = await FindInternalService();
             if (existingInternalService == null)
             {
                 Log.Info("Creating internal service for server {ServerId}...",
@@ -735,37 +726,47 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
             }
+        }
 
-            if (existingExternalService == null)
+        /// <summary>
+        ///     Ensure that the internally-facing Service resource exists for the specified database server.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task EnsureExternalServicePresent()
+        {
+            V1Service existingInternalService = await FindExternalService();
+            if (existingInternalService == null)
             {
-                Log.Info("Creating external service for server {ServerId}...",
+                Log.Info("Creating internal service for server {ServerId}...",
                     CurrentState.Id
                 );
 
                 V1Service createdService = await _kubeClient.ServicesV1.Create(
-                    KubeResources.ExternalService(CurrentState)
+                    KubeResources.InternalService(CurrentState)
                 );
 
-                Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
+                Log.Info("Successfully created internal service {ServiceName} for server {ServerId}.",
                     createdService.Metadata.Name,
                     CurrentState.Id
                 );
             }
             else
             {
-                Log.Info("Found existing external service {ServiceName} for server {ServerId}.",
-                    existingExternalService.Metadata.Name,
+                Log.Info("Found existing internal service {ServiceName} for server {ServerId}.",
+                    existingInternalService.Metadata.Name,
                     CurrentState.Id
                 );
             }
         }
 
         /// <summary>
-        ///     Ensure that a Service resource does not exist for the specified database server.
+        ///     Ensure that an internally-facing Service resource does not exist for the specified database server.
         /// </summary>
-        async Task EnsureServicesAbsent()
+        async Task EnsureInternalServiceAbsent()
         {
-            (V1Service existingInternalService, V1Service existingExternalService) = await FindService();
+            V1Service existingInternalService = await FindInternalService();
             if (existingInternalService != null)
             {
                 Log.Info("Deleting internal service {ServiceName} for server {ServerId}...",
@@ -792,7 +793,14 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
             }
+        }
 
+        /// <summary>
+        ///     Ensure that an externally-facing Service resource does not exist for the specified database server.
+        /// </summary>
+        async Task EnsureExternalServiceAbsent()
+        {
+            V1Service existingExternalService = await FindExternalService();
             if (existingExternalService != null)
             {
                 Log.Info("Deleting external service {ServiceName} for server {ServerId}...",
@@ -819,89 +827,6 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
             }
-        }
-
-        /// <summary>
-        ///     Ensure that an Ingress resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     The Ingress resource, as a <see cref="V1Beta1VoyagerIngress"/>.
-        /// </returns>
-        async Task<V1Beta1VoyagerIngress> EnsureIngressPresent()
-        {
-            // TODO: Ingress is now redundant because we're using a NodePort service.
-
-            V1Beta1VoyagerIngress ingress = await FindIngress();
-            if (ingress != null)
-            {
-                Log.Info("Found existing ingress {IngressName} for server {ServerId}.",
-                    ingress.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                return ingress;
-            }
-
-            Log.Info("Creating ingress for server {ServerId}...",
-                CurrentState.Id
-            );
-
-            V1Beta1VoyagerIngress createdIngress = await _kubeClient.VoyagerIngressesV1Beta1.Create(
-                KubeResources.Ingress(CurrentState)
-            );
-
-            Log.Info("Successfully created ingress {IngressName} for server {ServerId}.",
-                createdIngress.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return createdIngress;
-        }
-
-        /// <summary>
-        ///     Ensure that an Ingress resource does not exist for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if the ingress is now absent; otherwise, <c>false</c>.
-        /// </returns>
-        async Task<bool> EnsureIngressAbsent()
-        {
-            V1Beta1VoyagerIngress ingress = await FindIngress();
-            if (ingress == null)
-                return true;
-
-            Log.Info("Deleting ingress {IngressName} for server {ServerId}...",
-                ingress.Metadata.Name,
-                CurrentState.Id
-            );
-
-            try
-            {
-                await _kubeClient.VoyagerIngressesV1Beta1.Delete(
-                    name: ingress.Metadata.Name
-                );
-            }
-            catch (HttpRequestException<UnversionedStatus> deleteFailed)
-            {
-                if (deleteFailed.Response.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete replication service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        ingress.Metadata.Name,
-                        CurrentState.Id,
-                        deleteFailed.Response.Message,
-                        deleteFailed.Response.Reason
-                    );
-
-                    return false;
-                }
-            }
-
-            Log.Info("Deleted ingress {IngressName} for server {ServerId}.",
-                ingress.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return true;
         }
 
         /// <summary>
@@ -932,10 +857,10 @@ namespace DaaSDemo.Provisioning.Actors
                         // Capture current ingress details to enable subsequent provisioning actions (if any).
                         CurrentState.IngressIP = ingressIP;
                         CurrentState.IngressPort = ingressPort;
-
-                        if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
-                            CompleteCurrentAction();
                     }
+
+                    if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
+                        CompleteCurrentAction();
                 }
                 else
                 {
