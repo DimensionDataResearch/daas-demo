@@ -34,6 +34,8 @@ spec:
             value: 'http://*:5000'
           - name: ASPNETCORE_KUBERNETES__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
+          - name: ASPNETCORE_KUBERNETES__ClusterPublicPort
+            value: '31201'
           - name: ASPNETCORE_KUBERNETES__VolumeClaimName
             value: 'sql-data-claim'
           - name: ASPNETCORE_DATABASE__ConnectionString

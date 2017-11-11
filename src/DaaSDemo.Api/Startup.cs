@@ -61,6 +61,21 @@ namespace DaaSDemo.Api
                     });
                 });
 
+            services.AddCors(cors =>
+            {
+                // Allow requests from the UI.
+                string clusterPublicDomainName = Configuration.GetValue<string>("Kubernetes:ClusterPublicFQDN");
+                int clusterPublicPort = Configuration.GetValue<int>("Kubernetes:ClusterPublicUIPort");
+
+                cors.AddPolicy("UI", policy =>
+                    policy.WithOrigins(
+                        $"http://{clusterPublicDomainName}:{clusterPublicPort}"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                );
+            });
+
             services.AddMvc()
                 .AddJsonOptions(json =>
                 {
@@ -83,6 +98,7 @@ namespace DaaSDemo.Api
         public void Configure(IApplicationBuilder app, IApplicationLifetime appLifetime)
         {
             app.UseDeveloperExceptionPage();
+            app.UseCors("UI");
             app.UseMvc();
 
             appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
