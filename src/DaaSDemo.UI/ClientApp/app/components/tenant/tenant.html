@@ -1,41 +1,45 @@
 <template>
-    <div if.bind="!tenant">
-        <h1>Loading...</h1>
-    </div>
+    <div class="ui segment">
+        <div class="ui active dimmer" if.bind="!tenant">
+            <div class="ui active loader"></div>
+        </div>
 
-    <div if.bind="tenant">
-        <h1>${ tenant.name }</h1>
+        <div if.bind="tenant">
+            <h1 class="ui header">Tenant: ${ tenant.name }</h1>
 
-        <hr/>
-        
-        <h3>Server</h3>
+            <h3 class="ui dividing header">Server</h3>
 
-        <div if.bind="server">
-            <strong>Name</strong>: ${ server.name }<br/>
-            <strong>Status</strong>: ${ server.status }<br/>
-            <br/>
-            <strong>Requested Action</strong>: ${ server.action }<br/>
-            <br/>
-            
-            <h4>Connectivity</h4>
-            <div if.bind="server.publicFQDN">
-                <strong>Host</strong>: ${ server.publicFQDN }<br/>
-                <strong>Port</strong>: ${ server.publicPort }<br/>
-            </div>
-            <div if.bind="!server.publicFQDN" class="well">
-                Connection details are not currently available for this server.
-            </div>
-
-            <div style="margin-top: 20px;">
-                <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">Databases</a>
+            <div if.bind="server">
+                <strong>Name</strong>: ${ server.name }
                 <br/>
-                <a class="btn btn-info" click.delegate="deleteServer()">Databases</a>
+                <strong>Status</strong>: ${ server.status }
+                <br/>
+                <br/>
+                <strong>Requested Action</strong>: ${ server.action }
+                <br/>
+                <br/>
+
+                <h4 class="ui dividing header">Connectivity</h4>
+                <div if.bind="server.publicFQDN">
+                    <strong>Host</strong>: ${ server.publicFQDN }
+                    <br/>
+                    <strong>Port</strong>: ${ server.publicPort }
+                    <br/>
+                </div>
+                <div if.bind="!server.publicFQDN" class="well">
+                    Connection details are not currently available for this server.
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">Databases</a>
+                    <br/>
+                    <a class="btn btn-info" click.delegate="deleteServer()">Databases</a>
+                </div>
+            </div>
+
+            <div if.bind="!server" class="ui info message">
+                No server has been deployed for this tenant.
             </div>
         </div>
-        
-        <div if.bind="!server">
-            No server has been deployed for this tenant.
-        </div>
     </div>
-
 </template>

@@ -31,9 +31,9 @@ module.exports = ({ prod } = {}) => {
                 'aurelia-templating-binding',
                 'aurelia-templating-resources',
                 'aurelia-templating-router',
-                'bootstrap',
-                'bootstrap/dist/css/bootstrap.css',
-                'jquery'
+                'jquery',
+                './lib/semantic/dist/semantic.css',
+                './lib/semantic/dist/semantic'
             ],
         },
         output: {

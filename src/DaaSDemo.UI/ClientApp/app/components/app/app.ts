@@ -33,14 +33,14 @@ export class App {
         }, {
             route: 'servers',
             name: 'servers',
-            settings: { icon: 'modal-window' },
+            settings: { icon: 'server' },
             moduleId: PLATFORM.moduleName('../servers/servers'),
             nav: true,
             title: 'Servers'
         }, {
             route: 'databases',
             name: 'databases',
-            settings: { icon: 'briefcase' },
+            settings: { icon: 'database' },
             moduleId: PLATFORM.moduleName('../databases/databases'),
             nav: true,
             title: 'Databases'

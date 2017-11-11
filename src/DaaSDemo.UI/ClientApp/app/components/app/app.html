@@ -1,13 +1,15 @@
 <template>
     <require from="../navmenu/navmenu.html"></require>
     <require from="./app.css"></require>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-sm-3">
-                <navmenu router.bind="router"></navmenu>
-            </div>
-            <div class="col-sm-9 body-content">
-                <router-view></router-view>
+
+    <navmenu router.bind="router"></navmenu>
+
+    <div class="ui main container" style="margin-top: 50px;">
+        <div class="ui one column grid">
+            <div class="row">
+                <div class="ten wide column">
+                    <router-view></router-view>
+                </div>
             </div>
         </div>
     </div>

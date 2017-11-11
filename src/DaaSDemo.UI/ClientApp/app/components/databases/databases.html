@@ -1,24 +1,35 @@
 <template>
-    <h1>Databases</h1>
+    <div class="ui segment">
+        <div class="ui active dimmer" if.bind="!databases">
+            <div class="ui active loader"></div>
+        </div>
 
-    <p if.bind="!databases"><em>Loading...</em></p>
+        <div if.bind="databases">
+            <h1 class="ui dividing header">Databases</h1>
 
-    <table if.bind="databases" class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr repeat.for="forecast of databases">
-                <td>${ forecast.dateFormatted }</td>
-                <td>${ forecast.temperatureC }</td>
-                <td>${ forecast.temperatureF }</td>
-                <td>${ forecast.summary }</td>
-            </tr>
-        </tbody>
-    </table>
+            <div class="ui warning message">
+                View not implemented yet (non-tenant API not implemented, so it's just sample data below).
+            </div>
+
+            <table class="ui striped celled table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Temp. (C)</th>
+                        <th>Temp. (F)</th>
+                        <th>Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr repeat.for="forecast of databases">
+                        <td>${ forecast.dateFormatted }</td>
+                        <td>${ forecast.temperatureC }</td>
+                        <td>${ forecast.temperatureF }</td>
+                        <td>${ forecast.summary }</td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+    </div>
 </template>

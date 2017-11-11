@@ -2,7 +2,11 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div aurelia-app="boot">Loading...</div>
+<div aurelia-app="boot">
+    <div class="ui active dimmer">
+        <div class="ui active loader"></div>
+    </div>
+</div>
 
 @section scripts {
     <script type="text/javascript" src="~/dist/vendor.js" asp-append-version="true"></script>

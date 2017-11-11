@@ -1,28 +1,26 @@
 <template>
-    <h1>Tenants</h1>
+    <div class="ui segment">
+        <div class="ui active dimmer" if.bind="!tenants">
+            <div class="ui active loader"></div>
+        </div>
 
-    <p if.bind="!tenants"><em>Loading...</em></p>
+        <div if.bind="tenants">
+            <h1 class="ui dividing header">Tenants</h1>
 
-    <table if.bind="tenants" class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr repeat.for="tenant of tenants">
-                <td>
-                    ${ tenant.name }
-                </td>
-                <td>
-                    <a route-href="route: tenant; params.bind: {id: tenant.id}">Details</a>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+            <div class="ui relaxed divided list">
+                <div class="item" repeat.for="tenant of tenants">
+                    <i class="large user icon"></i>
+                    <div class="content">
+                        <a class="header" route-href="route: tenant; params.bind: {id: tenant.id}">
+                            ${ tenant.name }
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <h3 if.bind="noTenants">
-        No tenants
-    </h3>
+        <h3 if.bind="noTenants">
+            No tenants
+        </h3>
+    </div>
 </template>
