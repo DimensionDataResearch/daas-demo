@@ -29,6 +29,8 @@ namespace DaaSDemo.Models.Data
             
             Id = databaseInstance.Id;
             Name = databaseInstance.Name;
+            Action = databaseInstance.Action;
+            Status = databaseInstance.Status;
             ConnectionString = $"Data Source=tcp:{databaseInstance.DatabaseServer.PublicFQDN}:{databaseInstance.DatabaseServer.PublicPort};Initial Catalog={databaseInstance.Name};User={databaseInstance.DatabaseUser};Password=<password>";
         }
 
@@ -43,6 +45,16 @@ namespace DaaSDemo.Models.Data
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
         public string Name { get; set; }
+
+        /// <summary>
+        ///     The database's currently-requested provisioning action (if any).
+        /// </summary>
+        public ProvisioningAction Action { get; set; }
+
+        /// <summary>
+        ///     The database's provisioning status.
+        /// </summary>
+        public ProvisioningStatus Status { get; set; }
 
         /// <summary>
         ///     The database connection string.

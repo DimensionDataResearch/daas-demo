@@ -1,5 +1,5 @@
 import { inject, transient, TransientRegistration } from 'aurelia-framework';
-import { HttpClient } from 'aurelia-fetch-client';
+import { HttpClient, json } from 'aurelia-fetch-client';
 
 /**
  * Client for the Database-as-a-Service API.
@@ -134,7 +134,7 @@ export class DaaSAPI
     public async deployTenantServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
         const response = await this.http.fetch(`tenants/${tenantId}/server`, {
             method: 'POST',
-            body: JSON.stringify({
+            body: json({
                 name: name,
                 adminPassword: adminPassword
             })
@@ -173,6 +173,55 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to delete server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Create a database for a tenant.
+     * 
+     * @param tenantId The tenant Id.
+     * @param name The database name.
+     * @param user The database user name.
+     * @param password The database user password.
+     */
+    public async createTenantDatabase(tenantId: number, name: string, user: string, password: string): Promise<number> {
+        const response = await this.http.fetch(`tenants/${tenantId}/databases`, {
+            method: 'POST',
+            body: json({
+                tenantId: tenantId,
+                name: name,
+                databaseUser: user,
+                databasePassword: password
+            })
+        });
+        
+        const body = await response.json();
+
+        if (response.ok) {
+            const databaseCreated = body as DatabaseCreated;
+            
+            return databaseCreated.id;
+        }
+
+        if (response.status == 400) {
+            const invalidModelResponse = body as InvalidModelResponse;
+
+            let validationMessages: string = 'Invalid request:\n';
+            for (const propertyName of Object.getOwnPropertyNames(invalidModelResponse)) {
+                const errorMessages: string[] = invalidModelResponse[propertyName];
+                for (const errorMessage of errorMessages) {
+                    validationMessages += `- ${propertyName}: ${errorMessage}`;
+                    validationMessages += '\n';
+                }
+            }
+
+            throw new Error(validationMessages);
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to create database for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -272,6 +321,16 @@ export interface Database {
     name: string;
 
     /**
+     * The database's currently-requested provisioning action (if any).
+     */
+    action: string;
+
+    /**
+     * The database provisioning status.
+     */
+    status: string;
+
+    /**
      * The database connection string (if available).
      */
     connectionString: string | null;
@@ -292,6 +351,11 @@ interface ServerCreated extends ApiResponse {
     name: string;
 }
 
+interface DatabaseCreated extends ApiResponse {
+    id: number;
+    name: string;
+}
+
 /**
  * Represents the error response returned by the DaaS API with a 404 status code.
  */
@@ -305,4 +369,14 @@ interface NotFoundResponse extends ApiResponse {
      * The type of entity that was not found.
      */
     entityType: string;
+}
+
+/**
+ * Represents the error response returned when 
+ */
+interface InvalidModelResponse {
+    /**
+     * Get the validation messages for the specified property.
+     */
+    [propertyName: string]: string[];
 }

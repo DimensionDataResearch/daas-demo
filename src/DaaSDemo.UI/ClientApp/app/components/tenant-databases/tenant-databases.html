@@ -4,26 +4,67 @@
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="loaded">
-            <h1 class="ui dividing header">Databases owned by ${ tenant.name }</h1>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Connection String</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr repeat.for="database of databases">
-                        <td>${ database.name }</td>
-                        <td>${ database.connectionString }</td>
-                        <td>
-                            <a class="btn btn-info" click.delegate="deleteDatabase(database.id)">Delete</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div if.bind="!hasError">
+            
+            <h1 class="ui dividing header" if.bind="!(addingDatabase && !hasDatabase)">Databases owned by ${ tenant.name }</h1>
+
+            <div if.bind="hasDatabase">
+
+                <table class="ui striped celled table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Connection String</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr repeat.for="database of databases">
+                            <td>${ database.name }</td>
+                            <td>${ database.status == 'Ready' ? database.connectionString : '' }</td>
+                            <td>${ database.status }</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div if.bind="addingDatabase">
+                <h1 class="ui dividing header" if.bind="!hasDatabase">Add database</h1>
+
+                <form class="ui form">
+                    <div class="field">
+                        <label>Name</label>
+                        <input name="name" value.bind="newDatabase.name" placeholder="Database name" type="text">
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input name="user" value.bind="newDatabase.user" placeholder="user" type="text">
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input name="password" value.bind="newDatabase.password" placeholder="password" type="password">
+                    </div>
+
+                    <button class="ui positive button" click.delegate="createDatabase()">
+                        <i class="add circle icon"></i> Create
+                    </button>
+                    <button class="ui button" click.delegate="hideCreateDatabaseForm()">Cancel</button>
+                </form>
+            </div>
+
+            <div if.bind="!hasDatabase && !addingDatabase" class="ui info message">
+                <p>
+                    No databases exist for this tenant.
+                </p>
+
+                <button class="ui button" click.delegate="showCreateDatabaseForm()">
+                    <i class="add circle button"></i> Create Database
+                </button>
+            </div>
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p innerhtml.bind="errorMessage | sanitizeHTML"></p>
         </div>
     </div>
 </template>

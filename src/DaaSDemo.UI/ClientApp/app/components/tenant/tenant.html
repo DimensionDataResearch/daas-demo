@@ -1,15 +1,15 @@
 <template>
     <div class="ui segment">
-        <div class="ui active dimmer" if.bind="!tenant">
+        <div class="ui active dimmer" if.bind="loading">
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="tenant">
+        <div if.bind="!hasError">
             <h1 class="ui header">Tenant: ${ tenant.name }</h1>
 
             <h3 class="ui dividing header">Server</h3>
 
-            <div if.bind="server">
+            <div if.bind="hasServer">
                 <strong>Name</strong>: ${ server.name }
                 <br/>
                 <strong>Status</strong>: ${ server.status }
@@ -30,22 +30,18 @@
                     Connection details are not currently available for this server.
                 </div>
 
-                <div style="margin-top: 20px;">
-                    <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">Databases</a>
-                    <br/>
-                    <a class="btn btn-info" click.delegate="deleteServer()">Databases</a>
+                <div if.bind="isServerReady" style="margin-top: 20px;">
+                    <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">
+                        <i class="database icon"></i> Show Databases
+                    </a>
+                    |
+                    <a class="btn btn-info" if.bind="isServerReady" click.delegate="deleteServer()">
+                        <i class="delete icon"></i> Destroy
+                    </a>
                 </div>
             </div>
 
-            <div if.bind="!hasServer" class="ui info message">
-                <p>
-                    No server has been deployed for this tenant.
-                </p>
-
-                <button class="ui button" click.delegate="showCreateServerForm()">Create Server</button>
-            </div>
-
-            <form if.bind="newServer" class="ui form">
+            <form if.bind="addingServer" class="ui form">
                 <div class="field">
                     <label>Name</label>
                     <input name="name" value.bind="newServer.name" placeholder="Server name" type="text">
@@ -58,6 +54,20 @@
                 <button class="ui button" click.delegate="createServer()">Create</button>
                 <button class="ui button" click.delegate="hideCreateServerForm()">Cancel</button>
             </form>
+
+            <div if.bind="!hasServer && !addingServer" class="ui info message">
+                <p>
+                    No server has been deployed for this tenant.
+                </p>
+
+                <button class="ui button" click.delegate="showCreateServerForm()">Create Server</button>
+            </div>
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p>
+                ${ errorMessage }
+            </p>
         </div>
     </div>
 </template>
