@@ -17,7 +17,7 @@
                 <tr repeat.for="database of databases">
                     <td>${ database.name }</td>
                     <td>${ database.connectionString }</td>
-                    <td><a class="btn btn-info" click.delegate="deleteDatabase(tenant.id, database.id)">Delete</a></td>
+                    <td><a class="btn btn-info" click.delegate="deleteDatabase(database.id)">Delete</a></td>
                 </tr>
             </tbody>
         </table>

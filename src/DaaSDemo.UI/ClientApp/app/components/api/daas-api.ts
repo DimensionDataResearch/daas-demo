@@ -124,12 +124,35 @@ export class DaaSAPI
     }
 
     /**
+     * Destroy a tenant's database server.
+     * 
+     * @param tenantId The tenant Id.
+     * @param databaseId The database Id.
+     */
+    public async destroyTenantServer(tenantId: number): Promise<void> {
+        const response = await this.http.fetch(`tenants/${tenantId}/server`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok || response.status === 400) {
+            return
+        }
+
+        const body = await response.json();
+        const errorResponse = body as ApiErrorResponse;
+
+        throw new Error(
+            `Failed to delete server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Delete a tenant's database.
      * 
      * @param tenantId The tenant Id.
      * @param databaseId The database Id.
      */
-    public async deleteDatabase(tenantId: number, databaseId: number): Promise<void> {
+    public async deleteTenantDatabase(tenantId: number, databaseId: number): Promise<void> {
         const response = await this.http.fetch(`tenants/${tenantId}/databases/${databaseId}`, {
             method: 'DELETE'
         });
@@ -142,7 +165,7 @@ export class DaaSAPI
         const errorResponse = body as ApiErrorResponse;
 
         throw new Error(
-            `Failed to retrieve databases owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to delete database with Id ${databaseId} owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 }

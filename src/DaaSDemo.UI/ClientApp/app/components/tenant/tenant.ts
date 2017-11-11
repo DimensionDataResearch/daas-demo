@@ -34,6 +34,9 @@ export class TenantDetails {
         this.load();
     }
 
+    /**
+     * Load tenant and server details.
+     */
     private async load(): Promise<void> {
         const tenantRequest = this.api.getTenant(this.tenantId);
         const serverRequest = this.api.getTenantServer(this.tenantId);
@@ -45,6 +48,14 @@ export class TenantDetails {
             this.routeConfig.title = this.tenant.name;
         else
             this.routeConfig.title = 'Tenant not found';
+    }
+
+    /**
+     * Destroy the tenant's server.
+     */
+    private async destroyServer(): Promise<void> {
+        await this.api.destroyTenantServer(this.tenantId);
+        await this.load();
     }
 }
 

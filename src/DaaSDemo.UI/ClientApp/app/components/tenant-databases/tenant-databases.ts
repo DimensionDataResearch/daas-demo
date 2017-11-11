@@ -32,6 +32,9 @@ export class TenantDatabaseList {
         this.load();
     }
 
+    /**
+     * Load tenant and database details.
+     */
     private async load(): Promise<void> {
         const tenantRequest = this.api.getTenant(this.tenantId);
         const databasesRequest = this.api.getTenantDatabases(this.tenantId);
@@ -48,8 +51,13 @@ export class TenantDatabaseList {
         this.loaded = (this.tenant != null && this.databases != null);
     }
 
-    private async deleteDatabase(tenantId: number, databaseId: number): Promise<void> {
-        await this.api.deleteDatabase(tenantId, databaseId);
+    /**
+     * Delete a database.
+     * 
+     * @param databaseId The database Id.
+     */
+    private async deleteDatabase(databaseId: number): Promise<void> {
+        await this.api.deleteTenantDatabase(this.tenantId, databaseId);
         await this.load();
     }
 }

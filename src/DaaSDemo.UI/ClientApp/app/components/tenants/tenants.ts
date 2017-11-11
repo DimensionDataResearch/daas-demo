@@ -18,10 +18,17 @@ export class TenantList {
      * @param params Route parameters.
      * @param routeConfig The configuration for the currently-active route.
      */
-    public async activate(params: any, routeConfig: RouteConfig): Promise<void> {
+    public activate(params: any, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
 
+        this.load();
+    }
+
+    /**
+     * Load tenant details.
+     */
+    private async load(): Promise<void> {
         this.tenants = await this.api.getTenants();
         this.noTenants = !this.tenants.length;
-      }
+    }
 }
