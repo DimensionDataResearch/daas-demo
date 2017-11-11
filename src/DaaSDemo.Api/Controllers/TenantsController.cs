@@ -22,7 +22,7 @@ namespace DaaSDemo.Api.Controllers
     /// <summary>
     ///     Controller for the tenants API.
     /// </summary>
-    [Route("tenants")]
+    [Route("api/v1/tenants")]
     public class TenantsController
         : Controller
     {
