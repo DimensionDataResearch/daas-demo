@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using System.Threading.Tasks;
 using System;
+using System.IO;
 
 namespace DaaSDemo.Provisioning.Host
 {
@@ -28,7 +29,7 @@ namespace DaaSDemo.Provisioning.Host
                 .ConfigureLogging(logging =>
                 {
                     Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Debug()
+                        .MinimumLevel.Information()
                         .WriteTo.LiterateConsole()
                         .WriteTo.Debug()
                         .Enrich.FromLogContext()
@@ -39,6 +40,7 @@ namespace DaaSDemo.Provisioning.Host
                 })
                 .ConfigureAppConfiguration((context, config) =>
                 {
+                    config.AddJsonFile("appSettings.json");
                     config.AddUserSecrets(
                         typeof(Program).Assembly
                     );

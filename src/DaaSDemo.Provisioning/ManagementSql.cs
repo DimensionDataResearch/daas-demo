@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace DaaSDemo.Provisioning
 {
+    using Models.Sql;
+    using Newtonsoft.Json.Linq;
+
     /// <summary>
     ///     T-SQL for management of a tenant's SQL server and its databases.
     /// </summary>
@@ -35,6 +39,19 @@ namespace DaaSDemo.Provisioning
             yield return @"
                 Exec sys.sp_configure N'show advanced options', N'0'
                     Reconfigure With Override;
+            ";
+        }
+
+        /// <summary>
+        ///     Generate T-SQL for checking whether a database exists (if it exists, the query will return a single row).
+        /// </summary>
+        /// <returns>
+        ///     The T-SQL.
+        /// </returns>
+        public static IEnumerable<string> CheckDatabaseExists()
+        {
+            yield return @"
+                Select name from sys.databases Where name = @DatabaseName
             ";
         }
 
@@ -153,6 +170,35 @@ namespace DaaSDemo.Provisioning
             yield return $@"
                 Drop Database [{databaseName}]
             ";
+        }
+
+        /// <summary>
+        ///     Factory methods for <see cref="Parameter"/>s used in management SQL.
+        /// </summary>
+        public static class Parameters
+        {
+            /// <summary>
+            ///     Create <see cref="Parameter"/>s for <see cref="ManagementSql.CheckDatabaseExists"/>.
+            /// </summary>
+            /// <param name="databaseName">
+            ///     The name of the target database.
+            /// </param>
+            /// <returns>
+            ///     The parameters.
+            /// </returns>
+            public static IEnumerable<Parameter> CheckDatabaseExists(string databaseName)
+            {
+                if (String.IsNullOrWhiteSpace(databaseName))
+                    throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
+
+                yield return new Parameter
+                {
+                    Name = "DatabaseName",
+                    DataType = SqlDbType.NVarChar,
+                    Size = 50,
+                    Value = new JValue(databaseName)
+                };
+            }
         }
     }
 }

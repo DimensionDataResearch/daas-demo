@@ -24,6 +24,7 @@ namespace DaaSDemo.Provisioning.Actors
     using Messages;
     using Models.Data;
     using Models.Sql;
+    using Exceptions;
     using SqlExecutor.Client;
 
     /// <summary>
@@ -962,9 +963,13 @@ namespace DaaSDemo.Provisioning.Actors
                         error.Message
                     );
                 }
-                
-                // TODO: Custom exception type.
-                throw new Exception($"One or more errors were encountered while configuring server (Id: {_serverId}).");
+
+                throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {_serverId}).",
+                    serverId: CurrentState.Id,
+                    databaseId: SqlApiClient.MasterDatabaseId,
+                    sqlMessages: commandResult.Messages,
+                    sqlErrors: commandResult.Errors
+                );
             }
 
             Log.Info("Configuration initialised for server {ServerId}.", _serverId);

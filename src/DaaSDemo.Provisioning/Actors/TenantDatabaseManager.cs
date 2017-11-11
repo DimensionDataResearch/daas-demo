@@ -19,6 +19,7 @@ namespace DaaSDemo.Provisioning.Actors
     using Messages;
     using Models.Data;
     using Models.Sql;
+    using Exceptions;
     using SqlExecutor.Client;
 
     /// <summary>
@@ -125,37 +126,33 @@ namespace DaaSDemo.Provisioning.Actors
                 new DatabaseProvisioning(CurrentState.Id)
             );
 
-            if (!await DatabaseExists())
+            try
             {
-                try
-                {
+                if (!await DoesDatabaseExist())
                     await CreateDatabase();
-                }
-                catch (Exception createDatabaseFailed)
+                else
                 {
-                    Log.Error(createDatabaseFailed, "Unexpected error creating database {DatabaseName} (Id:{DatabaseId}).",
-                        CurrentState.Name,
-                        CurrentState.Id
+                    Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
+                        CurrentState.Id,
+                        CurrentState.Name
                     );
-
-                    _dataAccess.Tell(
-                        new DatabaseProvisioningFailed(CurrentState.Id)
-                    );
-
-                    return;
                 }
-            }
-            else
-            {
-                Log.Info("Database {DatabaseName} already exists; will treat as provisioned.",
-                    CurrentState.Id,
-                    CurrentState.Name
+
+                _dataAccess.Tell(
+                    new DatabaseProvisioned(CurrentState.Id)
                 );
             }
+            catch (ProvisioningException createDatabaseFailed)
+            {
+                Log.Error(createDatabaseFailed, "Unexpected error creating database {DatabaseName} (Id:{DatabaseId}).",
+                    CurrentState.Name,
+                    CurrentState.Id
+                );
 
-            _dataAccess.Tell(
-                new DatabaseProvisioned(CurrentState.Id)
-            );
+                _dataAccess.Tell(
+                    new DatabaseProvisioningFailed(CurrentState.Id)
+                );
+            }
         }
 
         /// <summary>
@@ -175,39 +172,33 @@ namespace DaaSDemo.Provisioning.Actors
                 new DatabaseDeprovisioning(CurrentState.Id)
             );
 
-            if (await DatabaseExists())
+            try
             {
-                try
-                {
+                if (await DoesDatabaseExist())
                     await DropDatabase();
-                }
-                catch (Exception dropDatabaseFailed)
+                else
                 {
-                    Log.Error(dropDatabaseFailed, "Unexpected error dropping database {DatabaseName} (Id:{DatabaseId}).",
-                        CurrentState.Name,
-                        CurrentState.Id
+                    Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
+                        CurrentState.Id,
+                        CurrentState.Name
                     );
-
-                    _dataAccess.Tell(
-                        new DatabaseDeprovisioningFailed(CurrentState.Id)
-                    );
-
-                    return false;
                 }
-            }
-            else
-            {
-                Log.Info("Database {DatabaseName} not found; will treat as deprovisioned.",
-                    CurrentState.Id,
-                    CurrentState.Name
+
+                _dataAccess.Tell(
+                    new DatabaseDeprovisioned(CurrentState.Id)
                 );
+
+                return true;
             }
+            catch (ProvisioningException dropDatabaseFailed)
+            {
+                Log.Error(dropDatabaseFailed, "Unexpected error dropping database {DatabaseName} (Id:{DatabaseId}).",
+                    CurrentState.Name,
+                    CurrentState.Id
+                );
 
-            _dataAccess.Tell(
-                new DatabaseDeprovisioned(CurrentState.Id)
-            );
-
-            return true;
+                return false;
+            }
         }
 
         /// <summary>
@@ -216,38 +207,28 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     <c>true</c>, if the database exists; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> DatabaseExists()
+        async Task<bool> DoesDatabaseExist()
         {
             QueryResult result = await _sqlClient.ExecuteQuery(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
-                sql: new string[]
-                {
-                    "Select name from sys.databases Where name = @DatabaseName"
-                },
-                parameters: new Parameter[]
-                {
-                    new Parameter
-                    {
-                        Name = "DatabaseName",
-                        DataType = SqlDbType.NVarChar,
-                        Size = 50,
-                        Value = new JValue(CurrentState.Name)
-                    }
-                },
+                sql: ManagementSql.CheckDatabaseExists(),
+                parameters: ManagementSql.Parameters.CheckDatabaseExists(
+                    databaseName: CurrentState.Name
+                ),
                 executeAsAdminUser: true
             );
 
-            return result.ResultSets[0].Rows.Count != 0;
+            return result.ResultSets[0].Rows.Count == 1;
         }
 
         /// <summary>
         ///     Create the database.
         /// </summary>
         /// <returns>
-        ///     <c>true</c>, if the database was created successfully; otherwise, <c>false</c>.
+        ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        async Task<bool> CreateDatabase()
+        async Task CreateDatabase()
         {
             Log.Info("Creating database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
                 CurrentState.Name,
@@ -256,25 +237,25 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Id
             );
 
-            CommandResult result = await _sqlClient.ExecuteCommand(
+            CommandResult commandResult = await _sqlClient.ExecuteCommand(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.CreateDatabase(CurrentState.Name, CurrentState.DatabaseUser, CurrentState.DatabasePassword),
                 executeAsAdminUser: true
             );
 
-            for (int messageIndex = 0; messageIndex < result.Messages.Count; messageIndex++)
+            for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
             {
                 Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
                     messageIndex,
                     CurrentState.DatabaseServerId,
-                    result.Messages[messageIndex]
+                    commandResult.Messages[messageIndex]
                 );
             }
 
-            if (!result.Success)
+            if (!commandResult.Success)
             {
-                foreach (SqlError error in result.Errors)
+                foreach (SqlError error in commandResult.Errors)
                 {
                     Log.Warning("Error encountered while creating database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
                         CurrentState.Id,
@@ -285,14 +266,12 @@ namespace DaaSDemo.Provisioning.Actors
                     );
                 }
 
-                Log.Info("Failed to create database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                    CurrentState.Name,
-                    CurrentState.Id,
-                    CurrentState.DatabaseServer.Name,
-                    CurrentState.DatabaseServer.Id
+                throw new SqlExecutionException($"Failed to create database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server '{CurrentState.DatabaseServer.Name}' (Id:{CurrentState.DatabaseServer.Id}).",
+                    serverId: CurrentState.DatabaseServerId,
+                    databaseId: CurrentState.Id,
+                    sqlMessages: commandResult.Messages,
+                    sqlErrors: commandResult.Errors
                 );
-
-                return false;
             }
 
             Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
@@ -301,17 +280,12 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Name,
                 CurrentState.DatabaseServer.Id
             );
-            
-            return true;
         }
 
         /// <summary>
         ///     Drop the database.
         /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if the database was dropped successfully; otherwise, <c>false</c>.
-        /// </returns>
-        async Task<bool> DropDatabase()
+        async Task DropDatabase()
         {
             Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
                 CurrentState.Name,
@@ -320,25 +294,25 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Id
             );
 
-            CommandResult result = await _sqlClient.ExecuteCommand(
+            CommandResult commandResult = await _sqlClient.ExecuteCommand(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),
                 executeAsAdminUser: true
             );
 
-            for (int messageIndex = 0; messageIndex < result.Messages.Count; messageIndex++)
+            for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
             {
                 Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
                     messageIndex,
                     CurrentState.DatabaseServerId,
-                    result.Messages[messageIndex]
+                    commandResult.Messages[messageIndex]
                 );
             }
 
-            if (!result.Success)
+            if (!commandResult.Success)
             {
-                foreach (SqlError error in result.Errors)
+                foreach (SqlError error in commandResult.Errors)
                 {
                     Log.Warning("Error encountered while dropping database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
                         CurrentState.Id,
@@ -349,14 +323,12 @@ namespace DaaSDemo.Provisioning.Actors
                     );
                 }
 
-                Log.Info("Failed to drop database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
-                    CurrentState.Name,
-                    CurrentState.Id,
-                    CurrentState.DatabaseServer.Name,
-                    CurrentState.DatabaseServer.Id
+                throw new SqlExecutionException($"Failed to drop database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server '{CurrentState.DatabaseServer.Name}' (Id:{CurrentState.DatabaseServer.Id}).",
+                    serverId: CurrentState.DatabaseServerId,
+                    databaseId: CurrentState.Id,
+                    sqlMessages: commandResult.Messages,
+                    sqlErrors: commandResult.Errors
                 );
-
-                return false;
             }
 
             Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
@@ -365,8 +337,6 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Name,
                 CurrentState.DatabaseServer.Id
             );
-            
-            return true;
         }
 
         /// <summary>
@@ -391,7 +361,8 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The database Id.
         /// </param>
         /// <returns>
-        ///     The actor name.
+        ///     
+        /// The actor name.
         /// </returns>
         public static string ActorName(int databaseId) => $"database-manager.{databaseId}";
     }
