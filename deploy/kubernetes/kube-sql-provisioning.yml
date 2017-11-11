@@ -1,11 +1,18 @@
-apiVersion: v1
-kind: ReplicationController
+apiVersion: apps/v1beta1
+kind: Deployment
 metadata:
   name: sql-provisioning
+  labels:
+    k8s-app: sql-provisioning
 spec:
   replicas: 1
   selector:
-    k8s-app: sql-provisioning
+    matchLabels:
+      k8s-app: sql-provisioning
+
+  strategy:
+        type: Recreate
+
   template:
     metadata:
       labels:
