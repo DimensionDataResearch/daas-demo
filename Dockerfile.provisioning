@@ -21,7 +21,7 @@ ARG VERSION_SUFFIX=dev
 RUN dotnet restore /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_Suffix}
 
 COPY . /build
-RUN dotnet publish src/DaaSDemo.SqlExecutor/DaaSDemo.SqlExecutor.csproj /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX} -o /out
+RUN dotnet publish src/DaaSDemo.Provisioning.Host/DaaSDemo.Provisioning.Host.csproj /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX} -o /out
 
 FROM microsoft/aspnetcore:2.0-jessie
 
@@ -29,7 +29,6 @@ WORKDIR /app
 
 COPY --from=build /out /app
 
-EXPOSE 5000
-ENV IN_KUBERNETES=0 PORT=5000 ASPNETCORE_URLS=http://localhost:5000
+ENV IN_KUBERNETES=0
 
-ENTRYPOINT [ "dotnet", "DaaSDemo.SqlExecutor.dll" ]
+ENTRYPOINT [ "dotnet", "DaaSDemo.Provisioning.dll" ]

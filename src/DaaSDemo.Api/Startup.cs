@@ -14,7 +14,6 @@ using Newtonsoft.Json.Converters;
 namespace DaaSDemo.Api
 {
     using Data;
-    using Provisioning;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo API.
@@ -73,8 +72,6 @@ namespace DaaSDemo.Api
             {
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
-
-            services.AddSingleton<ProvisioningEngine>();
         }
 
         /// <summary>
@@ -83,17 +80,11 @@ namespace DaaSDemo.Api
         /// <param name="app">
         ///     The application pipeline builder.
         /// </param>
-        public void Configure(IApplicationBuilder app, ProvisioningEngine provisioningEngine, IApplicationLifetime appLifetime)
+        public void Configure(IApplicationBuilder app, IApplicationLifetime appLifetime)
         {
-            provisioningEngine.Start();
-
             app.UseDeveloperExceptionPage();
             app.UseMvc();
 
-            appLifetime.ApplicationStopping.Register(() =>
-            {
-                provisioningEngine.Stop().Wait();
-            });
             appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
         }
     }

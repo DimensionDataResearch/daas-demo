@@ -10,6 +10,7 @@ COPY src/DaaSDemo.Data/*.csproj /build/src/DaaSDemo.Data/
 COPY src/DaaSDemo.KubeClient/*.csproj /build/src/DaaSDemo.KubeClient/
 COPY src/DaaSDemo.Models/*.csproj /build/src/DaaSDemo.Models/
 COPY src/DaaSDemo.Provisioning/*.csproj /build/src/DaaSDemo.Provisioning/
+COPY src/DaaSDemo.Provisioning.Host/*.csproj /build/src/DaaSDemo.Provisioning.Host/
 COPY src/DaaSDemo.SqlExecutor/*.csproj /build/src/DaaSDemo.SqlExecutor/
 COPY src/DaaSDemo.SqlExecutor.Client/*.csproj /build/src/DaaSDemo.SqlExecutor.Client/
 COPY test/DaaSDemo.TestHarness/*.csproj /build/test/DaaSDemo.TestHarness/

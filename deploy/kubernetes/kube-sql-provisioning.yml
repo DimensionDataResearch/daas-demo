@@ -1,30 +1,26 @@
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  name: sql-api
+  name: sql-provisioning
 spec:
-  replicas: 3
+  replicas: 1
   selector:
-    k8s-app: sql-api
+    k8s-app: sql-provisioning
   template:
     metadata:
       labels:
-        k8s-app: sql-api
+        k8s-app: sql-provisioning
     spec:
-      serviceAccountName: sql-api
+      serviceAccountName: sql-provisioning
       terminationGracePeriodSeconds: 60
 
       containers:
-      - name: sql-api
-        image: tintoy.azurecr.io/daas/api:1.0.0-dev
+      - name: sql-provisioning
+        image: tintoy.azurecr.io/daas/provisioning:1.0.0-dev
         imagePullPolicy: Always
         env:
-          - name: PORT
-            value: '5000'
           - name: IN_KUBERNETES
             value: '1'
-          - name: ASPNETCORE_URLS
-            value: 'http://*:5000'
           - name: ASPNETCORE_KUBERNETES__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
           - name: ASPNETCORE_KUBERNETES__VolumeClaimName
@@ -32,7 +28,7 @@ spec:
           - name: ASPNETCORE_DATABASE__ConnectionString
             valueFrom:
               secretKeyRef:
-                name: sql-api
+                name: sql-provisioning
                 key: connection_string
         ports:
           - containerPort: 5000
