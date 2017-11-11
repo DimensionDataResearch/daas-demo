@@ -41,6 +41,18 @@ export class DaaSAPI
     }
 
     /**
+     * Get information about all databases.
+     * 
+     * @returns The databases, sorted by server and then name.
+     */
+    public async getDatabases(): Promise<Database[]> {
+        const response = await this.http.fetch('databases');
+        const body = await response.json();
+
+        return body as Database[];
+    }
+
+    /**
      * Get information about a specific tenant.
      * 
      * @param tenantId The tenant Id.

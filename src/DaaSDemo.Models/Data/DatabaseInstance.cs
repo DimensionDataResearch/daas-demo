@@ -35,8 +35,10 @@ namespace DaaSDemo.Models.Data
         /// <summary>
         ///     The password for the database-level user.
         /// </summary>
+        [JsonIgnore]
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string DatabasePassword { get; set; }
 
         /// <summary>

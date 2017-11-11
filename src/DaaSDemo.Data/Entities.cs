@@ -165,6 +165,25 @@ namespace DaaSDemo.Data
         public bool DoesServerHaveDatabases(int serverId) => DatabaseInstances.Any(database => database.DatabaseServerId == serverId);
 
         /// <summary>
+        ///     Get all databases, ordered by server Id, then name.
+        /// </summary>
+        /// <returns>
+        ///     The <see cref="DatabaseInstance"/>s.
+        /// </returns>
+        public DatabaseInstance[] GetAllDatabases() => DatabaseInstances.OrderBy(database => database.DatabaseServerId).ThenBy(database => database.Name).ToArray();
+
+        /// <summary>
+        ///     Get all databases for the specified server, ordered by name.
+        /// </summary>
+        /// <param name="serverId">
+        ///     The server Id.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="DatabaseInstance"/>s.
+        /// </returns>
+        public DatabaseInstance[] GetServerDatabases(int serverId) => DatabaseInstances.Where(database => database.DatabaseServerId == serverId).OrderBy(database => database.Name).ToArray();
+
+        /// <summary>
         ///     Get a database instance by Id.
         /// </summary>
         /// <param name="databaseId">

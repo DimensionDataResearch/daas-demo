@@ -7,25 +7,17 @@
         <div if.bind="databases">
             <h1 class="ui dividing header">Databases</h1>
 
-            <div class="ui warning message">
-                View not implemented yet (non-tenant API not implemented, so it's just sample data below).
-            </div>
-
             <table class="ui striped celled table">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Temp. (C)</th>
-                        <th>Temp. (F)</th>
-                        <th>Summary</th>
+                        <th>Name</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr repeat.for="forecast of databases">
-                        <td>${ forecast.dateFormatted }</td>
-                        <td>${ forecast.temperatureC }</td>
-                        <td>${ forecast.temperatureF }</td>
-                        <td>${ forecast.summary }</td>
+                    <tr repeat.for="database of databases">
+                        <td>${ database.name }</td>
+                        <td>${ database.status }</td>
                     </tr>
                 </tbody>
             </table>
