@@ -1,0 +1,14 @@
+<template>
+    
+
+    <p if.bind="!tenant"><em>Loading...</em></p>
+
+    <div if.bind="tenant">
+        <h1>${ tenant.name }</h1>
+        
+        <p>
+            Tenant details go here.
+        </p>
+    </div>
+
+</template>

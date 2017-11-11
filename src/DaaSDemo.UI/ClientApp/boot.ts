@@ -7,6 +7,7 @@ declare const IS_DEV_BUILD: boolean; // The value is supplied by Webpack during 
 
 export function configure(aurelia: Aurelia) {
     aurelia.use.standardConfiguration();
+    aurelia.use.transient(HttpClient);
 
     if (IS_DEV_BUILD) {
         aurelia.use.developmentLogging();

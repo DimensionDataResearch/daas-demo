@@ -1,42 +1,27 @@
-import { HttpClient } from 'aurelia-fetch-client';
 import { inject } from 'aurelia-framework';
+import { RouteConfig } from 'aurelia-router';
 
-@inject(HttpClient)
+import { DaaSAPI, Tenant  } from '../api/daas-api';
+
+@inject(DaaSAPI)
 export class TenantList {
+    private routeConfig: RouteConfig;
+    
     public tenants: Tenant[];
-
-    constructor(private http: HttpClient) {
-        http.configure(request =>
-            request.withBaseUrl(
-                'http://kr-cluster.tintoy.io:31200/api/v1/'
-            )
-            .withDefaults({
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-        );
-
-        http.fetch('tenants')
-            .then(result => result.json() as Promise<Tenant[]>)
-            .then(data => {
-                this.tenants = data;
-            });
-    }
-}
-
-/**
- * Represents basic information about a tenant.
- */
-interface Tenant {
-    /**
-     * The tenant Id.
-     */
-    id: number,
+    public noTenants: boolean;
+    
+    constructor(private api: DaaSAPI) { }
 
     /**
-     * The tenant name.
+     * Called when the component is activated.
+     * 
+     * @param params Route parameters.
+     * @param routeConfig The configuration for the currently-active route.
      */
-    name: string
+    public async activate(params: any, routeConfig: RouteConfig): Promise<void> {
+        this.routeConfig = routeConfig;
+
+        this.tenants = await this.api.getTenants();
+        this.noTenants = !this.tenants.length;
+      }
 }

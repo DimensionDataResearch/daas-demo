@@ -6,15 +6,21 @@
     <table if.bind="tenants" class="table">
         <thead>
             <tr>
-                <th>Id</th>
                 <th>Name</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             <tr repeat.for="tenant of tenants">
-                <td>${ tenant.id }</td>
-                <td>${ tenant.name }</td>
+                <td>
+                    ${ tenant.name }
+                </td>
+                <td>
+                    <a route-href="route: tenant; params.bind: {id: tenant.id}">Details</a>
+                </td>
             </tr>
         </tbody>
     </table>
+
+    <h3 if.bind="noTenants"></h3>
 </template>

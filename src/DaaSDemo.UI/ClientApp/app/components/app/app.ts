@@ -21,6 +21,11 @@ export class App {
             nav: true,
             title: 'Tenants'
         }, {
+            route: 'tenants/:id',
+            name: 'tenant',
+            moduleId: PLATFORM.moduleName('../tenant/tenant'),
+            title: 'Tenant'
+        }, {
             route: 'servers',
             name: 'servers',
             settings: { icon: 'modal-window' },
