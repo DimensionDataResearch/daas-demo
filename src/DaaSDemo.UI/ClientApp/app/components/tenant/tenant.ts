@@ -11,8 +11,9 @@ export class TenantDetails {
     private routeConfig: RouteConfig;
     private tenantId: number;
     
-    public tenant: Tenant | null;
-    public server: Server | null;
+    public tenant: Tenant | null = null;
+    public server: Server | null = null;
+    public newServer: NewServer | null = null;
     
     /**
      * Create a new Tenant detail view component.
@@ -20,6 +21,55 @@ export class TenantDetails {
      * @param api The DaaS API client.
      */
     constructor(private api: DaaSAPI) { }
+
+    /**
+     * Does the tenant currently have a server (or are we in the process of adding one)?
+     */
+    public get hasServer(): boolean {
+        return this.server !== null || this.addingServer;
+    }
+
+    /**
+     * Is a server currently being added?
+     */
+    public get addingServer(): boolean {
+        return this.newServer !== null;
+    }
+
+    /**
+     * Show the server creation form.
+     */
+    public showCreateServerForm(): void {
+        this.newServer = {
+            name: null,
+            adminPassword: null
+        };
+    }
+
+    /**
+     * Hide the server creation form.
+     */
+    public hideCreateServerForm(): void {
+        this.newServer = null;
+    }
+
+    /**
+     * Request creation of a new server.
+     */
+    public async createServer(): Promise<void> {
+        if (this.newServer === null || this.newServer.name === null || this.newServer.adminPassword === null)
+            return;
+
+        await this.api.deployTenantServer(
+            this.tenantId,
+            this.newServer.name,
+            this.newServer.adminPassword
+        );
+
+        this.hideCreateServerForm();
+
+        await this.load();
+    }
 
     /**
      * Called when the component is activated.
@@ -57,6 +107,14 @@ export class TenantDetails {
         await this.api.destroyTenantServer(this.tenantId);
         await this.load();
     }
+}
+
+/**
+ * Represents the form values for creating a server.
+ */
+export interface NewServer {
+    name: string | null;
+    adminPassword: string | null;
 }
 
 /**

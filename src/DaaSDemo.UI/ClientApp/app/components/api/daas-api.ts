@@ -53,14 +53,14 @@ export class DaaSAPI
         if (response.ok)
             return body as Tenant;
 
-        if (response.status == 400)
+        if (response.status === 404)
         {
             const notFound = body as NotFoundResponse;
             if (notFound.entityType == 'DatabaseServer')
                 return null;
         }
 
-        const errorResponse = body as ApiErrorResponse;
+        const errorResponse = body as ApiResponse;
 
         throw new Error(
             `Failed to retrieve details for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
@@ -81,14 +81,14 @@ export class DaaSAPI
             return body as Server;
         }
 
-        if (response.status == 400)
+        if (response.status === 404)
         {
             const notFound = body as NotFoundResponse;
             if (notFound.entityType == 'DatabaseServer')
                 return null;
         }
 
-        const errorResponse = body as ApiErrorResponse;
+        const errorResponse = body as ApiResponse;
 
         throw new Error(
             `Failed to retrieve details for server owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
@@ -109,14 +109,14 @@ export class DaaSAPI
             return body as Database[];
         }
 
-        if (response.status == 400)
+        if (response.status == 404)
         {
             const notFound = body as NotFoundResponse;
             if (notFound.entityType == 'DatabaseServer')
                 return null;
         }
 
-        const errorResponse = body as ApiErrorResponse;
+        const errorResponse = body as ApiResponse;
 
         throw new Error(
             `Failed to retrieve databases owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
@@ -124,22 +124,52 @@ export class DaaSAPI
     }
 
     /**
-     * Destroy a tenant's database server.
+     * Deploy a tenant's database server.
      * 
      * @param tenantId The tenant Id.
      * @param databaseId The database Id.
+     * 
+     * @returns The Id of the new server.
+     */
+    public async deployTenantServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
+        const response = await this.http.fetch(`tenants/${tenantId}/server`, {
+            method: 'POST',
+            body: JSON.stringify({
+                name: name,
+                adminPassword: adminPassword
+            })
+        });
+        
+        const body = await response.json();
+        if (response.ok) {
+            const serverCreated = body as ServerCreated;
+
+            return serverCreated.id;
+        }
+        
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to create server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Destroy a tenant's database server.
+     * 
+     * @param tenantId The tenant Id.
      */
     public async destroyTenantServer(tenantId: number): Promise<void> {
         const response = await this.http.fetch(`tenants/${tenantId}/server`, {
             method: 'DELETE'
         });
         
-        if (response.ok || response.status === 400) {
+        if (response.ok || response.status === 404) {
             return
         }
 
         const body = await response.json();
-        const errorResponse = body as ApiErrorResponse;
+        const errorResponse = body as ApiResponse;
 
         throw new Error(
             `Failed to delete server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
@@ -162,7 +192,7 @@ export class DaaSAPI
         }
 
         const body = await response.json();
-        const errorResponse = body as ApiErrorResponse;
+        const errorResponse = body as ApiResponse;
 
         throw new Error(
             `Failed to delete database with Id ${databaseId} owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
@@ -248,19 +278,24 @@ export interface Database {
 }
 
 /**
- * Represents an error from the DaaS API.
+ * Represents a generic response from the DaaS API.
  */
-interface ApiErrorResponse {
+interface ApiResponse {
     /**
      * An informational message describing the error.
      */
-    message: string;
+    message?: string;
+}
+
+interface ServerCreated extends ApiResponse {
+    id: number;
+    name: string;
 }
 
 /**
  * Represents the error response returned by the DaaS API with a 404 status code.
  */
-interface NotFoundResponse extends ApiErrorResponse {
+interface NotFoundResponse extends ApiResponse {
     /**
      * The Id of the entity that was not found.
      */

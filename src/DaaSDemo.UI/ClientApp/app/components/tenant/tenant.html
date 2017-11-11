@@ -37,9 +37,27 @@
                 </div>
             </div>
 
-            <div if.bind="!server" class="ui info message">
-                No server has been deployed for this tenant.
+            <div if.bind="!hasServer" class="ui info message">
+                <p>
+                    No server has been deployed for this tenant.
+                </p>
+
+                <button class="ui button" click.delegate="showCreateServerForm()">Create Server</button>
             </div>
+
+            <form if.bind="newServer" class="ui form">
+                <div class="field">
+                    <label>Name</label>
+                    <input name="name" value.bind="newServer.name" placeholder="Server name" type="text">
+                </div>
+                <div class="field">
+                    <label>Admin password</label>
+                    <input name="databaseUser" value.bind="newServer.adminPassword" placeholder="Password for the sa user" type="password">
+                </div>
+                
+                <button class="ui button" click.delegate="createServer()">Create</button>
+                <button class="ui button" click.delegate="hideCreateServerForm()">Cancel</button>
+            </form>
         </div>
     </div>
 </template>
