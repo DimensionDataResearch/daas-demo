@@ -25,6 +25,74 @@ namespace DaaSDemo.Provisioning
         public static string GetBaseName(DatabaseServer server) => $"sql-server-{server.Id}";
 
         /// <summary>
+        ///     Create a new <see cref="V1beta1Deployment"/> for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <param name="dataVolumeClaimName">
+        ///     The name of the Kubernetes VolumeClaim where the data will be stored.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1beta1Deployment"/>.
+        /// </returns>
+        public static V1beta1Deployment Deployment(DatabaseServer server, string dataVolumeClaimName)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
+
+            string baseName = GetBaseName(server);
+            
+            return Deployment(
+                name: baseName,
+                spec: KubeSpecs.Deployment(server, dataVolumeClaimName)
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="V1beta1Deployment"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The deployment name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="V1beta1DeploymentSpec"/> representing the deployment specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the deployment.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the deployment.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="V1beta1Deployment"/>.
+        /// </returns>
+        public static V1beta1Deployment Deployment(string name, V1beta1DeploymentSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            return new V1beta1Deployment
+            {
+                ApiVersion = "apps/v1beta1",
+                Kind = "Deployment",
+                Metadata = new V1ObjectMeta
+                {
+                    Name = name,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Spec = spec
+            };
+        }
+
+        /// <summary>
         ///     Create a new <see cref="V1ReplicationController"/> for the specified database server.
         /// </summary>
         /// <param name="server">
@@ -41,6 +109,9 @@ namespace DaaSDemo.Provisioning
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
+            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
+
             string baseName = GetBaseName(server);
             
             return ReplicationController(
@@ -48,7 +119,7 @@ namespace DaaSDemo.Provisioning
                 spec: KubeSpecs.ReplicationController(server, dataVolumeClaimName)
             );
         }
-        
+
         /// <summary>
         ///     Create a new <see cref="V1ReplicationController"/>.
         /// </summary>
