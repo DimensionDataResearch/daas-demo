@@ -1,0 +1,25 @@
+<template>
+    <div if.bind="!loaded">
+        <h1>Loading...</h1>
+    </div>
+
+    <div if.bind="loaded">
+        <h1>Databases owned by ${ tenant.name }</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Connection String</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr repeat.for="database of databases">
+                    <td>${ database.name }</td>
+                    <td>${ database.connectionString }</td>
+                    <td><a class="btn btn-info" click.delegate="deleteDatabase(tenant.id, database.id)">Delete</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</template>

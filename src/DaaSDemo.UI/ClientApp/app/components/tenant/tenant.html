@@ -1,14 +1,39 @@
 <template>
-    
-
-    <p if.bind="!tenant"><em>Loading...</em></p>
+    <div if.bind="!tenant">
+        <h1>Loading...</h1>
+    </div>
 
     <div if.bind="tenant">
         <h1>${ tenant.name }</h1>
+
+        <hr/>
         
-        <p>
-            Tenant details go here.
-        </p>
+        <h3>Server</h3>
+
+        <div if.bind="server">
+            <strong>Name</strong>: ${ server.name }<br/>
+            <strong>Status</strong>: ${ server.status }<br/>
+            <br/>
+            <strong>Requested Action</strong>: ${ server.action }<br/>
+            <br/>
+            
+            <h4>Connectivity</h4>
+            <div if.bind="server.publicFQDN">
+                <strong>Host</strong>: ${ server.publicFQDN }<br/>
+                <strong>Port</strong>: ${ server.publicPort }<br/>
+            </div>
+            <div if.bind="!server.publicFQDN" class="well">
+                Connection details are not currently available for this server.
+            </div>
+
+            <div style="margin-top: 20px;">
+                <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">Databases</a>
+            </div>
+        </div>
+        
+        <div if.bind="!server">
+            No server has been deployed for this tenant.
+        </div>
     </div>
 
 </template>

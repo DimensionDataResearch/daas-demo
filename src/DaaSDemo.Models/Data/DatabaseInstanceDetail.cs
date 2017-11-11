@@ -29,7 +29,7 @@ namespace DaaSDemo.Models.Data
             
             Id = databaseInstance.Id;
             Name = databaseInstance.Name;
-            ConnectionString = $"Data Source={databaseInstance.DatabaseServer.PublicFQDN}:{databaseInstance.DatabaseServer.PublicPort};Initial Catalog={databaseInstance.Name};User={databaseInstance.DatabaseUser};Password={databaseInstance.DatabasePassword}";
+            ConnectionString = $"Data Source=tcp:{databaseInstance.DatabaseServer.PublicFQDN}:{databaseInstance.DatabaseServer.PublicPort};Initial Catalog={databaseInstance.Name};User={databaseInstance.DatabaseUser};Password=<password>";
         }
 
         /// <summary>

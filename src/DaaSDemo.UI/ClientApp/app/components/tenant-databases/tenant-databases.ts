@@ -1,21 +1,19 @@
 import { inject } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
 
-import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
+import { DaaSAPI, Database, Tenant } from '../api/daas-api';
 
-/**
- * Component for the Tenant detail view.
- */
 @inject(DaaSAPI)
-export class TenantDetails {
+export class TenantDatabaseList {
     private routeConfig: RouteConfig;
     private tenantId: number;
-    
+
     public tenant: Tenant | null;
-    public server: Server | null;
-    
+    public databases: Database[] | null;
+    public loaded: boolean = false;
+
     /**
-     * Create a new Tenant detail view component.
+     * Create a new Server databases view component.
      * 
      * @param api The DaaS API client.
      */
@@ -30,26 +28,34 @@ export class TenantDetails {
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
         this.tenantId = params.id;
-        
+
         this.load();
     }
 
     private async load(): Promise<void> {
         const tenantRequest = this.api.getTenant(this.tenantId);
-        const serverRequest = this.api.getTenantServer(this.tenantId);
+        const databasesRequest = this.api.getTenantDatabases(this.tenantId);
 
         this.tenant = await tenantRequest;
-        this.server = await serverRequest;
         
         if (this.tenant != null)
-            this.routeConfig.title = this.tenant.name;
+            this.routeConfig.title = `${this.tenant.name} - Databases`;
         else
             this.routeConfig.title = 'Tenant not found';
+
+        this.databases = await databasesRequest;
+
+        this.loaded = (this.tenant != null && this.databases != null);
+    }
+
+    private async deleteDatabase(tenantId: number, databaseId: number): Promise<void> {
+        await this.api.deleteDatabase(tenantId, databaseId);
+        await this.load();
     }
 }
 
 /**
- * Route parameters for the Tenant detail view.
+ * Route parameters for the Tenant databases view.
  */
 interface RouteParams
 {

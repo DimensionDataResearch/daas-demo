@@ -26,6 +26,11 @@ export class App {
             moduleId: PLATFORM.moduleName('../tenant/tenant'),
             title: 'Tenant'
         }, {
+            route: 'tenants/:id/databases',
+            name: 'tenantDatabases',
+            moduleId: PLATFORM.moduleName('../tenant-databases/tenant-databases'),
+            title: 'Databases'
+        }, {
             route: 'servers',
             name: 'servers',
             settings: { icon: 'modal-window' },
