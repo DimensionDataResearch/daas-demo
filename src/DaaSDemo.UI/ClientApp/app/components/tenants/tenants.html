@@ -1,0 +1,20 @@
+<template>
+    <h1>Tenants</h1>
+
+    <p if.bind="!tenants"><em>Loading...</em></p>
+
+    <table if.bind="tenants" class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr repeat.for="tenant of tenants">
+                <td>${ tenant.id }</td>
+                <td>${ tenant.name }</td>
+            </tr>
+        </tbody>
+    </table>
+</template>

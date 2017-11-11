@@ -1,22 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SpaServices.Webpack;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Converters;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace DaaSDemo.Api
+namespace DaaSDemo.UI
 {
     using Data;
 
     /// <summary>
-    ///     Startup logic for the Database-as-a-Service demo API.
+    ///     Startup logic for the Database-as-a-Service demo UI.
     /// </summary>
     public class Startup
     {
@@ -47,9 +46,6 @@ namespace DaaSDemo.Api
         /// </param>
         public void ConfigureServices(IServiceCollection services)
         {
-            if (services == null)
-                throw new ArgumentNullException(nameof(services));
-
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {
@@ -61,22 +57,6 @@ namespace DaaSDemo.Api
                     });
                 });
 
-            services.AddCors(cors =>
-            {
-                // Allow requests from the UI.
-                string clusterPublicDomainName = Configuration.GetValue<string>("Kubernetes:ClusterPublicFQDN");
-                int clusterPublicPort = Configuration.GetValue<int>("Kubernetes:ClusterPublicUIPort");
-
-                cors.AddPolicy("UI", policy =>
-                    policy.WithOrigins(
-                        $"http://{clusterPublicDomainName}:{clusterPublicPort}",
-                        "http://localhost:5000" // Development
-                    )
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                );
-            });
-
             services.AddMvc()
                 .AddJsonOptions(json =>
                 {
@@ -84,6 +64,7 @@ namespace DaaSDemo.Api
                         new StringEnumConverter()
                     );
                 });
+            
             services.AddDataProtection(dataProtection =>
             {
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
@@ -96,13 +77,33 @@ namespace DaaSDemo.Api
         /// <param name="app">
         ///     The application pipeline builder.
         /// </param>
-        public void Configure(IApplicationBuilder app, IApplicationLifetime appLifetime)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment hostingEnvironment, IApplicationLifetime appLifetime)
         {
-            app.UseDeveloperExceptionPage();
-            app.UseCors("UI");
-            app.UseMvc();
+            if (hostingEnvironment.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseWebpackDevMiddleware(new WebpackDevMiddlewareOptions
+                {
+                    HotModuleReplacement = true
+                });
+            }
+            else
+                app.UseExceptionHandler("/Home/Error");
 
-            appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
+            app.UseStaticFiles();
+
+            app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}"
+                );
+
+                routes.MapSpaFallbackRoute(
+                    name: "spa-fallback",
+                    defaults: new { controller = "Home", action = "Index" }
+                );
+            });
         }
     }
 }

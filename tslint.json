@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "quotemark": {
+      "options": "single"
+    }
+  }
+}
