@@ -26,7 +26,7 @@ namespace DaaSDemo.KubeClient
         /// <returns>
         ///     An <see cref="HttpResponseMessage"/> representing the response.
         /// </returns>
-        public static async Task<HttpResponseMessage> GetStreamedAsync(this HttpClient httpClient, HttpRequest request, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<HttpResponseMessage> GetStreamedAsync(this HttpClient httpClient, HttpRequest request, CancellationToken cancellationToken = default)
         {
             using (HttpRequestMessage requestMessage = request.BuildRequestMessage(HttpMethod.Get, baseUri: httpClient.BaseAddress))
             {

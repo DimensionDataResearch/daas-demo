@@ -43,7 +43,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     The Jobs, as a list of <see cref="V1Job"/>s.
         /// </returns>
-        public async Task<List<V1Job>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1Job>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             V1JobList matchingJobs =
                 await Http.GetAsync(
@@ -98,7 +98,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Job"/> representing the current state for the Job, or <c>null</c> if no Job was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Job> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Job> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -125,7 +125,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Job"/> representing the current state for the newly-created Job.
         /// </returns>
-        public async Task<V1Job> Create(V1Job newJob, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Job> Create(V1Job newJob, CancellationToken cancellationToken = default)
         {
             if (newJob == null)
                 throw new ArgumentNullException(nameof(newJob));
@@ -160,7 +160,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsJsonAsync(

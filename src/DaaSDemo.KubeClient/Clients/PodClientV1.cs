@@ -43,7 +43,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     The Pods, as a list of <see cref="V1Pod"/>s.
         /// </returns>
-        public async Task<List<V1Pod>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1Pod>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             V1PodList matchingPods =
                 await Http.GetAsync(
@@ -98,7 +98,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Pod"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Pod> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Pod> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -131,7 +131,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A string containing the logs.
         /// </returns>
-        public async Task<string> Logs(string name, string kubeNamespace = null, int? limitBytes = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<string> Logs(string name, string kubeNamespace = null, int? limitBytes = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -168,7 +168,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1Pod"/> representing the current state for the newly-created Pod.
         /// </returns>
-        public async Task<V1Pod> Create(V1Pod newPod, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1Pod> Create(V1Pod newPod, CancellationToken cancellationToken = default)
         {
             if (newPod == null)
                 throw new ArgumentNullException(nameof(newPod));
@@ -200,7 +200,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(

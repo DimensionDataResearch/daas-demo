@@ -43,7 +43,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     The ReplicationControllers, as a list of <see cref="V1ReplicationController"/>s.
         /// </returns>
-        public async Task<List<V1ReplicationController>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1ReplicationController>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             V1ReplicationControllerList matchingControllers =
                 await Http.GetAsync(
@@ -98,7 +98,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1ReplicationController"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ReplicationController> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1ReplicationController> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -125,7 +125,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1ReplicationController"/> representing the current state for the newly-created ReplicationController.
         /// </returns>
-        public async Task<V1ReplicationController> Create(V1ReplicationController newController, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1ReplicationController> Create(V1ReplicationController newController, CancellationToken cancellationToken = default)
         {
             if (newController == null)
                 throw new ArgumentNullException(nameof(newController));
@@ -160,7 +160,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return
                 await Http.DeleteAsJsonAsync(

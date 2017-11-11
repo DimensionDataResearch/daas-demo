@@ -73,7 +73,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The command result.
         /// </returns>
-        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));
@@ -120,7 +120,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The query result.
         /// </returns>
-        public async Task<QueryResult> ExecuteQuery(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<QueryResult> ExecuteQuery(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));

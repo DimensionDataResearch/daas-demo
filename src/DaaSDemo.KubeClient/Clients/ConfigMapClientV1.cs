@@ -43,7 +43,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     The ConfigMaps, as a list of <see cref="V1ConfigMap"/>s.
         /// </returns>
-        public async Task<List<V1ConfigMap>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<List<V1ConfigMap>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             V1ConfigMapList matchingConfigMaps =
                 await Http.GetAsync(
@@ -74,7 +74,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1ConfigMap"/> representing the current state for the ConfigMap, or <c>null</c> if no ConfigMap was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ConfigMap> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1ConfigMap> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -101,7 +101,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="V1ConfigMap"/> representing the current state for the newly-created ConfigMap.
         /// </returns>
-        public async Task<V1ConfigMap> Create(V1ConfigMap newConfigMap, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<V1ConfigMap> Create(V1ConfigMap newConfigMap, CancellationToken cancellationToken = default)
         {
             if (newConfigMap == null)
                 throw new ArgumentNullException(nameof(newConfigMap));
@@ -133,7 +133,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(
