@@ -5,6 +5,8 @@
     <NoWarn>NU1608</NoWarn>
   </PropertyGroup>
 
+  <Import Project="..\Common.props" />
+
   <ItemGroup>
     <EmbeddedResource Include="ActorSystem.conf" />
   </ItemGroup>

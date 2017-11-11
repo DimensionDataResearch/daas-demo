@@ -4,6 +4,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <Import Project="..\Common.props" />
+
   <ItemGroup>
     <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />

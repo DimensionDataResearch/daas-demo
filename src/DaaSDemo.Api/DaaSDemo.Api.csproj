@@ -6,6 +6,8 @@
     <UserSecretsId>DaaS.Demo</UserSecretsId>
   </PropertyGroup>
 
+  <Import Project="..\Common.props" />
+
   <ItemGroup>
     <Folder Include="wwwroot\" />
   </ItemGroup>

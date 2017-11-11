@@ -3,10 +3,11 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
     
     <UserSecretsId>DaaS.Demo</UserSecretsId>
   </PropertyGroup>
+
+  <Import Project="..\Common.props" />
 
   <ItemGroup>
     <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
