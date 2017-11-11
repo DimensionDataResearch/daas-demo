@@ -2,8 +2,8 @@ FROM microsoft/aspnetcore-build:2.0-jessie AS build
 
 WORKDIR /build
 
-COPY DaaS.Demo.sln /build
-COPY nuget.config /build
+COPY DaaS.Demo.sln nuget.config /build/
+COPY src/Common.props /build/src/
 COPY src/DaaSDemo.Api/*.csproj /build/src/DaaSDemo.Api/
 COPY src/DaaSDemo.Common/*.csproj /build/src/DaaSDemo.Common/
 COPY src/DaaSDemo.Data/*.csproj /build/src/DaaSDemo.Data/
