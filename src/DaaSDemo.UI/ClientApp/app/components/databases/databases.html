@@ -11,6 +11,7 @@
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Server</th>
                         <th>Tenant</th>
                         <th>Status</th>
                     </tr>
@@ -18,7 +19,10 @@
                 <tbody>
                     <tr repeat.for="database of databases">
                         <td>${ database.name }</td>
-                        <td>(not implemented yet)</td>
+                        <td>${ database.serverName }</td>
+                        <td>
+                            <a route-href="route: tenant; params.bind: { id: database.tenantId }">${ database.tenantName }</a>
+                        </td>
                         <td>${ database.status }</td>
                     </tr>
                 </tbody>

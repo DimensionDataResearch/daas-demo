@@ -333,6 +333,26 @@ export interface Database {
     name: string;
 
     /**
+     * The Id of the server that hosts the database.
+     */
+    serverId: number;
+
+    /**
+     * The name of the server that hosts the database.
+     */
+    serverName: string;
+
+    /**
+     * The Id of the tenant that owns the database.
+     */
+    tenantId: number;
+
+    /**
+     * The name of the tenant that owns the database.
+     */
+    tenantName: string;
+
+    /**
      * The database's currently-requested provisioning action (if any).
      */
     action: string;
