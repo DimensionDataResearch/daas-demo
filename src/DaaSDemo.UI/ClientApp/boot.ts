@@ -1,3 +1,4 @@
+
 import 'isomorphic-fetch';
 import { Aurelia, PLATFORM } from 'aurelia-framework';
 import { HttpClient } from 'aurelia-fetch-client';
@@ -7,6 +8,10 @@ declare const IS_DEV_BUILD: boolean; // The value is supplied by Webpack during 
 export function configure(aurelia: Aurelia) {
     aurelia.use.standardConfiguration();
     aurelia.use.transient(HttpClient);
+
+    aurelia.use.plugin(
+        PLATFORM.moduleName('aurelia-validation')
+    );
 
     if (IS_DEV_BUILD) {
         aurelia.use.developmentLogging();

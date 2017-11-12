@@ -1,4 +1,4 @@
-import { inject } from 'aurelia-framework';
+import { inject, computedFrom } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
 
 import { DaaSAPI, Database } from '../api/daas-api';
@@ -8,9 +8,17 @@ export class DatabaseList {
     private routeConfig: RouteConfig;
 
     public databases: Database[] = [];
-    public noDatabases: boolean = false;
+    public isLoading: boolean = false;
 
     constructor(private api: DaaSAPI) { }
+
+    /**
+     * Are there no databases defined in the system?
+     */
+    @computedFrom('isLoading', 'databases')
+    public get hasNoDatabases(): boolean {
+        return !this.isLoading && this.databases.length == 0;
+    }
 
     /**
      * Called when the component is activated.
@@ -28,7 +36,14 @@ export class DatabaseList {
      * Load tenant details.
      */
     private async load(): Promise<void> {
-        this.databases = await this.api.getDatabases();
-        this.noDatabases = !this.databases.length;
+        this.isLoading = true;
+
+        try
+        {
+            this.databases = await this.api.getDatabases();
+        }
+        finally {
+            this.isLoading = false;
+        }
     }
 }

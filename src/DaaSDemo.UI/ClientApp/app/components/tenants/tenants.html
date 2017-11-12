@@ -1,5 +1,5 @@
 <template>
-    <div class="ui segment">
+    <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="!tenants">
             <div class="ui active loader"></div>
         </div>
@@ -11,12 +11,18 @@
                 <div class="item" repeat.for="tenant of tenants">
                     <i class="large user icon"></i>
                     <div class="content">
-                        <a class="header" route-href="route: tenant; params.bind: {id: tenant.id}">
-                            ${ tenant.name }
-                        </a>
+                        <div class="header">
+                            <a route-href="route: tenant; params.bind: {id: tenant.id}">
+                                ${ tenant.name }
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <button class="ui icon button" disabled="disabled">
+                <i class="add circle icon"></i> Add Tenant
+            </button>
         </div>
 
         <h3 if.bind="noTenants">

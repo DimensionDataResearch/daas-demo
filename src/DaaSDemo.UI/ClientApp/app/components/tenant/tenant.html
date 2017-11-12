@@ -1,5 +1,5 @@
 <template>
-    <div class="ui segment">
+    <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="loading">
             <div class="ui active loader"></div>
         </div>
@@ -41,19 +41,40 @@
                 </div>
             </div>
 
-            <form if.bind="addingServer" class="ui form">
-                <div class="field">
-                    <label>Name</label>
-                    <input name="name" value.bind="newServer.name" placeholder="Server name" type="text">
-                </div>
-                <div class="field">
-                    <label>Admin password</label>
-                    <input name="databaseUser" value.bind="newServer.adminPassword" placeholder="Password for the sa user" type="password">
-                </div>
-                
-                <button class="ui button" click.delegate="createServer()">Create</button>
-                <button class="ui button" click.delegate="hideCreateServerForm()">Cancel</button>
-            </form>
+            <div if.bind="addingServer">
+                <form class="ui form">
+                    <div class="required field"
+                        validation-errors.bind="nameErrors"
+                        class.bind="nameErrors.length ? 'error' : ''"
+                    >
+                        <label>Name</label>
+                        <input name="name" value.bind="newServer.name & validate" placeholder="Server name" type="text">
+                    </div>
+
+                    <div class="field"
+                        validation-errors.bind="adminPasswordErrors"
+                        class.bind="adminPasswordErrors.length ? 'error' : ''"
+                    >
+                        <label>Admin password</label>
+                        <input name="databaseUser" value.bind="newServer.adminPassword & validate" placeholder="Password for the sa user" type="password">
+                    </div>
+
+                    <div class="ui message" if.bind="validationController.errors.length">
+                        <div class="header">One or more fields are invalid</div>
+                        
+                        <ul>
+                            <li repeat.for="error of validationController.errors">
+                                ${error.message}
+                            </li>
+                        </ul>
+                    </div>
+
+                    <button class="ui icon button" click.delegate="createServer()" disabled.bind="validationController.errors.length">
+                        <i class="add circle icon"></i> Create
+                    </button>
+                    <button class="ui button" click.delegate="hideCreateServerForm()">Cancel</button>
+                </form>
+            </div>
 
             <div if.bind="!hasServer && !addingServer" class="ui info message">
                 <p>

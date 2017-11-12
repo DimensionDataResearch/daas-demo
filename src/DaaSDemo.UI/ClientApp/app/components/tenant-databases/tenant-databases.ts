@@ -1,14 +1,16 @@
 import { inject, computedFrom } from 'aurelia-framework';
+import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
+import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI, Database, Tenant } from '../api/daas-api';
 
-@inject(DaaSAPI)
+@inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
     private routeConfig: RouteConfig;
     private tenantId: number;
 
-    public loading: boolean = false;
+    public isLoading: boolean = false;
     public tenant: Tenant | null = null;
     public databases: Database[] | null = null;
     public newDatabase: NewDatabase | null = null;
@@ -19,7 +21,7 @@ export class TenantDatabaseList {
      * 
      * @param api The DaaS API client.
      */
-    constructor(private api: DaaSAPI) { }
+    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
 
     /**
      * Has an error occurred?
@@ -27,6 +29,13 @@ export class TenantDatabaseList {
     @computedFrom('errorMessage')
     public get hasError(): boolean {
         return this.errorMessage !== null;
+    }
+
+    /**
+     * Does the database creation form have any validation errors?
+     */
+    public get hasValidationErrors(): boolean {
+        return this.validationController.errors.length !== 0;
     }
 
     /**
@@ -54,14 +63,18 @@ export class TenantDatabaseList {
     }
 
     /**
+     * Should the "tenant has no databases." message be displayed?
+     */
+    // @computedFrom('hasDatabase', 'addingDatabases')
+    public get shouldShowNoDatabasesMessage(): boolean {
+        return !this.isLoading && !this.hasDatabase && !this.addingDatabase;
+    }
+
+    /**
      * Show the database creation form.
      */
     public showCreateDatabaseForm(): void {
-        this.newDatabase = {
-            name: null,
-            user: null,
-            password: null
-        };
+        this.newDatabase = new NewDatabase();
     }
 
     /**
@@ -75,7 +88,13 @@ export class TenantDatabaseList {
      * Request creation of a new database.
      */
     public async createDatabase(): Promise<void> {
-        if (this.newDatabase === null || this.newDatabase.name === null || this.newDatabase.user === null || this.newDatabase.password == null)
+        if (this.newDatabase === null)
+            return;
+
+        if (this.validationController.errors.length)
+            return;
+
+        if (this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
             return;
 
         try {
@@ -116,7 +135,7 @@ export class TenantDatabaseList {
      * Load tenant and database details.
      */
     private async load(): Promise<void> {
-        this.loading = true;
+        this.isLoading = true;
 
         try
         {
@@ -138,7 +157,7 @@ export class TenantDatabaseList {
         }
         finally
         {
-            this.loading = false;
+            this.isLoading = false;
         }
     }
 
@@ -156,11 +175,23 @@ export class TenantDatabaseList {
 /**
  * Represents the form values for creating a database.
  */
-export interface NewDatabase {
-    name: string | null;
-    user: string | null;
-    password: string | null;
+export class NewDatabase {
+    name: string | null = null;
+    user: string | null = null;
+    password: string | null = null;
 }
+
+ValidationRules
+    .ensure('name').displayName('Database name')
+        .required()
+        .minLength(5)
+    .ensure('user').displayName('User name')
+        .required()
+        .minLength(4)
+    .ensure('password').displayName('Password')
+        .required()
+        .minLength(6)
+    .on(NewDatabase);
 
 /**
  * Route parameters for the Tenant databases view.

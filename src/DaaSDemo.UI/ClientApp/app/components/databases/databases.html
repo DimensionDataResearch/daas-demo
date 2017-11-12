@@ -1,27 +1,36 @@
 <template>
     <div class="ui segment">
-        <div class="ui active dimmer" if.bind="!databases">
+        <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="databases">
-            <h1 class="ui dividing header">Databases</h1>
+        <div if.bind="!hasNoDatabases">
+            <h1 class="ui dividing header">All Databases</h1>
 
             <table class="ui striped celled table">
                 <thead>
                     <tr>
                         <th>Name</th>
+                        <th>Tenant</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr repeat.for="database of databases">
                         <td>${ database.name }</td>
+                        <td>(not implemented yet)</td>
                         <td>${ database.status }</td>
                     </tr>
                 </tbody>
             </table>
 
+            <button class="ui icon button" disabled="disabled">
+                <i class="add circle icon"></i> Add Database
+            </button>
+        </div>
+
+        <div if.bind="hasNoDatabases" class="ui info message">
+            No databases found.
         </div>
     </div>
 </template>

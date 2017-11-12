@@ -1,12 +1,14 @@
 import { inject, factory, transient, computedFrom } from 'aurelia-framework';
+import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
+import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
 
 /**
  * Component for the Tenant detail view.
  */
-@inject(DaaSAPI)
+@inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDetails {
     private routeConfig: RouteConfig;
     private tenantId: number;
@@ -22,7 +24,7 @@ export class TenantDetails {
      * 
      * @param api The DaaS API client.
      */
-    constructor(private api: DaaSAPI) { }
+    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
 
     /**
      * Has an error occurred?
@@ -30,6 +32,13 @@ export class TenantDetails {
     @computedFrom('errorMessage')
     public get hasError(): boolean {
         return this.errorMessage !== null;
+    }
+
+    /**
+     * Does the tenant creation form have any validation errors?
+     */
+    public get hasValidationErrors(): boolean {
+        return this.validationController.errors.length !== 0;
     }
 
     /**
@@ -85,7 +94,13 @@ export class TenantDetails {
      * Request creation of a new server.
      */
     public async createServer(): Promise<void> {
-        if (this.newServer === null || this.newServer.name === null || this.newServer.adminPassword === null)
+        if (this.hasValidationErrors)
+            return;
+
+        if (this.newServer === null)
+            return;
+
+        if (this.newServer.name === null || this.newServer.adminPassword === null)
             return;
 
         this.server = null;
@@ -159,10 +174,19 @@ export class TenantDetails {
 /**
  * Represents the form values for creating a server.
  */
-export interface NewServer {
-    name: string | null;
-    adminPassword: string | null;
+export class NewServer {
+    name: string | null = null;
+    adminPassword: string | null = null;
 }
+
+ValidationRules
+    .ensure('name').displayName('Database name')
+        .required()
+        .minLength(5)
+    .ensure('password').displayName('Administrator password')
+        .required()
+        .minLength(6)
+    .on(NewServer);
 
 /**
  * Route parameters for the Tenant detail view.
