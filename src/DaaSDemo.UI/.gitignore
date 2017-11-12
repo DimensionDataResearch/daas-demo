@@ -235,6 +235,3 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
-
-# Semantic UI
-lib/Semantic
