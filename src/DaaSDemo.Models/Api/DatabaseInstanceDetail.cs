@@ -24,29 +24,13 @@ namespace DaaSDemo.Models.Api
         /// <param name="database">
         ///     The <see cref="DatabaseInstance"/> to copy from.
         /// </param>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the server that hosts the database.
-        /// </param>
-        /// <param name="tenant">
-        ///     A <see cref="Tenant"/> representing the tenant that owns the database.
-        /// </param>
-        public DatabaseInstanceDetail(DatabaseInstance database, DatabaseServer server, Tenant tenant)
+        public DatabaseInstanceDetail(DatabaseInstance database)
         {
             if (database == null)
                 throw new ArgumentNullException(nameof(database));
 
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-            
-            if (tenant == null)
-                throw new ArgumentNullException(nameof(tenant));
-            
             Id = database.Id;
             Name = database.Name;
-            TenantId = tenant.Id;
-            TenantName = tenant.Name;
-            ServerId = server.Id;
-            ServerName = server.Name;
             Action = database.Action;
             Status = database.Status;
             ConnectionString = $"Data Source=tcp:{database.DatabaseServer.PublicFQDN}:{database.DatabaseServer.PublicPort};Initial Catalog={database.Name};User={database.DatabaseUser};Password=<password>";
