@@ -26,7 +26,7 @@ export class ServerDetail {
     @bindable public progressBar: Element;
     
     /**
-     * Create a new Server detail view component.
+     * Create a new Server detail view model.
      * 
      * @param api The DaaS API client.
      */

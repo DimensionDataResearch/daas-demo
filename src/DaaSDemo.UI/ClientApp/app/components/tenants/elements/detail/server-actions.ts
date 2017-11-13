@@ -13,9 +13,7 @@ export class ServerActions
         return this.server !== null && this.server.status === 'Ready';
     }
 
-    constructor() {
-        console.log('SERVER_ACTIONS');
-    }
+    constructor() { }
 
     private onDestroyServerClicked(): void {
         if (this.destroyServerClicked)

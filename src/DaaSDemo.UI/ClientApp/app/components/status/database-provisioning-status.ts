@@ -7,7 +7,7 @@ export class DatabaseProvisioningStatus {
     constructor() {}
 
     public get isReady(): boolean {
-        return this.database && this.database.status == 'Ready';
+        return this.database && this.database.status == 'Ready' && !this.isActionInProgress;
     }
 
     public get isActionInProgress(): boolean {

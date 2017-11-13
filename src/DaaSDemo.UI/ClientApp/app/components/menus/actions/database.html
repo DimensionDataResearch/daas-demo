@@ -1,0 +1,15 @@
+<template>
+    <require from="./database.css"></require>
+
+    <div class="ui dropdown blue icon button" element.ref="rootElement">
+        <i class="setting icon"></i> <i class="angle down icon"></i>
+
+        <div class="menu">
+            <div class="item" class.bind="!canDestroy ? 'disabled' : ''">
+                <a click.delegate="destroyClicked()">
+                    <i class="red circle delete icon"></i> Destroy
+                </a>
+            </div>
+        </div>
+    </div>
+</template>

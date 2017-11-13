@@ -21,7 +21,7 @@ export class TenantDetail {
     @bindable public newServer: NewServer | null = null;
     
     /**
-     * Create a new Tenant detail view component.
+     * Create a new Tenant detail view model.
      * 
      * @param api The DaaS API client.
      */

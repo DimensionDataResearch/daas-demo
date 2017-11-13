@@ -1,27 +1,33 @@
-import { inject, computedFrom } from 'aurelia-framework';
+import { inject, computedFrom, PLATFORM, bindable } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI, Database, Tenant } from '../../api/daas-api';
+import { ConfirmDialog } from '../../dialogs/confirm';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
     private routeConfig: RouteConfig;
     private tenantId: number;
 
-    public isLoading: boolean = false;
-    public tenant: Tenant | null = null;
-    public databases: Database[] | null = null;
-    public newDatabase: NewDatabase | null = null;
-    public errorMessage: string | null = null;
+    @bindable public isLoading: boolean = false;
+    @bindable public tenant: Tenant | null = null;
+    @bindable public databases: Database[] | null = null;
+    @bindable public newDatabase: NewDatabase | null = null;
+    @bindable public errorMessage: string | null = null;
+
+    @bindable private confirmDialog: ConfirmDialog
 
     /**
-     * Create a new tenant databases view component.
+     * Create a new tenant databases view model.
      * 
      * @param api The DaaS API client.
      */
-    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
+    constructor(
+        private api: DaaSAPI,
+        public validationController: ValidationController
+    ) { }
 
     /**
      * Has an error occurred?
@@ -71,9 +77,9 @@ export class TenantDatabaseList {
     }
 
     /**
-     * Refresh the server list.
+     * Refresh the database list.
      */
-    public async refreshServerList(): Promise<void> {
+    public async refreshDatabaseList(): Promise<void> {
         this.clearError();
 
         try {
@@ -110,6 +116,8 @@ export class TenantDatabaseList {
         if (this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
             return;
 
+        this.clearError();
+
         try {
             await this.api.createTenantDatabase(
                 this.tenantId,
@@ -119,9 +127,7 @@ export class TenantDatabaseList {
             );
         }
         catch (error) {
-            console.log(error);
-
-            this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
+            this.showError(error as Error);
 
             return;
         }
@@ -129,6 +135,38 @@ export class TenantDatabaseList {
         this.hideCreateDatabaseForm();
 
         await this.load();
+    }
+
+    /**
+     * Destroy the specified database.
+     * 
+     * @param database The database to destroy.
+     */
+    public async destroyDatabase(database: Database): Promise<void> {
+        this.clearError();
+
+        try {
+            if (!this.confirmDialog)
+                return;
+
+            const confirm = await this.confirmDialog.show('Delete Database',
+                `Delete database "${database.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.deleteTenantDatabase(
+                database.tenantId,
+                database.id
+            );
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        await this.refreshDatabaseList();
     }
 
     /**
@@ -183,10 +221,18 @@ export class TenantDatabaseList {
         await this.load();
     }
 
+    /**
+     * Clear the current error message (if any).
+     */
     private clearError(): void {
         this.errorMessage = null;
     }
 
+    /**
+     * Show an error message.
+     * 
+     * @param error The error to show.
+     */
     private showError(error: Error): void {
         console.log(error);
         
@@ -198,8 +244,19 @@ export class TenantDatabaseList {
  * Represents the form values for creating a database.
  */
 export class NewDatabase {
+    /**
+     * The database name.
+     */
     name: string | null = null;
+
+    /**
+     * The database user's name.
+     */
     user: string | null = null;
+
+    /**
+     * The database user's password.
+     */
     password: string | null = null;
 }
 

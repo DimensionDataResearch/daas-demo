@@ -9,38 +9,45 @@
         <div if.bind="!hasNoServers">
             <h1 class="ui dividing header">All Servers</h1>
 
+            <button class="ui icon button" disabled="disabled">
+                    <i class="add circle icon"></i> Add Server
+                </button>
+            <button class="ui right floated circular icon button" click.delegate="refreshServerList()">
+                <i class="refresh icon"></i>
+            </button>
+
             <table class="ui striped celled table">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Tenant</th>
-                        <th>Public FQDN</th>
-                        <th>Public Port</th>
-                        <th>Status</th>
+                        <th class="center aligned">Name</th>
+                        <th class="center aligned">Tenant</th>
+                        <th class="center aligned">Public FQDN</th>
+                        <th class="center aligned">Public Port</th>
+                        <th class="center aligned">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr repeat.for="server of servers">
-                        <td>${ server.name }</td>
-                        <td>
+                        <td class="center aligned">${ server.name }</td>
+                        <td class="center aligned">
                             <a route-href="route: tenant; params.bind: { id: server.tenantId }">${ server.tenantName }</a>
                         </td>
-                        <td>${ server.publicFQDN }</td>
-                        <td>${ server.publicPort }</td>
-                        <td>
+                        <td class="center aligned">${ server.publicFQDN }</td>
+                        <td class="center aligned">${ server.publicPort }</td>
+                        <td class="collapsing center aligned">
                             <server-provisioning-status server.bind="server"></server-provisioning-status>
                         </td>
                     </tr>
                 </tbody>
             </table>
-
-            <button class="ui icon button" disabled="disabled">
-                <i class="add circle icon"></i> Add Server
-            </button>
         </div>
 
         <div if.bind="hasNoServers" class="ui info message">
             No servers found.
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p innerhtml.bind="errorMessage | sanitizeHTML"></p>
         </div>
     </div>
 </template>

@@ -13,7 +13,7 @@ export class NewDatabaseForm {
     @bindable public cancelClicked: () => void;
 
     /**
-     * Create a new tenant database creation view component.
+     * Create a new tenant database creation view model.
      * 
      * @param api The DaaS API client.
      */
