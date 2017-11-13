@@ -14,6 +14,7 @@ using Newtonsoft.Json.Converters;
 namespace DaaSDemo.Api
 {
     using Data;
+    using Serilog;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo API.
@@ -64,16 +65,13 @@ namespace DaaSDemo.Api
             services.AddCors(cors =>
             {
                 // Allow requests from the UI.
-                string clusterPublicDomainName = Configuration.GetValue<string>("Kubernetes:ClusterPublicFQDN");
-                int clusterPublicPort = Configuration.GetValue<int>("Kubernetes:ClusterPublicUIPort");
+                string[] uiBaseAddresses = Configuration.GetValue<string>("CORS:UI").Split(';');
+                Log.Information("CORS enabled for UI: {@BaseAddresses}", uiBaseAddresses);
 
                 cors.AddPolicy("UI", policy =>
-                    policy.WithOrigins(
-                        $"http://{clusterPublicDomainName}:{clusterPublicPort}",
-                        "http://localhost:5000" // Development
-                    )
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
+                    policy.WithOrigins(uiBaseAddresses)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
                 );
             });
 

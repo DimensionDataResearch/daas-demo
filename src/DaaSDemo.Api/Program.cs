@@ -34,18 +34,19 @@ namespace DaaSDemo.Api
         /// <returns>
         ///     The <see cref="IWebHost"/>.
         /// </returns>
-        public static IWebHost BuildWebHost(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
+        public static IWebHost BuildWebHost(string[] args)
+        {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .WriteTo.LiterateConsole()
+                .WriteTo.Debug()
+                .Enrich.FromLogContext()
+                .CreateLogger();
+
+            return WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
                 .ConfigureLogging(logging =>
                 {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .WriteTo.LiterateConsole()
-                        .WriteTo.Debug()
-                        .Enrich.FromLogContext()
-                        .CreateLogger();
-
                     logging.ClearProviders();
                     logging.AddSerilog(Log.Logger);
                 })
@@ -54,5 +55,6 @@ namespace DaaSDemo.Api
                     config.AddUserSecrets<Startup>();
                 })
                 .Build();
+        }
     }
 }

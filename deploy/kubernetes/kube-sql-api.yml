@@ -32,13 +32,13 @@ spec:
             value: '1'
           - name: ASPNETCORE_URLS
             value: 'http://*:5000'
-          - name: ASPNETCORE_KUBERNETES__ClusterPublicFQDN
+          - name: Kubernetes__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
-          - name: ASPNETCORE_KUBERNETES__ClusterPublicPort
+          - name: Kubernetes__ClusterPublicPort
             value: '31201'
-          - name: ASPNETCORE_KUBERNETES__VolumeClaimName
+          - name: Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
-          - name: ASPNETCORE_DATABASE__ConnectionString
+          - name: Database__ConnectionString
             valueFrom:
               secretKeyRef:
                 name: sql-api
