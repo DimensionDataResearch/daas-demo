@@ -1,6 +1,6 @@
 import { bindable } from 'aurelia-framework';
 
-import { Server } from '../api/daas-api';
+import { Server } from '../../../api/daas-api';
 
 export class ServerConnectivity
 {

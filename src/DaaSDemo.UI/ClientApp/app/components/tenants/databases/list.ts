@@ -3,7 +3,7 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Database, Tenant } from '../api/daas-api';
+import { DaaSAPI, Database, Tenant } from '../../api/daas-api';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {

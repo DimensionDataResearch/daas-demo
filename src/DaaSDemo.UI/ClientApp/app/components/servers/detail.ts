@@ -14,7 +14,7 @@ import { DaaSAPI, Server  } from '../api/daas-api';
  * Component for the Server detail view.
  */
 @inject(DaaSAPI, NewInstance.of(ValidationController))
-export class ServerDetails {
+export class ServerDetail {
     private routeConfig: RouteConfig;
     private serverId: number = 0;
     private pollHandle: number = 0;

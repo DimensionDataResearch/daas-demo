@@ -10,7 +10,7 @@ import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
  * Component for the Tenant detail view.
  */
 @inject(DaaSAPI, NewInstance.of(ValidationController))
-export class TenantDetails {
+export class TenantDetail {
     private routeConfig: RouteConfig;
     private tenantId: number;
     

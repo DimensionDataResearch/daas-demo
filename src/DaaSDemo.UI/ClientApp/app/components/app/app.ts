@@ -17,36 +17,36 @@ export class App {
             route: 'tenants',
             name: 'tenants',
             settings: { icon: 'user' },
-            moduleId: PLATFORM.moduleName('../tenants/tenants'),
+            moduleId: PLATFORM.moduleName('../tenants/list'),
             nav: true,
             title: 'Tenants'
         }, {
             route: 'tenants/:id',
             name: 'tenant',
-            moduleId: PLATFORM.moduleName('../tenant/tenant'),
+            moduleId: PLATFORM.moduleName('../tenants/detail'),
             title: 'Tenant'
         }, {
             route: 'tenants/:id/databases',
             name: 'tenantDatabases',
-            moduleId: PLATFORM.moduleName('../tenant-databases/tenant-databases'),
+            moduleId: PLATFORM.moduleName('../tenants/databases/list'),
             title: 'Databases'
         }, {
             route: 'servers',
             name: 'servers',
             settings: { icon: 'server' },
-            moduleId: PLATFORM.moduleName('../servers/servers'),
+            moduleId: PLATFORM.moduleName('../servers/list'),
             nav: true,
             title: 'Servers'
         }, {
             route: 'servers/:id',
             name: 'server',
-            moduleId: PLATFORM.moduleName('../server/server'),
+            moduleId: PLATFORM.moduleName('../servers/detail'),
             title: 'Server'
         }, {
             route: 'databases',
             name: 'databases',
             settings: { icon: 'database' },
-            moduleId: PLATFORM.moduleName('../databases/databases'),
+            moduleId: PLATFORM.moduleName('../databases/list'),
             nav: true,
             title: 'Databases'
         }]);

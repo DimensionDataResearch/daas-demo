@@ -1,6 +1,6 @@
 import { bindable } from 'aurelia-framework';
 
-import { Tenant, Server } from '../api/daas-api';
+import { Tenant, Server } from '../../../api/daas-api';
 
 export class ServerActions
 {
