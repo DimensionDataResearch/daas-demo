@@ -17,7 +17,7 @@ export class TenantDatabaseList {
     public errorMessage: string | null = null;
 
     /**
-     * Create a new Server databases view component.
+     * Create a new tenant databases view component.
      * 
      * @param api The DaaS API client.
      */

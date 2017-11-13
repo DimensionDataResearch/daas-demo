@@ -1,0 +1,35 @@
+<template>
+    <h1 class="ui dividing header">Add database</h1>
+
+    <form class="ui form">
+        <div class="required field" validation-errors.bind="nameErrors" class.bind="nameErrors.length ? 'error' : ''">
+            <label>Name</label>
+            <input name="name" value.bind="newDatabase.name & validate" placeholder="Database name" type="text">
+        </div>
+
+        <div class="required field" validation-errors.bind="userErrors" class.bind="userErrors.length ? 'error' : ''">
+            <label>Password</label>
+            <input name="user" value.bind="newDatabase.user & validate" placeholder="user" type="text">
+        </div>
+
+        <div class="required field" validation-errors.bind="passwordErrors" class.bind="passwordErrors.length ? 'error' : ''">
+            <label>Password</label>
+            <input name="password" value.bind="newDatabase.password & validate" placeholder="password" type="password">
+        </div>
+
+        <div class="ui message" if.bind="validationController.errors.length">
+            <div class="header">One or more fields are invalid</div>
+
+            <ul>
+                <li repeat.for="error of validationController.errors">
+                    ${error.message}
+                </li>
+            </ul>
+        </div>
+
+        <button class="ui positive button" click.delegate="createClicked()" disabled.bind="validationController.errors.length">
+            <i class="add circle icon"></i> Create
+        </button>
+        <button class="ui button" click.delegate="cancelClicked()">Cancel</button>
+    </form>
+</template>

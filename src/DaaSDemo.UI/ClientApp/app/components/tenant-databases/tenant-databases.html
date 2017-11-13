@@ -1,14 +1,25 @@
 <template>
+    <require from="./new-database-form"></require>
+
     <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
         </div>
 
         <div if.bind="!hasError">
+            <div if.bind="addingDatabase">
+                <new-database-form new-database.bind="newDatabase"
+                    create-clicked.call="createDatabase()"
+                    cancel-clicked.call="hideCreateDatabaseForm()"
+                />
+            </div>
             
-            <h1 class="ui dividing header" if.bind="hasDatabase || addingDatabase">Databases owned by ${ tenant.name }</h1>
+            <h1 class="ui dividing header" if.bind="!addingDatabase">Databases owned by ${ tenant.name }</h1>
 
-            <div if.bind="hasDatabase">
+            <div if.bind="hasDatabase && !addingDatabase">
+                <button class="ui button" click.delegate="showCreateDatabaseForm()">
+                    <i class="add circle button"></i> Create Database
+                </button>
 
                 <table class="ui striped celled table">
                     <thead>
@@ -30,55 +41,6 @@
                         </tr>
                     </tbody>
                 </table>
-
-                <button class="ui button" click.delegate="showCreateDatabaseForm()">
-                    <i class="add circle button"></i> Create Database
-                </button>
-            </div>
-
-            <div if.bind="addingDatabase">
-                <h1 class="ui dividing header" if.bind="!hasDatabase">Add database</h1>
-
-                <form class="ui form">
-                    <div class="required field"
-                        validation-errors.bind="nameErrors"
-                        class.bind="nameErrors.length ? 'error' : ''"
-                    >
-                        <label>Name</label>
-                        <input name="name" value.bind="newDatabase.name & validate" placeholder="Database name" type="text">
-                    </div>
-                    
-                    <div class="required field"
-                        validation-errors.bind="userErrors"
-                        class.bind="userErrors.length ? 'error' : ''"
-                    >
-                        <label>Password</label>
-                        <input name="user" value.bind="newDatabase.user & validate" placeholder="user" type="text">
-                    </div>
-
-                    <div class="required field"
-                        validation-errors.bind="passwordErrors"
-                        class.bind="passwordErrors.length ? 'error' : ''"
-                    >
-                        <label>Password</label>
-                        <input name="password" value.bind="newDatabase.password & validate" placeholder="password" type="password">
-                    </div>
-
-                    <div class="ui message" if.bind="validationController.errors.length">
-                        <div class="header">One or more fields are invalid</div>
-                        
-                        <ul>
-                            <li repeat.for="error of validationController.errors">
-                                ${error.message}
-                            </li>
-                        </ul>
-                    </div>
-
-                    <button class="ui positive button" click.delegate="createDatabase()" disabled.bind="validationController.errors.length">
-                        <i class="add circle icon"></i> Create
-                    </button>
-                    <button class="ui button" click.delegate="hideCreateDatabaseForm()">Cancel</button>
-                </form>
             </div>
 
             <div if.bind="shouldShowNoDatabasesMessage" class="ui info message">
