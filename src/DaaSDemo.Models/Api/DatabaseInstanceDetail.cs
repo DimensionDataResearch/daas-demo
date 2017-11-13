@@ -21,19 +21,30 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     Create new <see cref="DatabaseInstanceDetail"/>.
         /// </summary>
-        /// <param name="database">
-        ///     The <see cref="DatabaseInstance"/> to copy from.
-        /// </param>
-        public DatabaseInstanceDetail(DatabaseInstance database)
+        /// <param name="databaseId"></param>
+        /// <param name="databaseName"></param>
+        /// <param name="databaseUser"></param>
+        /// <param name="databaseAction"></param>
+        /// <param name="databaseStatus"></param>
+        /// <param name="serverId"></param>
+        /// <param name="serverName"></param>
+        /// <param name="serverFQDN"></param>
+        /// <param name="serverPort"></param>
+        /// <param name="tenantId"></param>
+        /// <param name="tenantName"></param>
+        public DatabaseInstanceDetail(int databaseId, string databaseName, string databaseUser, ProvisioningAction databaseAction, ProvisioningStatus databaseStatus, int serverId, string serverName, string serverFQDN, int? serverPort, int tenantId, string tenantName)
         {
-            if (database == null)
-                throw new ArgumentNullException(nameof(database));
+            Id = databaseId;
+            Name = databaseName;
+            ServerId = serverId;
+            ServerName = serverName;
+            Action = databaseAction;
+            Status = databaseStatus;
+            TenantId = tenantId;
+            TenantName = tenantName;
 
-            Id = database.Id;
-            Name = database.Name;
-            Action = database.Action;
-            Status = database.Status;
-            ConnectionString = $"Data Source=tcp:{database.DatabaseServer.PublicFQDN}:{database.DatabaseServer.PublicPort};Initial Catalog={database.Name};User={database.DatabaseUser};Password=<password>";
+            if (!String.IsNullOrWhiteSpace(serverFQDN) && serverPort != null)
+                ConnectionString = $"Data Source=tcp:{serverFQDN}:{serverPort};Initial Catalog={Name};User={databaseUser};Password=<password>";
         }
 
         /// <summary>

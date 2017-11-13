@@ -301,30 +301,23 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/databases")]
         public IActionResult GetDatabases(int tenantId)
         {
-            DatabaseServer databaseServer = Entities.GetDatabaseServerByTenantId(tenantId);
-            if (databaseServer == null)
-            {
-                return NotFound(new
-                {
-                    Id = tenantId,
-                    EntityType = "DatabaseServer",
-                    Message = $"No database server found for tenant with Id {tenantId}"
-                });
-            }
-
-            Tenant ownerTenant = Entities.GetTenantById(tenantId);
-            if (ownerTenant == null)
-            {
-                return NotFound(new
-                {
-                    Id = tenantId,
-                    EntityType = "Tenant",
-                    Message = $"No tenant found with Id {tenantId}"
-                });
-            }
-
-            DatabaseInstanceDetail[] databases = Entities.GetDatabaseInstancesByServer(databaseServer.Id)
-                .Select(database => new DatabaseInstanceDetail(database))
+            DatabaseInstanceDetail[] databases = Entities.DatabaseInstances
+                .Where(
+                    database => database.DatabaseServer.TenantId == tenantId
+                )
+                .Select(database => new DatabaseInstanceDetail(
+                    database.Id,
+                    database.Name,
+                    database.DatabaseUser,
+                    database.Action,
+                    database.Status,
+                    database.DatabaseServer.Id,
+                    database.DatabaseServer.Name,
+                    database.DatabaseServer.PublicFQDN,
+                    database.DatabaseServer.PublicPort,
+                    database.DatabaseServer.Tenant.Id,
+                    database.DatabaseServer.Tenant.Name
+                ))
                 .ToArray();
             
             return Json(databases);

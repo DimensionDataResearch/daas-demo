@@ -58,7 +58,7 @@ namespace DaaSDemo.Api.Controllers
         ILogger Log { get; }
 
         /// <summary>
-        ///     Get a tenant by Id.
+        ///     Get a database by Id.
         /// </summary>
         /// <param name="databaseId">
         ///     The database Id.
@@ -66,9 +66,25 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{databaseId:int}")]
         public IActionResult GetById(int databaseId)
         {
-            DatabaseInstance tenant = Entities.GetDatabaseInstanceById(databaseId);
-            if (tenant != null)
-                return Json(tenant);
+            DatabaseInstanceDetail databaseDetail = Entities.DatabaseInstances
+                .Where(database => database.Id == databaseId)
+                .Select(database => new DatabaseInstanceDetail(
+                    database.Id,
+                    database.Name,
+                    database.DatabaseUser,
+                    database.Action,
+                    database.Status,
+                    database.DatabaseServer.Id,
+                    database.DatabaseServer.Name,
+                    database.DatabaseServer.PublicFQDN,
+                    database.DatabaseServer.PublicPort,
+                    database.DatabaseServer.Tenant.Id,
+                    database.DatabaseServer.Tenant.Name
+                ))
+                .FirstOrDefault();
+
+            if (databaseDetail != null)
+                return Json(databaseDetail);
 
             return NotFound(new
             {
@@ -79,27 +95,26 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
-        ///     Get all tenants.
+        ///     Get all databases.
         /// </summary>
         [HttpGet]
         public IActionResult List()
         {
             return Json(
-                Entities.GetAllDatabases()
-            );
-        }
-
-        /// <summary>
-        ///     Get all databases hosted by the specified server.
-        /// </summary>
-        /// <param name="serverId">
-        ///     The server Id.
-        /// </param>
-        [HttpGet("by-server/{serverId}")]
-        public IActionResult GetByServer(int serverId)
-        {
-            return Json(
-                Entities.GetServerDatabases(serverId)
+                Entities.DatabaseInstances
+                    .Select(database => new DatabaseInstanceDetail(
+                        database.Id,
+                        database.Name,
+                        database.DatabaseUser,
+                        database.Action,
+                        database.Status,
+                        database.DatabaseServer.Id,
+                        database.DatabaseServer.Name,
+                        database.DatabaseServer.PublicFQDN,
+                        database.DatabaseServer.PublicPort,
+                        database.DatabaseServer.Tenant.Id,
+                        database.DatabaseServer.Tenant.Name
+                    ))
             );
         }
     }
