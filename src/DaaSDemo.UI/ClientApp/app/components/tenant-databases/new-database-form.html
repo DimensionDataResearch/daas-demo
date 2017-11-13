@@ -8,13 +8,13 @@
         </div>
 
         <div class="required field" validation-errors.bind="userErrors" class.bind="userErrors.length ? 'error' : ''">
-            <label>Password</label>
-            <input name="user" value.bind="newDatabase.user & validate" placeholder="user" type="text">
+            <label>User</label>
+            <input name="user" value.bind="newDatabase.user & validate" placeholder="Database user" type="text">
         </div>
 
         <div class="required field" validation-errors.bind="passwordErrors" class.bind="passwordErrors.length ? 'error' : ''">
             <label>Password</label>
-            <input name="password" value.bind="newDatabase.password & validate" placeholder="password" type="password">
+            <input name="password" value.bind="newDatabase.password & validate" placeholder="Database user's password" type="password">
         </div>
 
         <div class="ui message" if.bind="validationController.errors.length">

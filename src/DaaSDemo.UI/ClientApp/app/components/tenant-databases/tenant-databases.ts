@@ -65,9 +65,22 @@ export class TenantDatabaseList {
     /**
      * Should the "tenant has no databases." message be displayed?
      */
-    // @computedFrom('hasDatabase', 'addingDatabases')
+    @computedFrom('hasDatabase', 'addingDatabases')
     public get shouldShowNoDatabasesMessage(): boolean {
         return !this.isLoading && !this.hasDatabase && !this.addingDatabase;
+    }
+
+    /**
+     * Refresh the server list.
+     */
+    public async refreshServerList(): Promise<void> {
+        this.clearError();
+
+        try {
+            this.databases = await this.api.getTenantDatabases(this.tenantId);
+        } catch (error) {
+            this.showError(error as Error);
+        }
     }
 
     /**
@@ -135,6 +148,7 @@ export class TenantDatabaseList {
      * Load tenant and database details.
      */
     private async load(): Promise<void> {
+        this.clearError();
         this.isLoading = true;
 
         try
@@ -151,9 +165,7 @@ export class TenantDatabaseList {
     
             this.databases = await databasesRequest;
         } catch (error) {
-            console.log(error);
-
-            this.errorMessage = error.message;
+            this.showError(error as Error);
         }
         finally
         {
@@ -169,6 +181,16 @@ export class TenantDatabaseList {
     private async deleteDatabase(databaseId: number): Promise<void> {
         await this.api.deleteTenantDatabase(this.tenantId, databaseId);
         await this.load();
+    }
+
+    private clearError(): void {
+        this.errorMessage = null;
+    }
+
+    private showError(error: Error): void {
+        console.log(error);
+        
+        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 }
 

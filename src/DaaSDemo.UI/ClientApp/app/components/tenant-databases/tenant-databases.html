@@ -1,4 +1,6 @@
 <template>
+    <require from="../status/database-provisioning-status"></require>
+
     <require from="./new-database-form"></require>
 
     <div class="ui segment" style="min-height: 10.0rem;">
@@ -17,27 +19,36 @@
             <h1 class="ui dividing header" if.bind="!addingDatabase">Databases owned by ${ tenant.name }</h1>
 
             <div if.bind="hasDatabase && !addingDatabase">
-                <button class="ui button" click.delegate="showCreateDatabaseForm()">
-                    <i class="add circle button"></i> Create Database
+                <button class="ui icon button" click.delegate="showCreateDatabaseForm()">
+                    <i class="add circle icon"></i> Add
+                </button>
+                <button class="ui right floated circular icon button" click.delegate="refreshServerList()">
+                    <i class="refresh icon"></i>
                 </button>
 
-                <table class="ui striped celled table">
+                <table class="ui striped celled compact table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Server</th>
-                            <th>Connection String</th>
-                            <th>Status</th>
+                            <th class="center aligned">Name</th>
+                            <th class="center aligned">Server</th>
+                            <th class="center aligned">Status</th>
+                            <th class="center aligned"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr repeat.for="database of databases">
-                            <td>${ database.name }</td>
-                            <td>
+                            <td class="center aligned">${ database.name }</td>
+                            <td class="center aligned">
                                 <a route-href="route: server; params.bind: { id: database.serverId }">${ database.serverName }</a>
                             </td>
-                            <td>${ database.status == 'Ready' ? database.connectionString : '' }</td>
-                            <td>${ database.status }</td>
+                            <td class="center aligned">
+                                <database-provisioning-status database.bind="database"></database-provisioning-status>
+                            </td>
+                            <td class="collapsing center aligned">
+                                <button class="ui blue icon button">
+                                    <i class="setting icon"></i> <i class="angle down icon"></i>
+                                </button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

@@ -1,4 +1,6 @@
 <template>
+    <require from="../status/server-provisioning-status"></require>
+
     <div class="ui segment">
         <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
@@ -25,7 +27,9 @@
                         </td>
                         <td>${ server.publicFQDN }</td>
                         <td>${ server.publicPort }</td>
-                        <td>${ server.status }</td>
+                        <td>
+                            <server-provisioning-status server.bind="server"></server-provisioning-status>
+                        </td>
                     </tr>
                 </tbody>
             </table>

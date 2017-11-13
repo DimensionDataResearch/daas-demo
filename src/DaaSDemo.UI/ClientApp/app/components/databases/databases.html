@@ -1,4 +1,6 @@
 <template>
+    <require from="../status/database-provisioning-status"></require>
+
     <div class="ui segment">
         <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
@@ -25,7 +27,9 @@
                         <td>
                             <a route-href="route: tenant; params.bind: { id: database.tenantId }">${ database.tenantName }</a>
                         </td>
-                        <td>${ database.status }</td>
+                        <td>
+                            <database-provisioning-status database.bind="database"></database-provisioning-status>
+                        </td>
                     </tr>
                 </tbody>
             </table>

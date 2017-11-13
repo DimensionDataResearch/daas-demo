@@ -1,4 +1,9 @@
 <template>
+    <require from="../status/server-provisioning-status"></require>
+    
+    <require from="./server-connectivity"></require>
+    <require from="./server-actions"></require>
+
     <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="loading">
             <div class="ui active loader"></div>
@@ -12,31 +17,19 @@
             <div if.bind="hasServer">
                 <strong>Name</strong>: ${ server.name }
                 <br/>
-                <strong>Status</strong>: ${ server.status }
+                <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
                 <br/>
-                <br/>
-                <strong>Requested Action</strong>: ${ server.action }
-                <br/>
-                <br/>
-
-                <h4 class="ui dividing header">Connectivity</h4>
-                <div if.bind="server.publicFQDN">
-                    <strong>Host</strong>: ${ server.publicFQDN }
+                <div if.bind="server.action != 'None'">
                     <br/>
-                    <strong>Port</strong>: ${ server.publicPort }
+                    <strong>Requested Action</strong>: ${ server.action }
                     <br/>
                 </div>
-                <div if.bind="!server.publicFQDN" class="well">
-                    Connection details are not currently available for this server.
-                </div>
+                <br/>
 
-                <div if.bind="isServerReady" style="margin-top: 20px;">
-                    <a class="ui icon button" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">
-                        <i class="database icon"></i> Show Databases
-                    </a>
-                    <a class="ui right floated red icon button" if.bind="isServerReady" click.delegate="deleteServer()">
-                        <i class="delete icon"></i> Destroy Server
-                    </a>
+                <server-connectivity server.bind="server"></server-connectivity>
+
+                <div style="margin-top: 20px;">
+                    <server-actions tenant.bind="tenant" server.bind="server" destroy-server-clicked.call="destroyServer()"></server-actions>
                 </div>
             </div>
 

@@ -1,4 +1,6 @@
 <template>
+    <require from="../status/server-provisioning-status"></require>
+
     <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="loading">
             <div class="ui active loader"></div>
@@ -8,9 +10,9 @@
             <div if.bind="hasServer">
                 <h1 class="ui header">${ server.name }</h1>
 
+                <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
+                <br/>
                 <div if.bind="server.action != 'None'">
-                    <strong>Status</strong>: <span class="ui inline tiny active loader"></span> ${ server.status }
-                    <br/>
                     <strong>Requested Action</strong>: ${ server.action }
                     <br/>
                     <strong>Phase</strong>: ${ server.phase }
@@ -21,9 +23,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                <div else>
-                    <strong>Status</strong>: ${ server.status }
                 </div>
                 <br/>
 

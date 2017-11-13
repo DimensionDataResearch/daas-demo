@@ -1,0 +1,7 @@
+<template>
+    <div if.bind="isReady" class="ui green label">Ready</div>
+    <div if.bind="isActionInProgress" class="ui label">
+        <div class="ui tiny active inline loader"></div> ${server.status}
+    </div>
+    <div if.bind="hasError" class="ui red label">Error</div>
+</template>

@@ -1,6 +1,7 @@
 import { inject, factory, transient, computedFrom } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
+import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
@@ -13,11 +14,11 @@ export class TenantDetails {
     private routeConfig: RouteConfig;
     private tenantId: number;
     
-    public loading: boolean = false;
-    public tenant: Tenant | null = null;
-    public server: Server | null = null;
-    public errorMessage: string | null = null;
-    public newServer: NewServer | null = null;
+    @bindable public loading: boolean = false;
+    @bindable public tenant: Tenant | null = null;
+    @bindable public server: Server | null = null;
+    @bindable public errorMessage: string | null = null;
+    @bindable public newServer: NewServer | null = null;
     
     /**
      * Create a new Tenant detail view component.
