@@ -31,11 +31,10 @@
                 </div>
 
                 <div if.bind="isServerReady" style="margin-top: 20px;">
-                    <a class="btn btn-info" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">
+                    <a class="ui button" route-href="route: tenantDatabases; params.bind: { id: tenant.id }">
                         <i class="database icon"></i> Show Databases
                     </a>
-                    |
-                    <a class="btn btn-info" if.bind="isServerReady" click.delegate="deleteServer()">
+                    <a class="ui button" if.bind="isServerReady" click.delegate="deleteServer()">
                         <i class="delete icon"></i> Destroy
                     </a>
                 </div>

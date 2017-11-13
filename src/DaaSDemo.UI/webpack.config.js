@@ -10,7 +10,7 @@ module.exports = (env) => {
         entry: { 'app': 'aurelia-bootstrapper' },
         resolve: {
             extensions: ['.ts', '.js'],
-            modules: ['ClientApp', 'node_modules'],
+            modules: ['ClientApp', 'node_modules', 'lib/semantic/dist'],
         },
         output: {
             path: path.resolve(bundleOutputDir),

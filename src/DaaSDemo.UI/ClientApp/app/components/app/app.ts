@@ -38,6 +38,11 @@ export class App {
             nav: true,
             title: 'Servers'
         }, {
+            route: 'servers/:id',
+            name: 'server',
+            moduleId: PLATFORM.moduleName('../server/server'),
+            title: 'Server'
+        }, {
             route: 'databases',
             name: 'databases',
             settings: { icon: 'database' },

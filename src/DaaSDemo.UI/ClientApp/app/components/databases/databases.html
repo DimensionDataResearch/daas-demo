@@ -19,7 +19,9 @@
                 <tbody>
                     <tr repeat.for="database of databases">
                         <td>${ database.name }</td>
-                        <td>${ database.serverName }</td>
+                        <td>
+                            <a route-href="route: server; params.bind: { id: database.serverId }">${ database.serverName }</a>
+                        </td>
                         <td>
                             <a route-href="route: tenant; params.bind: { id: database.tenantId }">${ database.tenantName }</a>
                         </td>

@@ -41,6 +41,18 @@ export class DaaSAPI
     }
 
     /**
+     * Get information about all servers.
+     * 
+     * @returns The tenants, sorted by name.
+     */
+    public async getServers(): Promise<Server[]> {
+        const response = await this.http.fetch('servers');
+        const body = await response.json();
+
+        return body as Server[];
+    }
+
+    /**
      * Get information about all databases.
      * 
      * @returns The databases, sorted by server and then name.
@@ -76,6 +88,33 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to retrieve details for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Get information about a specific database server.
+     * 
+     * @param serverId The server Id.
+     * @returns The server, or null if no server exists with the specified Id.
+     */
+    public async getServer(serverId: number): Promise<Server | null> {
+        const response = await this.http.fetch(`servers/${serverId}`);
+        const body = await response.json();
+
+        if (response.ok)
+            return body as Server;
+
+        if (response.status === 404)
+        {
+            const notFound = body as NotFoundResponse;
+            if (notFound.entityType == 'DatabaseServer')
+                return null;
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to retrieve details for server with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -293,9 +332,24 @@ export interface Server
     name: string;
 
     /**
+     * The fully-qualified domain name (if any) on which the server is externally accessible.
+     */
+    publicFQDN?: string | null;
+    
+    /**
+     * The TCP port (if any) on which the server is externally accessible.
+     */
+    publicPort?: number | null;
+
+    /**
      * The Id of the tenant that owns the server.
      */
     tenantId: number;
+
+    /**
+     * The name of the tenant that owns the server.
+     */
+    tenantName: string;
 
     /**
      * The currently-requested action (if any) for the server.
@@ -303,19 +357,14 @@ export interface Server
     action?: string | null;
 
     /**
+     * The server provovisioning phase (if any).
+     */
+    phase?: string | null;
+
+    /**
      * The server status.
      */
     status?: string | null;
-
-    /**
-     * The fully-qualified domain name (if any) on which the server is externally accessible.
-     */
-    publicFQDN?: string | null;
-
-    /**
-     * The TCP port (if any) on which the server is externally accessible.
-     */
-    publicPort?: number | null;
 }
 
 /**

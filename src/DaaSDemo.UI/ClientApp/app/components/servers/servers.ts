@@ -1,22 +1,49 @@
-import { HttpClient } from 'aurelia-fetch-client';
-import { inject } from 'aurelia-framework';
+import { inject, computedFrom } from 'aurelia-framework';
+import { RouteConfig } from 'aurelia-router';
 
-@inject(HttpClient)
+import { DaaSAPI, Server } from '../api/daas-api';
+
+@inject(DaaSAPI)
 export class ServerList {
-    public servers: Server[];
+    private routeConfig: RouteConfig;
 
-    constructor(private http: HttpClient) {
-        http.fetch('api/data/sample/weather-forecasts')
-            .then(result => result.json() as Promise<Server[]>)
-            .then(data => {
-                this.servers = data;
-            });
+    public servers: Server[] = [];
+    public isLoading: boolean = false;
+
+    constructor(private api: DaaSAPI) { }
+
+    /**
+     * Are there no servers defined in the system?
+     */
+    @computedFrom('isLoading', 'servers')
+    public get hasNoServers(): boolean {
+        return !this.isLoading && this.servers.length == 0;
     }
-}
 
-interface Server {
-    dateFormatted: string;
-    temperatureC: number;
-    temperatureF: number;
-    summary: string;
+    /**
+     * Called when the component is activated.
+     * 
+     * @param params Route parameters.
+     * @param routeConfig The configuration for the currently-active route.
+     */
+    public activate(params: any, routeConfig: RouteConfig): void {
+        this.routeConfig = routeConfig;
+
+        this.load();
+    }
+
+    /**
+     * Load tenant details.
+     */
+    private async load(): Promise<void> {
+        this.isLoading = true;
+
+        try
+        {
+            this.servers = await this.api.getServers();
+        }
+        finally {
+            this.isLoading = false;
+        }
+    }
 }

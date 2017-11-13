@@ -15,6 +15,8 @@
     "semantic-ui": "^2.2.13"
   },
   "devDependencies": {
+    "@types/jquery": "^3.2.16",
+    "@types/semantic-ui": "^2.2.6",
     "@types/webpack-env": "^1.13.0",
     "aspnet-webpack": "^2.0.1",
     "aurelia-webpack-plugin": "^2.0.0-rc.2",

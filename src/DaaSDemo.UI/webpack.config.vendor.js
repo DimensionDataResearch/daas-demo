@@ -9,7 +9,8 @@ module.exports = ({ prod } = {}) => {
     return [{
         stats: { modules: false },
         resolve: {
-            extensions: ['.js']
+            extensions: ['.js'],
+            modules: ['node_modules', 'lib'],
         },
         module: {
             loaders: [
@@ -33,8 +34,8 @@ module.exports = ({ prod } = {}) => {
                 'aurelia-templating-router',
                 'aurelia-validation',
                 'jquery',
-                './lib/semantic/dist/semantic.css',
-                './lib/semantic/dist/semantic'
+                'semantic/dist/semantic.css',
+                'semantic/dist/semantic'
             ],
         },
         output: {

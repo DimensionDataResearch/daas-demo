@@ -1,34 +1,42 @@
 <template>
     <div class="ui segment">
-        <div class="ui active dimmer" if.bind="!servers">
+        <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="servers">
-            <h1>Servers</h1>
-
-            <div class="ui warning message">
-                View not implemented yet (non-tenant API not implemented, so it's just sample data below).
-            </div>
+        <div if.bind="!hasNoServers">
+            <h1 class="ui dividing header">All Servers</h1>
 
             <table class="ui striped celled table">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Temp. (C)</th>
-                        <th>Temp. (F)</th>
-                        <th>Summary</th>
+                        <th>Name</th>
+                        <th>Tenant</th>
+                        <th>Public FQDN</th>
+                        <th>Public Port</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr repeat.for="server of servers">
-                        <td>${ server.dateFormatted }</td>
-                        <td>${ server.temperatureC }</td>
-                        <td>${ server.temperatureF }</td>
-                        <td>${ server.summary }</td>
+                        <td>${ server.name }</td>
+                        <td>
+                            <a route-href="route: tenant; params.bind: { id: server.tenantId }">${ server.tenantName }</a>
+                        </td>
+                        <td>${ server.publicFQDN }</td>
+                        <td>${ server.publicPort }</td>
+                        <td>${ server.status }</td>
                     </tr>
                 </tbody>
             </table>
+
+            <button class="ui icon button" disabled="disabled">
+                <i class="add circle icon"></i> Add Server
+            </button>
+        </div>
+
+        <div if.bind="hasNoServers" class="ui info message">
+            No servers found.
         </div>
     </div>
 </template>

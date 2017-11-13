@@ -1,0 +1,61 @@
+<template>
+    <div class="ui segment" style="min-height: 10.0rem;">
+        <div class="ui active dimmer" if.bind="loading">
+            <div class="ui active loader"></div>
+        </div>
+
+        <div if.bind="!hasError">
+            <div if.bind="hasServer">
+                <h1 class="ui header">${ server.name }</h1>
+
+                <div if.bind="server.action != 'None'">
+                    <strong>Status</strong>: <span class="ui inline tiny active loader"></span> ${ server.status }
+                    <br/>
+                    <strong>Requested Action</strong>: ${ server.action }
+                    <br/>
+                    <strong>Phase</strong>: ${ server.phase }
+                    <div class="ui grid">
+                        <div class="four wide column">
+                            <div element.ref="progressBar" class="ui indicating inline progress">
+                                <div class="bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div else>
+                    <strong>Status</strong>: ${ server.status }
+                </div>
+                <br/>
+
+                <h4 class="ui dividing header">Connectivity</h4>
+                <div if.bind="server.publicFQDN">
+                    <strong>Host</strong>: ${ server.publicFQDN }
+                    <br/>
+                    <strong>Port</strong>: ${ server.publicPort }
+                    <br/>
+                </div>
+                <div if.bind="!server.publicFQDN" class="well">
+                    Connection details are not currently available for this server.
+                </div>
+
+                <div if.bind="isServerReady" style="margin-top: 20px;">
+                    <a class="ui button" route-href="route: tenantDatabases; params.bind: { id: server.tenantId }">
+                        <i class="database icon"></i> Show Databases
+                    </a>
+                </div>
+            </div>
+
+            <div if.bind="!hasServer" class="ui info message">
+                <p>
+                    No server has been deployed for this server.
+                </p>
+            </div>
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p>
+                ${ errorMessage }
+            </p>
+        </div>
+    </div>
+</template>
