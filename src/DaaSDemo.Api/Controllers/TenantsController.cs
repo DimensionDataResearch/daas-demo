@@ -222,6 +222,7 @@ namespace DaaSDemo.Api.Controllers
             }
 
             targetServer.Action = ProvisioningAction.Reconfigure;
+            targetServer.Status = ProvisioningStatus.Pending;
             Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -282,6 +283,7 @@ namespace DaaSDemo.Api.Controllers
             }
 
             targetServer.Action = ProvisioningAction.Deprovision;
+            targetServer.Status = ProvisioningStatus.Pending;
             Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -475,6 +477,7 @@ namespace DaaSDemo.Api.Controllers
             }
 
             targetDatabase.Action = ProvisioningAction.Deprovision;
+            targetDatabase.Status = ProvisioningStatus.Pending;
             Entities.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
