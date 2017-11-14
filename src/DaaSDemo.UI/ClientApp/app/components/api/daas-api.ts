@@ -1,13 +1,15 @@
-import { inject, transient, TransientRegistration } from 'aurelia-framework';
+import { inject, singleton } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
 
 /**
  * Client for the Database-as-a-Service API.
  */
-@transient()
+@singleton()
 @inject(HttpClient)
 export class DaaSAPI
 {
+    private configured: Promise<void>;
+
     /**
      * Create a new DaaS API client.
      * 
@@ -15,17 +17,7 @@ export class DaaSAPI
      */
     constructor(private http: HttpClient)
     {
-        http.configure(request =>
-            request.withBaseUrl(
-                'http://kr-cluster.tintoy.io:31200/api/v1/'
-            )
-            .withDefaults({
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-        );
+        this.configured = this.configure();
     }
 
     /**
@@ -34,6 +26,8 @@ export class DaaSAPI
      * @returns The tenants, sorted by name.
      */
     public async getTenants(): Promise<Tenant[]> {
+        await this.configured;
+
         const response = await this.http.fetch('tenants');
         const body = await response.json();
 
@@ -46,6 +40,8 @@ export class DaaSAPI
      * @returns The tenants, sorted by name.
      */
     public async getServers(): Promise<Server[]> {
+        await this.configured;
+
         const response = await this.http.fetch('servers');
         const body = await response.json();
 
@@ -58,6 +54,8 @@ export class DaaSAPI
      * @returns The databases, sorted by server and then name.
      */
     public async getDatabases(): Promise<Database[]> {
+        await this.configured;
+
         const response = await this.http.fetch('databases');
         const body = await response.json();
 
@@ -71,6 +69,8 @@ export class DaaSAPI
      * @returns The tenant, or null if no tenant exists with the specified Id.
      */
     public async getTenant(tenantId: number): Promise<Tenant | null> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}`);
         const body = await response.json();
 
@@ -98,6 +98,8 @@ export class DaaSAPI
      * @returns The server, or null if no server exists with the specified Id.
      */
     public async getServer(serverId: number): Promise<Server | null> {
+        await this.configured;
+
         const response = await this.http.fetch(`servers/${serverId}`);
         const body = await response.json();
 
@@ -125,6 +127,8 @@ export class DaaSAPI
      * @returns The server, or null if the tenant does not have a server.
      */
     public async getTenantServer(tenantId: number): Promise<Server | null> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/server`);
         const body = await response.json();
 
@@ -153,6 +157,8 @@ export class DaaSAPI
      * @returns The databases, or null if the tenant does not have a server.
      */
     public async getTenantDatabases(tenantId: number): Promise<Database[] | null> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/databases`);
         const body = await response.json();
 
@@ -183,6 +189,8 @@ export class DaaSAPI
      * @returns The Id of the new server.
      */
     public async deployTenantServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/server`, {
             method: 'POST',
             body: json({
@@ -211,6 +219,8 @@ export class DaaSAPI
      * @param tenantId The tenant Id.
      */
     public async destroyTenantServer(tenantId: number): Promise<void> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/server`, {
             method: 'DELETE'
         });
@@ -236,6 +246,8 @@ export class DaaSAPI
      * @param password The database user password.
      */
     public async createTenantDatabase(tenantId: number, name: string, user: string, password: string): Promise<number> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/databases`, {
             method: 'POST',
             body: json({
@@ -283,6 +295,8 @@ export class DaaSAPI
      * @param databaseId The database Id.
      */
     public async deleteTenantDatabase(tenantId: number, databaseId: number): Promise<void> {
+        await this.configured;
+
         const response = await this.http.fetch(`tenants/${tenantId}/databases/${databaseId}`, {
             method: 'DELETE'
         });
@@ -298,6 +312,34 @@ export class DaaSAPI
             `Failed to delete database with Id ${databaseId} owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
+
+    /**
+     * Configure the DaaS API client.
+     */
+    private async configure(): Promise<void> {
+        const endPointsResponse = await this.http.fetch('/end-points/api');
+        if (!endPointsResponse.ok)
+            throw new Error('Failed to retrieve configuration for DaaS API end-points.');
+
+            const body = await endPointsResponse.json();
+            const endPoints = body as ApiEndPoints;
+
+        this.http.configure(request =>
+            request.withBaseUrl(endPoints.default).withDefaults({
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+        );
+    }
+}
+
+interface ApiEndPoints {
+    /**
+     * The default API end-point.
+     */
+    default: string;
 }
 
 /**
