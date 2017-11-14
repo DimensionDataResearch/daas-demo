@@ -118,8 +118,10 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{tenantId:int}/server")]
         public IActionResult GetServer(int tenantId)
         {
-            DatabaseServer databaseServer = Entities.GetDatabaseServerByTenantId(tenantId);
-            if (databaseServer == null)
+            DatabaseServer tenantServer = Entities.DatabaseServers.Include(server => server.Tenant).FirstOrDefault(
+                server => server.TenantId == tenantId
+            );
+            if (tenantServer == null)
             {
                 return NotFound(new
                 {
@@ -129,7 +131,17 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            return Json(databaseServer);
+            return Json(new DatabaseServerDetail(
+                tenantServer.Id,
+                tenantServer.Name,
+                tenantServer.PublicFQDN,
+                tenantServer.PublicPort,
+                tenantServer.Action,
+                tenantServer.Phase,
+                tenantServer.Status,
+                tenantServer.Tenant.Id,
+                tenantServer.Tenant.Name
+            ));
         }
 
         /// <summary>

@@ -4,7 +4,8 @@ import { RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
+import { ConfirmDialog } from '../dialogs/confirm';
+import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase  } from '../api/daas-api';
 
 /**
  * Component for the Tenant detail view.
@@ -13,12 +14,15 @@ import { DaaSAPI, Tenant, Server  } from '../api/daas-api';
 export class TenantDetail {
     private routeConfig: RouteConfig;
     private tenantId: number;
+    private pollHandle: number = 0;
     
     @bindable public loading: boolean = false;
     @bindable public tenant: Tenant | null = null;
     @bindable public server: Server | null = null;
     @bindable public errorMessage: string | null = null;
     @bindable public newServer: NewServer | null = null;
+
+    @bindable private confirmDialog: ConfirmDialog
     
     /**
      * Create a new Tenant detail view model.
@@ -63,7 +67,37 @@ export class TenantDetail {
      */
     @computedFrom('server')
     public get isServerReady(): boolean {
-        return this.server !== null && this.server.status === 'Ready';
+        return this.server !== null && this.server.status === ProvisioningStatus.Ready;
+    }
+
+    /**
+     * Is a provisioning action currently in progress for the tenant's server?
+     */
+    @computedFrom('server')
+    public get isServerActionInProgress(): boolean {
+        return this.server !== null && this.server.action !== ProvisioningAction.None;
+    }
+
+    /**
+     * If an action is in progress for the server, its percentage completion.
+     */
+    @computedFrom('server')
+    public get actionPercentComplete(): number {
+        if (this.server === null)
+            return 0;
+
+        switch (this.server.phase) {
+            case ServerProvisioningPhase.Instance:
+                return 25;
+            case ServerProvisioningPhase.Network:
+                return 50;
+            case ServerProvisioningPhase.Configuration:
+                return 75;
+            case ServerProvisioningPhase.Ingress:
+                return 100;
+            default:
+                return 0;
+        }
     }
 
     /**
@@ -112,9 +146,9 @@ export class TenantDetail {
             this.newServer.adminPassword
         );
 
-        this.hideCreateServerForm();
+        await this.load(true);
 
-        await this.load();
+        this.hideCreateServerForm();
     }
 
     /**
@@ -127,15 +161,29 @@ export class TenantDetail {
         this.routeConfig = routeConfig;
         this.tenantId = params.id;
         
-        this.load();
+        this.load(false);
+    }
+
+    /**
+     * Called when the component is deactivated.
+     */
+    public deactivate(): void {
+        if (this.pollHandle != 0) {
+            window.clearTimeout(this.pollHandle);
+            this.pollHandle = 0;
+        }
     }
 
     /**
      * Load tenant and server details.
      */
-    private async load(): Promise<void> {
+    private async load(isReload: boolean): Promise<void> {
         this.errorMessage = null;
-        this.loading = true;
+        
+        if (isReload)
+            this.pollHandle = 0;
+        else
+            this.loading = true;
 
         try {
             const tenantRequest = this.api.getTenant(this.tenantId);
@@ -144,14 +192,15 @@ export class TenantDetail {
             this.tenant = await tenantRequest;
             this.server = await serverRequest;
 
-            if (this.tenant === null)
-            {
+            if (!this.tenant) {
                 this.routeConfig.title = 'Tenant not found';
                 this.errorMessage = `Tenant not found with Id ${this.tenantId}.`;
-            }
-            else
-            {
+            } else {
                 this.routeConfig.title = this.tenant.name;
+            }
+
+            if (this.server && this.server.action !== ProvisioningAction.None) {
+                this.pollHandle = window.setTimeout(() => this.load(true));
             }
         } catch (error) {
             console.log(error);
@@ -159,7 +208,8 @@ export class TenantDetail {
             this.errorMessage = error.message;
         }
         finally {
-            this.loading = false;
+            if (!isReload)
+                this.loading = false;
         }
     }
 
@@ -167,8 +217,47 @@ export class TenantDetail {
      * Destroy the tenant's server.
      */
     private async destroyServer(): Promise<void> {
-        await this.api.destroyTenantServer(this.tenantId);
-        await this.load();
+        this.clearError();
+        
+        try {
+            if (!this.tenant || !this.server || !this.confirmDialog)
+                return;
+
+            const confirm = await this.confirmDialog.show('Destroy Server',
+                `Delete server "${this.server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.destroyTenantServer(
+                this.tenant.id
+            );
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        await this.load(true);
+    }
+
+    /**
+     * Clear the current error message (if any).
+     */
+    private clearError(): void {
+        this.errorMessage = null;
+    }
+
+    /**
+     * Show an error message.
+     * 
+     * @param error The error to show.
+     */
+    private showError(error: Error): void {
+        console.log(error);
+        
+        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 }
 

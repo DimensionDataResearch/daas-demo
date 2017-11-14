@@ -215,7 +215,7 @@ export class DaaSAPI
             method: 'DELETE'
         });
         
-        if (response.ok || response.status === 404) {
+        if (response.ok) {
             return
         }
 
@@ -354,17 +354,17 @@ export interface Server
     /**
      * The currently-requested action (if any) for the server.
      */
-    action?: ProvisioningAction;
+    action: ProvisioningAction;
 
     /**
      * The server provovisioning phase (if any).
      */
-    phase?: string | null;
+    phase: ServerProvisioningPhase;
 
     /**
      * The server status.
      */
-    status?: ProvisioningStatus;
+    status: ProvisioningStatus;
 }
 
 /**
@@ -480,6 +480,42 @@ export enum ProvisioningAction {
      * Reconfigure resource(s).
      */
     Reconfigure = 'Reconfigure'
+}
+
+/**
+ * Represents a phase in server provisioning / reconfiguration / de-provisioning.
+ */
+export enum ServerProvisioningPhase
+{
+    /**
+     * No provisioning phase is currently active.
+     */
+    None = 'None',
+
+    /**
+     * The server instance.
+     */
+    Instance = 'Instance',
+
+    /**
+     * The server's internal network connectivity.
+     */
+    Network = 'Network',
+
+    /**
+     * The server's configuration.
+     */
+    Configuration = 'Configuration',
+
+    /**
+     * The server's external network connectivity.
+     */
+    Ingress = 'Ingress',
+
+    /**
+     * The server's current action has been completed.
+     */
+    Done = 'Done'
 }
 
 /**

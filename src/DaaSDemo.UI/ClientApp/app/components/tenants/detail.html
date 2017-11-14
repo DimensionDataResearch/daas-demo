@@ -1,4 +1,5 @@
 <template>
+    <require from="../dialogs/confirm"></require>
     <require from="../status/server-provisioning-status"></require>
     
     <require from="./elements/detail/server-connectivity"></require>
@@ -19,7 +20,9 @@
                 <br/>
                 <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
                 <br/>
-                <div if.bind="server.action != 'None'">
+                <div if.bind="isServerActionInProgress">
+                    <br/>
+                    <strong>Phase</strong>: ${ server.phase }
                     <br/>
                     <strong>Requested Action</strong>: ${ server.action }
                     <br/>
@@ -73,7 +76,10 @@
                     No server has been deployed for this tenant.
                 </p>
 
-                <button class="ui button" click.delegate="showCreateServerForm()">Create Server</button>
+                <button class="ui icon button" click.delegate="showCreateServerForm()">
+                    <i class="circular add button"></i>
+                    Create Server
+                </button>
             </div>
         </div>
 
@@ -81,6 +87,13 @@
             <p>
                 ${ errorMessage }
             </p>
+
+            <button class="ui icon button" click.delegate="load(true)">
+                <i class="circular refresh button"></i>
+                Refresh
+            </button>
         </div>
     </div>
+
+    <confirm-dialog view-model.ref="confirmDialog"></confirm-dialog>
 </template>

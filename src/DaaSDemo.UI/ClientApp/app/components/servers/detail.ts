@@ -8,7 +8,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { DaaSAPI, Server, ProvisioningAction  } from '../api/daas-api';
+import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus  } from '../api/daas-api';
 
 /**
  * Component for the Server detail view.
@@ -53,7 +53,15 @@ export class ServerDetail {
      */
     @computedFrom('server')
     public get isServerReady(): boolean {
-        return this.server !== null && this.server.status === 'Ready';
+        return this.server !== null && this.server.status === ProvisioningStatus.Ready;
+    }
+
+    /**
+     * Is a provisioning action currently in progress for the tenant's server?
+     */
+    @computedFrom('server')
+    public get isServerActionInProgress(): boolean {
+        return this.server !== null && this.server.action !== ProvisioningAction.None;
     }
 
     /**
@@ -65,13 +73,13 @@ export class ServerDetail {
             return 0;
 
         switch (this.server.phase) {
-            case 'ReplicationController':
+            case ServerProvisioningPhase.Instance:
                 return 25;
-            case 'Service':
+            case ServerProvisioningPhase.Network:
                 return 50;
-            case 'InitializeConfiguration':
+            case ServerProvisioningPhase.Configuration:
                 return 75;
-            case 'Ingress':
+            case ServerProvisioningPhase.Ingress:
                 return 100;
             default:
                 return 0;
