@@ -41,6 +41,7 @@ namespace DaaSDemo.Api
                 .WriteTo.LiterateConsole()
                 .WriteTo.Debug()
                 .Enrich.FromLogContext()
+                .Enrich.WithDemystifiedStackTraces()
                 .CreateLogger();
 
             return WebHost.CreateDefaultBuilder(args)

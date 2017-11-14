@@ -33,6 +33,7 @@ namespace DaaSDemo.Provisioning.Host
                         .WriteTo.LiterateConsole()
                         .WriteTo.Debug()
                         .Enrich.FromLogContext()
+                        .Enrich.WithDemystifiedStackTraces()
                         .CreateLogger();
 
                     logging.ClearProviders();
