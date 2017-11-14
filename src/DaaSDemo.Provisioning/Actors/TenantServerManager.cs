@@ -475,19 +475,19 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
-                    goto case ServerProvisioningPhase.ReplicationController;
+                    goto case ServerProvisioningPhase.Instance;
                 }
-                case ServerProvisioningPhase.ReplicationController:
+                case ServerProvisioningPhase.Instance:
                 {
-                    StartProvisioningPhase(ServerProvisioningPhase.ReplicationController);
+                    StartProvisioningPhase(ServerProvisioningPhase.Instance);
 
                     await EnsureReplicationControllerPresent();
                     
-                    goto case ServerProvisioningPhase.Service;
+                    goto case ServerProvisioningPhase.Network;
                 }
-                case ServerProvisioningPhase.Service:
+                case ServerProvisioningPhase.Network:
                 {
-                    StartProvisioningPhase(ServerProvisioningPhase.Service);
+                    StartProvisioningPhase(ServerProvisioningPhase.Network);
 
                     await EnsureInternalServicePresent();
 
@@ -495,9 +495,9 @@ namespace DaaSDemo.Provisioning.Actors
 
                     break;
                 }
-                case ServerProvisioningPhase.InitializeConfiguration:
+                case ServerProvisioningPhase.Configuration:
                 {
-                    StartProvisioningPhase(ServerProvisioningPhase.InitializeConfiguration);
+                    StartProvisioningPhase(ServerProvisioningPhase.Configuration);
 
                     await InitialiseServerConfiguration();
 
@@ -528,19 +528,19 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
-                    goto case ServerProvisioningPhase.ReplicationController;
+                    goto case ServerProvisioningPhase.Instance;
                 }
-                case ServerProvisioningPhase.ReplicationController:
+                case ServerProvisioningPhase.Instance:
                 {
-                    StartReconfigurationPhase(ServerProvisioningPhase.ReplicationController);
+                    StartReconfigurationPhase(ServerProvisioningPhase.Instance);
 
                     await EnsureReplicationControllerPresent();
                     
-                    goto case ServerProvisioningPhase.Service;
+                    goto case ServerProvisioningPhase.Network;
                 }
-                case ServerProvisioningPhase.Service:
+                case ServerProvisioningPhase.Network:
                 {
-                    StartReconfigurationPhase(ServerProvisioningPhase.Service);
+                    StartReconfigurationPhase(ServerProvisioningPhase.Network);
 
                     await EnsureInternalServicePresent();
 
@@ -548,9 +548,9 @@ namespace DaaSDemo.Provisioning.Actors
 
                     break;
                 }
-                case ServerProvisioningPhase.InitializeConfiguration:
+                case ServerProvisioningPhase.Configuration:
                 {
-                    StartReconfigurationPhase(ServerProvisioningPhase.InitializeConfiguration);
+                    StartReconfigurationPhase(ServerProvisioningPhase.Configuration);
                     
                     await InitialiseServerConfiguration();
 
@@ -581,19 +581,19 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
-                    goto case ServerProvisioningPhase.ReplicationController;
+                    goto case ServerProvisioningPhase.Instance;
                 }
-                case ServerProvisioningPhase.ReplicationController:
+                case ServerProvisioningPhase.Instance:
                 {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.ReplicationController);
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Instance);
 
                     await EnsureReplicationControllerAbsent();
                     
-                    goto case ServerProvisioningPhase.Service;
+                    goto case ServerProvisioningPhase.Network;
                 }
-                case ServerProvisioningPhase.Service:
+                case ServerProvisioningPhase.Network:
                 {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.Service);
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Network);
                     
                     await EnsureInternalServiceAbsent();
 

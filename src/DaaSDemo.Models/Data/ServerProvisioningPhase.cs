@@ -11,22 +11,22 @@ namespace DaaSDemo.Models.Data
         None = 0,
 
         /// <summary>
-        ///     The server's ReplicationController resource.
+        ///     The server instance.
         /// </summary>
-        ReplicationController = 1,
+        Instance = 1,
 
         /// <summary>
-        ///     The server's Service resources.
+        ///     The server's internal network connectivity.
         /// </summary>
-        Service = 2,
+        Network = 2,
 
         /// <summary>
-        ///     The server's initial configuration.
+        ///     The server's configuration.
         /// </summary>
-        InitializeConfiguration = 3,
+        Configuration = 3,
 
         /// <summary>
-        ///     The server's Ingress resource.
+        ///     The server's external network connectivity.
         /// </summary>
         Ingress = 4,
 
