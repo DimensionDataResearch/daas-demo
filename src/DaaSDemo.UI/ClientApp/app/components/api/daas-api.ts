@@ -464,22 +464,22 @@ export enum ProvisioningAction {
     /**
      * No provisioning action.
      */
-    None = 0,
+    None = 'None',
 
     /**
      * Provision resource(s).
      */
-    Provision = 1,
+    Provision = 'Provision',
 
     /**
      * De-provision resource(s).
      */
-    Deprovision = 2,
+    Deprovision = 'Deprovision',
 
     /**
      * Reconfigure resource(s).
      */
-    Reconfigure = 3
+    Reconfigure = 'Reconfigure'
 }
 
 /**
