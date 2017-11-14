@@ -25,6 +25,7 @@
     <PackageReference Include="HTTPlease" Version="1.0.0-rc1-0232" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.0-preview1-27377" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.1.0-preview1-27377" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="2.1.0-preview1-27377" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.0-preview1-27377" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="2.1.0-preview1-27377" />

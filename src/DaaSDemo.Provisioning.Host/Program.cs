@@ -41,10 +41,11 @@ namespace DaaSDemo.Provisioning.Host
                 })
                 .ConfigureAppConfiguration((context, config) =>
                 {
-                    config.AddJsonFile("appSettings.json");
+                    config.AddJsonFile("appsettings.json");
                     config.AddUserSecrets(
                         typeof(Program).Assembly
                     );
+                    config.AddEnvironmentVariables(prefix: "DAAS_");
                 })
                 .ConfigureServices((hostContext, services) =>
                 {

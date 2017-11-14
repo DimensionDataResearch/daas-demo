@@ -693,6 +693,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
                 KubeResources.ReplicationController(CurrentState,
+                    imageName: Context.System.Settings.Config.GetString("daas.kube.sql-image-name"),
                     dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
                 )
             );

@@ -31,4 +31,4 @@ COPY --from=build /out /app
 
 ENV IN_KUBERNETES=0
 
-ENTRYPOINT [ "dotnet", "DaaSDemo.Provisioning.dll" ]
+ENTRYPOINT [ "dotnet", "DaaSDemo.Provisioning.Host.dll" ]

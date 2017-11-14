@@ -18,16 +18,25 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="imageName">
+        ///     The name (and tag) of the SQL Server for Linux image to use.
+        /// </param>
         /// <param name="dataVolumeClaimName">
         ///     The name of the Kubernetes VolumeClaim where the data will be stored.
         /// </param>
         /// <returns>
         ///     The configured <see cref="V1beta1DeploymentSpec"/>.
         /// </returns>
-        public static V1beta1DeploymentSpec Deployment(DatabaseServer server, string dataVolumeClaimName)
+        public static V1beta1DeploymentSpec Deployment(DatabaseServer server, string imageName, string dataVolumeClaimName)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
+
+            if (String.IsNullOrWhiteSpace(imageName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'imageName'.", nameof(imageName));
+            
+            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
 
             string baseName = KubeResources.GetBaseName(server);
 
@@ -64,7 +73,7 @@ namespace DaaSDemo.Provisioning
                             new V1Container
                             {
                                 Name = baseName,
-                                Image = "microsoft/mssql-server-linux:2017-GA",
+                                Image = imageName,
                                 Resources = new V1ResourceRequirements
                                 {
                                     Requests = new Dictionary<string, string>
@@ -129,16 +138,25 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="imageName">
+        ///     The name (and tag) of the SQL Server for Linux image to use.
+        /// </param>
         /// <param name="dataVolumeClaimName">
         ///     The name of the Kubernetes VolumeClaim where the data will be stored.
         /// </param>
         /// <returns>
         ///     The configured <see cref="V1ReplicationControllerSpec"/>.
         /// </returns>
-        public static V1ReplicationControllerSpec ReplicationController(DatabaseServer server, string dataVolumeClaimName)
+        public static V1ReplicationControllerSpec ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
+
+            if (String.IsNullOrWhiteSpace(imageName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'imageName'.", nameof(imageName));
+            
+            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
 
             string baseName = KubeResources.GetBaseName(server);
 
@@ -168,7 +186,7 @@ namespace DaaSDemo.Provisioning
                             new V1Container
                             {
                                 Name = baseName,
-                                Image = "microsoft/mssql-server-linux:2017-GA",
+                                Image = imageName,
                                 Resources = new V1ResourceRequirements
                                 {
                                     Requests = new Dictionary<string, string>

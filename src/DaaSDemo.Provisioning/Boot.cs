@@ -32,6 +32,11 @@ namespace DaaSDemo.Provisioning
                 daas.db.connection-string = ""{connectionString}""
             ");
 
+            string sqlImageName = appConfiguration["Provisioning:Images:SQL"];
+            Config provisioningConfig = ConfigurationFactory.ParseString($@"
+                daas.kube.sql-image-name = ""{sqlImageName}""
+            ");
+
             string kubeApiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];
             string kubeApiToken = appConfiguration["Kubernetes:Token"];
             string clusterPublicDomainName = appConfiguration["Kubernetes:ClusterPublicFQDN"];
@@ -51,6 +56,7 @@ namespace DaaSDemo.Provisioning
             return ActorSystem.Create("daas-demo",
                 BaseConfiguration
                     .WithFallback(databaseConfig)
+                    .WithFallback(provisioningConfig)
                     .WithFallback(kubeConfig)
                     .WithFallback(sqlConfig)
             );
