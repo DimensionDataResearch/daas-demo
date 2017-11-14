@@ -8,7 +8,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { DaaSAPI, Server  } from '../api/daas-api';
+import { DaaSAPI, Server, ProvisioningAction  } from '../api/daas-api';
 
 /**
  * Component for the Server detail view.
@@ -122,7 +122,7 @@ export class ServerDetail {
             else
             {
                 this.routeConfig.title = this.server.name;
-                if (this.server.action != 'None')
+                if (this.server.action != ProvisioningAction.None)
                     this.startPolling();
                 else
                     this.stopPolling();

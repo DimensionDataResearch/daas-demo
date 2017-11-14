@@ -354,7 +354,7 @@ export interface Server
     /**
      * The currently-requested action (if any) for the server.
      */
-    action?: string | null;
+    action?: ProvisioningAction;
 
     /**
      * The server provovisioning phase (if any).
@@ -364,7 +364,7 @@ export interface Server
     /**
      * The server status.
      */
-    status?: string | null;
+    status?: ProvisioningStatus;
 }
 
 /**
@@ -404,17 +404,82 @@ export interface Database {
     /**
      * The database's currently-requested provisioning action (if any).
      */
-    action: string;
+    action: ProvisioningAction;
 
     /**
      * The database provisioning status.
      */
-    status: string;
+    status: ProvisioningStatus;
 
     /**
      * The database connection string (if available).
      */
     connectionString: string | null;
+}
+
+/**
+ * The provisioning status of a resource.
+ */
+export enum ProvisioningStatus {
+    /**
+     * Resource provisioning is pending.
+     */
+    Pending = 'Pending',
+
+    /**
+     * Resource is ready for use.
+     */
+    Ready = 'Ready',
+
+    /**
+     * Resource is being provisioned.
+     */
+    Provisioning = 'Provisioning',
+
+    /**
+     * Resource is being de-provisioned.
+     */
+    Deprovisioning = 'Deprovisioning',
+
+    /**
+     * Resource is being reconfigured.
+     */
+    Reconfiguring = 'Reconfiguring',
+
+    /**
+     * Resource state is invalid.
+     */
+    Error = 'Error',
+
+    /**
+     * Resource has been de-provisioned.
+     */
+    Deprovisioned = 'Deprovisioned'
+}
+
+/**
+ * A provisioning action to be performed for a resource.
+ */
+export enum ProvisioningAction {
+    /**
+     * No provisioning action.
+     */
+    None = 0,
+
+    /**
+     * Provision resource(s).
+     */
+    Provision = 1,
+
+    /**
+     * De-provision resource(s).
+     */
+    Deprovision = 2,
+
+    /**
+     * Reconfigure resource(s).
+     */
+    Reconfigure = 3
 }
 
 /**

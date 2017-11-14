@@ -1,5 +1,5 @@
 import { bindable } from 'aurelia-framework';
-import { Server } from '../api/daas-api';
+import { Server, ProvisioningAction, ProvisioningStatus } from '../api/daas-api';
 
 export class ServerProvisioningStatus {
     @bindable public server: Server;
@@ -7,14 +7,14 @@ export class ServerProvisioningStatus {
     constructor() {}
 
     public get isReady(): boolean {
-        return this.server && this.server.status == 'Ready';
+        return this.server && this.server.status == ProvisioningStatus.Ready;
     }
 
     public get isActionInProgress(): boolean {
-        return this.server && this.server.action !== 'None';
+        return this.server && this.server.action !== ProvisioningAction.None;
     }
 
     public get hasError(): boolean {
-        return this.server && this.server.status === 'Error';
+        return this.server && this.server.status === ProvisioningStatus.Error;
     }
 }

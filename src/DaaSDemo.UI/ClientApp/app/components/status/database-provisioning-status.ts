@@ -1,5 +1,5 @@
 import { bindable } from 'aurelia-framework';
-import { Database } from '../api/daas-api';
+import { Database, ProvisioningAction, ProvisioningStatus } from '../api/daas-api';
 
 export class DatabaseProvisioningStatus {
     @bindable public database: Database;
@@ -7,14 +7,14 @@ export class DatabaseProvisioningStatus {
     constructor() {}
 
     public get isReady(): boolean {
-        return this.database && this.database.status == 'Ready' && !this.isActionInProgress;
+        return this.database && this.database.status == ProvisioningStatus.Ready && !this.isActionInProgress;
     }
 
     public get isActionInProgress(): boolean {
-        return this.database && this.database.action !== 'None';
+        return this.database && this.database.action !== ProvisioningAction.None;
     }
 
     public get hasError(): boolean {
-        return this.database && this.database.status === 'Error';
+        return this.database && this.database.status === ProvisioningStatus.Error;
     }
 }

@@ -3,6 +3,11 @@
         <i class="setting icon"></i> <i class="angle down icon"></i>
 
         <div class="menu">
+            <div class="item" class.bind="!canRepair ? 'disabled' : ''">
+                <a click.delegate="repairClicked()">
+                    <i class="blue circle refresh icon"></i> Repair
+                </a>
+            </div>
             <div class="item" class.bind="!canDestroy ? 'disabled' : ''">
                 <a click.delegate="destroyClicked()">
                     <i class="red circle delete icon"></i> Destroy
