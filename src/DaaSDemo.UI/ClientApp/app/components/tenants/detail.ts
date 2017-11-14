@@ -6,6 +6,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase  } from '../api/daas-api';
+import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
  * Component for the Tenant detail view.
@@ -79,24 +80,26 @@ export class TenantDetail {
     }
 
     /**
-     * If an action is in progress for the server, its percentage completion.
+     * The current provisioning phase (if any) for the tenant's server.
      */
     @computedFrom('server')
-    public get actionPercentComplete(): number {
-        if (this.server === null)
-            return 0;
+    public get serverPhaseDescription(): string | null {
+        if (!this.server || !this.isServerActionInProgress)
+            return null;
 
         switch (this.server.phase) {
+            case ServerProvisioningPhase.None:
+                return 'Waiting';
             case ServerProvisioningPhase.Instance:
-                return 25;
+                return 'Server Instance';
             case ServerProvisioningPhase.Network:
-                return 50;
+                return 'Internal Network';
             case ServerProvisioningPhase.Configuration:
-                return 75;
+                return 'Server Configuration';
             case ServerProvisioningPhase.Ingress:
-                return 100;
+                return 'External Network';
             default:
-                return 0;
+                return null;
         }
     }
 
@@ -178,7 +181,7 @@ export class TenantDetail {
      * Load tenant and server details.
      */
     private async load(isReload: boolean): Promise<void> {
-        this.errorMessage = null;
+        this.clearError();
         
         if (isReload)
             this.pollHandle = 0;
@@ -200,12 +203,10 @@ export class TenantDetail {
             }
 
             if (this.server && this.server.action !== ProvisioningAction.None) {
-                this.pollHandle = window.setTimeout(() => this.load(true));
+                this.pollHandle = window.setTimeout(() => this.load(true), 1000);
             }
         } catch (error) {
-            console.log(error);
-
-            this.errorMessage = error.message;
+            this.showError(error as Error);
         }
         finally {
             if (!isReload)

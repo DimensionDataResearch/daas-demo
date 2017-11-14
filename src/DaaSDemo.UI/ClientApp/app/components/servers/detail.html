@@ -18,9 +18,7 @@
                     <strong>Phase</strong>: ${ server.phase }
                     <div class="ui grid">
                         <div class="four wide column">
-                            <div element.ref="progressBar" class="ui indicating inline progress">
-                                <div class="bar"></div>
-                            </div>
+                            <server-provisioning-phase-progress server.bind="server" view-model.ref="progressBar"></server-provisioning-phase-progress>
                         </div>
                     </div>
                 </div>

@@ -1,15 +1,17 @@
-import { inject, computedFrom, PLATFORM, bindable } from 'aurelia-framework';
+import { inject, computedFrom, PLATFORM, bindable, factory } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Database, Tenant } from '../../api/daas-api';
+import { DaaSAPI, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
 import { ConfirmDialog } from '../../dialogs/confirm';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
     private routeConfig: RouteConfig;
     private tenantId: number;
+
+    private pollHandle: number = 0;
 
     @bindable public isLoading: boolean = false;
     @bindable public tenant: Tenant | null = null;
@@ -24,10 +26,7 @@ export class TenantDatabaseList {
      * 
      * @param api The DaaS API client.
      */
-    constructor(
-        private api: DaaSAPI,
-        public validationController: ValidationController
-    ) { }
+    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
 
     /**
      * Has an error occurred?
@@ -71,22 +70,9 @@ export class TenantDatabaseList {
     /**
      * Should the "tenant has no databases." message be displayed?
      */
-    @computedFrom('hasDatabase', 'addingDatabases')
+    @computedFrom('databases', 'hasDatabase', 'addingDatabase')
     public get shouldShowNoDatabasesMessage(): boolean {
         return !this.isLoading && !this.hasDatabase && !this.addingDatabase;
-    }
-
-    /**
-     * Refresh the database list.
-     */
-    public async refreshDatabaseList(): Promise<void> {
-        this.clearError();
-
-        try {
-            this.databases = await this.api.getTenantDatabases(this.tenantId);
-        } catch (error) {
-            this.showError(error as Error);
-        }
     }
 
     /**
@@ -134,7 +120,7 @@ export class TenantDatabaseList {
 
         this.hideCreateDatabaseForm();
 
-        await this.load();
+        await this.load(true);
     }
 
     /**
@@ -166,7 +152,7 @@ export class TenantDatabaseList {
             return;
         }
 
-        await this.refreshDatabaseList();
+        await this.load(true);
     }
 
     /**
@@ -179,15 +165,29 @@ export class TenantDatabaseList {
         this.routeConfig = routeConfig;
         this.tenantId = params.id;
 
-        this.load();
+        this.load(false);
+    }
+
+    /**
+     * Called when the component is deactivated.
+     */
+    public deactivate(): void {
+        if (this.pollHandle !== 0) {
+            window.clearTimeout(this.pollHandle);
+            this.pollHandle = 0;
+        }
     }
 
     /**
      * Load tenant and database details.
+     * 
+     * @param isReload Is this a reload, rather than the initial load?
      */
-    private async load(): Promise<void> {
+    private async load(isReload: boolean): Promise<void> {
         this.clearError();
-        this.isLoading = true;
+        
+        if (!isReload)
+            this.isLoading = true;
 
         try
         {
@@ -202,12 +202,17 @@ export class TenantDatabaseList {
                 this.routeConfig.title = 'Tenant not found';
     
             this.databases = await databasesRequest;
+
+            if (this.databases && this.databases.find(database => database.action != ProvisioningAction.None)) {
+                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
+            }
         } catch (error) {
             this.showError(error as Error);
         }
         finally
         {
-            this.isLoading = false;
+            if (!isReload)
+                this.isLoading = false;
         }
     }
 
@@ -218,7 +223,7 @@ export class TenantDatabaseList {
      */
     private async deleteDatabase(databaseId: number): Promise<void> {
         await this.api.deleteTenantDatabase(this.tenantId, databaseId);
-        await this.load();
+        await this.load(true);
     }
 
     /**

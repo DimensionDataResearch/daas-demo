@@ -1,13 +1,13 @@
 <template>
     <h4 class="ui dividing header">Connectivity</h4>
     
-    <div if.bind="server.publicFQDN">
+    <div if.bind="isServerExternallyAccessible">
         <strong>Host</strong>: ${ server.publicFQDN }
         <br/>
         <strong>Port</strong>: ${ server.publicPort }
         <br/>
     </div>
-    <div else class="well">
+    <div if.bind="!isServerExternallyAccessible" class="well">
         Connection details are not currently available for this server.
     </div>
 </template>

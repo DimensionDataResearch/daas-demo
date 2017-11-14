@@ -9,6 +9,7 @@ import * as $ from 'jquery';
 import 'semantic';
 
 import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus  } from '../api/daas-api';
+import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
  * Component for the Server detail view.
@@ -23,7 +24,7 @@ export class ServerDetail {
     public server: Server | null = null;
     public errorMessage: string | null = null;
 
-    @bindable public progressBar: Element;
+    @bindable private progressBar: ServerProvisioningPhaseProgress
     
     /**
      * Create a new Server detail view model.
@@ -65,28 +66,6 @@ export class ServerDetail {
     }
 
     /**
-     * If an action is in progress for the server, its percentage completion.
-     */
-    @computedFrom('server')
-    public get actionPercentComplete(): number {
-        if (this.server === null)
-            return 0;
-
-        switch (this.server.phase) {
-            case ServerProvisioningPhase.Instance:
-                return 25;
-            case ServerProvisioningPhase.Network:
-                return 50;
-            case ServerProvisioningPhase.Configuration:
-                return 75;
-            case ServerProvisioningPhase.Ingress:
-                return 100;
-            default:
-                return 0;
-        }
-    }
-
-    /**
      * Called when the component is activated.
      * 
      * @param params Route parameters.
@@ -97,6 +76,16 @@ export class ServerDetail {
         this.serverId = params.id;
         
         this.load(false);
+    }
+
+    /**
+     * Called when the component is deactivated.
+     */
+    public deactivate(): void {
+        if (this.pollHandle != 0) {
+            window.clearTimeout(this.pollHandle);
+            this.pollHandle = 0;
+        }
     }
 
     /**
@@ -131,12 +120,12 @@ export class ServerDetail {
             {
                 this.routeConfig.title = this.server.name;
                 if (this.server.action != ProvisioningAction.None)
-                    this.startPolling();
-                else
-                    this.stopPolling();
+                {
+                    this.pollHandle = window.setTimeout(() => this.load(false), 1000);
 
-                if (this.progressBar)
-                    $(this.progressBar).progress('set percent', this.actionPercentComplete);
+                    if (this.progressBar)
+                        this.progressBar.update();
+                }
             }
         } catch (error) {
             console.log(error);

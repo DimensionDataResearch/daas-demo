@@ -1,5 +1,6 @@
 <template>
     <require from="../dialogs/confirm"></require>
+    <require from="../progress/server-provisioning-phase"></require>
     <require from="../status/server-provisioning-status"></require>
     
     <require from="./elements/detail/server-connectivity"></require>
@@ -21,11 +22,16 @@
                 <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
                 <br/>
                 <div if.bind="isServerActionInProgress">
-                    <br/>
-                    <strong>Phase</strong>: ${ server.phase }
-                    <br/>
                     <strong>Requested Action</strong>: ${ server.action }
                     <br/>
+                    <div if.bind="serverPhaseDescription">
+                        <strong>Phase</strong>: ${ serverPhaseDescription }
+                        <div class="ui grid">
+                            <div class="four wide column">
+                                <server-provisioning-phase-progress server.bind="server"></server-provisioning-phase-progress>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <br/>
 
