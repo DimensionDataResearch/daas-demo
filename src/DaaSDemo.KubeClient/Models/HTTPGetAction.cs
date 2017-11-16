@@ -1,0 +1,36 @@
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+
+namespace DaaSDemo.KubeClient.Models
+{
+    /// <summary>
+    ///     HTTPGetAction describes an action based on HTTP Get requests.
+    /// </summary>
+    public class HTTPGetActionV1
+    {
+        /// <summary>
+        ///     Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+        /// </summary>
+        [JsonProperty("host")]
+        public string Host { get; set; }
+
+        /// <summary>
+        ///     Custom headers to set in the request. HTTP allows repeated headers.
+        /// </summary>
+        [JsonProperty("httpHeaders")]
+        public List<HTTPHeaderV1> HttpHeaders { get; set; }
+
+        /// <summary>
+        ///     Path to access on the HTTP server.
+        /// </summary>
+        [JsonProperty("path")]
+        public string Path { get; set; }
+
+        /// <summary>
+        ///     Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
+        /// </summary>
+        [JsonProperty("port")]
+        public string Port { get; set; }
+    }
+}

@@ -41,11 +41,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Pods, as a list of <see cref="V1Beta1VoyagerIngress"/>es.
+        ///     The Pods, as a list of <see cref="VoyagerIngressV1Beta1"/>es.
         /// </returns>
-        public async Task<List<V1Beta1VoyagerIngress>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<VoyagerIngressV1Beta1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1Beta1VoyagerIngressList matchingPods =
+            VoyagerIngressListV1Beta1 matchingPods =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +54,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Beta1VoyagerIngressList, UnversionedStatus>();
+                .ReadContentAsAsync<VoyagerIngressListV1Beta1, UnversionedStatus>();
 
             return matchingPods.Items;
         }
@@ -72,14 +72,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
+        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Beta1VoyagerIngress> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<VoyagerIngressV1Beta1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1Beta1VoyagerIngress>(
+            return await GetSingleResource<VoyagerIngressV1Beta1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -93,15 +93,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Pod"/>.
         /// </summary>
         /// <param name="newPod">
-        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the Pod to create.
+        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the Pod to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Beta1VoyagerIngress"/> representing the current state for the newly-created Pod.
+        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the current state for the newly-created Pod.
         /// </returns>
-        public async Task<V1Beta1VoyagerIngress> Create(V1Beta1VoyagerIngress newPod, CancellationToken cancellationToken = default)
+        public async Task<VoyagerIngressV1Beta1> Create(VoyagerIngressV1Beta1 newPod, CancellationToken cancellationToken = default)
         {
             if (newPod == null)
                 throw new ArgumentNullException(nameof(newPod));
@@ -115,7 +115,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newPod,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Beta1VoyagerIngress, UnversionedStatus>();
+                .ReadContentAsAsync<VoyagerIngressV1Beta1, UnversionedStatus>();
         }
 
         /// <summary>
