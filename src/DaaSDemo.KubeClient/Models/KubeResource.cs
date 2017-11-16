@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace DaaSDemo.KubeClient.Models
 {
     /// <summary>
