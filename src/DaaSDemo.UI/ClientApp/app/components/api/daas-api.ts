@@ -63,6 +63,35 @@ export class DaaSAPI
     }
 
     /**
+     * Get information about a specific database.
+     * 
+     * @param databaseId The database Id.
+     * @returns The database, or null if no database exists with the specified Id.
+     */
+    public async getDatabase(databaseId: number): Promise<Database | null> {
+        await this.configured;
+
+        const response = await this.http.fetch(`databases/${databaseId}`);
+        const body = await response.json();
+
+        if (response.ok)
+            return body as Database;
+
+        if (response.status === 404)
+        {
+            const notFound = body as NotFoundResponse;
+            if (notFound.entityType == 'DatabaseServer')
+                return null;
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to retrieve details for database with Id ${databaseId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Get information about a specific tenant.
      * 
      * @param tenantId The tenant Id.

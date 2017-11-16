@@ -1,0 +1,33 @@
+<template>
+    <require from="../dialogs/confirm"></require>
+    <require from="../status/database-provisioning-status"></require>
+
+    <div class="ui segment" style="min-height: 10.0rem;">
+        <div class="ui active dimmer" if.bind="loading">
+            <div class="ui active loader"></div>
+        </div>
+
+        <button class="ui circular right floated icon button" click.delegate="load(true)">
+            <i class="refresh icon"></i>
+        </button>
+
+        <div if.bind="!hasError">
+            <h1 class="ui header">Database</h1>
+
+            <div if.bind="hasDatabase">
+                <strong>Name</strong>: ${ database.name }
+                <br/>
+                <br/>
+                <strong>Status</strong>:
+                <database-provisioning-status database.bind="database"></database-provisioning-status>
+                <br/>
+            </div>
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p>
+                ${ errorMessage }
+            </p>
+        </div>
+    </div>
+</template>

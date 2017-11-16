@@ -33,7 +33,9 @@
                         <td class="collapsing center aligned">
                             <database-actions-menu database.bind="database" destroy-clicked.call="destroyDatabase(database)"></database-actions-menu>
                         </td>
-                        <td class="center aligned">${ database.name }</td>
+                        <td class="center aligned">
+                            <a route-href="route: database; params.bind: { id: database.id }">${ database.name }</a>
+                        </td>
                         <td class="center aligned">
                             <a route-href="route: server; params.bind: { id: database.serverId }">${ database.serverName }</a>
                         </td>

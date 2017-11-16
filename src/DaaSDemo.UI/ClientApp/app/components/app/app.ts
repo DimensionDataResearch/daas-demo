@@ -49,6 +49,12 @@ export class App {
             moduleId: PLATFORM.moduleName('../databases/list'),
             nav: true,
             title: 'Databases'
+        }, {
+            route: 'databases/:id',
+            name: 'database',
+            settings: { icon: 'database' },
+            moduleId: PLATFORM.moduleName('../databases/detail'),
+            title: 'Database'
         }]);
 
         this.router = router;

@@ -28,7 +28,9 @@
                 </thead>
                 <tbody>
                     <tr repeat.for="server of servers">
-                        <td class="center aligned">${ server.name }</td>
+                        <td class="center aligned">
+                            <a route-href="route: server; params.bind: { id: server.id }">${ server.name }</a>
+                        </td>
                         <td class="center aligned">
                             <a route-href="route: tenant; params.bind: { id: server.tenantId }">${ server.tenantName }</a>
                         </td>
