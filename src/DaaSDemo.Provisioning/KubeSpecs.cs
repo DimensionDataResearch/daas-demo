@@ -107,7 +107,7 @@ namespace DaaSDemo.Provisioning
                                 },
                                 VolumeMounts = new List<V1VolumeMount>
                                 {
-                                    new V1VolumeMountWithSubPath
+                                    new V1VolumeMount
                                     {
                                         Name = "sql-data",
                                         SubPath = baseName,
@@ -183,9 +183,10 @@ namespace DaaSDemo.Provisioning
                         TerminationGracePeriodSeconds = 60,
                         Containers = new List<V1Container>
                         {
+                            // SQL Server
                             new V1Container
                             {
-                                Name = baseName,
+                                Name = "sql-server",
                                 Image = imageName,
                                 Resources = new V1ResourceRequirements
                                 {
@@ -220,11 +221,47 @@ namespace DaaSDemo.Provisioning
                                 },
                                 VolumeMounts = new List<V1VolumeMount>
                                 {
-                                    new V1VolumeMountWithSubPath
+                                    new V1VolumeMount
                                     {
                                         Name = "sql-data",
                                         SubPath = baseName,
                                         MountPath = "/var/opt/mssql"
+                                    }
+                                }
+                            },
+                            // Prometheus exporter
+                            new V1Container
+                            {
+                                Name = "prometheus-exporter",
+                                Image = "awaragi/prometheus-mssql-exporter:v0.4.1",
+                                Env = new List<V1EnvVar>
+                                {
+                                    new V1EnvVar
+                                    {
+                                        Name = "SERVER",
+                                        Value = "127.0.0.1",
+                                    },
+                                    new V1EnvVar
+                                    {
+                                        Name = "USERNAME",
+                                        Value = "sa" // TODO: Use Secret resource instead.
+                                    },
+                                    new V1EnvVar
+                                    {
+                                        Name = "PASSWORD",
+                                        Value = server.AdminPassword // TODO: Use Secret resource instead.
+                                    },
+                                    new V1EnvVar
+                                    {
+                                        Name = "DEBUG",
+                                        Value = "app"
+                                    }
+                                },
+                                Ports = new List<V1ContainerPort>
+                                {
+                                    new V1ContainerPort
+                                    {
+                                        ContainerPort = 4000
                                     }
                                 }
                             }
@@ -269,6 +306,12 @@ namespace DaaSDemo.Provisioning
                     {
                         Name = "sql-server",
                         Port = 1433,
+                        Protocol = "TCP"
+                    },
+                    new V1ServicePort
+                    {
+                        Name = "prometheus-exporter",
+                        Port = 4000,
                         Protocol = "TCP"
                     }
                 },
