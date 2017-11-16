@@ -1,0 +1,30 @@
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+
+namespace DaaSDemo.KubeClient.Models
+{
+    /// <summary>
+    ///     PersistentVolume (PV) is a storage resource provisioned by an administrator. It is analogous to a node. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes
+    /// </summary>
+    public class PersistentVolumeV1 : KubeResource
+    {
+        /// <summary>
+        ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+        /// </summary>
+        [JsonProperty("metadata")]
+        public ObjectMetaV1 Metadata { get; set; }
+
+        /// <summary>
+        ///     Spec defines a specification of a persistent volume owned by the cluster. Provisioned by an administrator. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistent-volumes
+        /// </summary>
+        [JsonProperty("spec")]
+        public PersistentVolumeSpecV1 Spec { get; set; }
+
+        /// <summary>
+        ///     Status represents the current information/status for the persistent volume. Populated by the system. Read-only. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistent-volumes
+        /// </summary>
+        [JsonProperty("status")]
+        public PersistentVolumeStatusV1 Status { get; set; }
+    }
+}

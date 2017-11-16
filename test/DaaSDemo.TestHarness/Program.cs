@@ -70,7 +70,7 @@ namespace DaaSDemo.TestHarness
                             Log.Information("Subscribed.");
                         };
 
-                        actor.Receive<V1ResourceEvent<V1ReplicationController>>((resourceEvent, context) =>
+                        actor.Receive<ResourceEventV1<V1ReplicationController>>((resourceEvent, context) =>
                         {
                             Log.Information("Recieved {EventType} event for ReplicationController {ResourceName}.",
                                 resourceEvent.EventType,

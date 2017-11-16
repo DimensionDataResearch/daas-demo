@@ -22,7 +22,7 @@ namespace DaaSDemo.Provisioning.Actors
     ///     The type used to describe event filters.
     /// </typeparam>
     public abstract class ResourceEventBus<TResource, TFilter>
-        : ActorEventBus<V1ResourceEvent<TResource>, TFilter>
+        : ActorEventBus<ResourceEventV1<TResource>, TFilter>
             where TFilter : EventFilter
     {
         /// <summary>
@@ -77,7 +77,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///		The event classifier.
         /// </returns>
-        protected sealed override TFilter GetClassifier(V1ResourceEvent<TResource> resourceEvent)
+        protected sealed override TFilter GetClassifier(ResourceEventV1<TResource> resourceEvent)
         {
             if (resourceEvent == null)
                 throw new ArgumentNullException(nameof(resourceEvent));
@@ -99,7 +99,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///		<c>true</c>, if the event matches the filter; otherwise, <c>false</c>.
         /// </returns>
-        protected override bool Classify(V1ResourceEvent<TResource> resourceEvent, TFilter resourceFilter)
+        protected override bool Classify(ResourceEventV1<TResource> resourceEvent, TFilter resourceFilter)
         {
             if (resourceEvent == null)
                 throw new ArgumentNullException(nameof(resourceEvent));
@@ -121,7 +121,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="subscriber">
         ///		An <see cref="IActorRef"/> representing the actor to subscribe.
         /// </param>
-        protected override void Publish(V1ResourceEvent<TResource> resourceEvent, IActorRef subscriber)
+        protected override void Publish(ResourceEventV1<TResource> resourceEvent, IActorRef subscriber)
         {
             if (resourceEvent == null)
                 throw new ArgumentNullException(nameof(resourceEvent));

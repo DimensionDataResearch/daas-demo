@@ -93,7 +93,7 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Get an <see cref="IObservable{T}"/> for <see cref="V1ResourceEvent{TResource}"/>s streamed from an HTTP GET request.
+        ///     Get an <see cref="IObservable{T}"/> for <see cref="ResourceEventV1{TResource}"/>s streamed from an HTTP GET request.
         /// </summary>
         /// <typeparam name="TResource">
         ///     The resource type that the events relate to.
@@ -104,13 +104,13 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     The <see cref="IObservable{T}"/>.
         /// </returns>
-        protected IObservable<V1ResourceEvent<TResource>> ObserveEvents<TResource>(HttpRequest request)
+        protected IObservable<ResourceEventV1<TResource>> ObserveEvents<TResource>(HttpRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
             return ObserveLines(request).Select(
-                line => JsonConvert.DeserializeObject<V1ResourceEvent<TResource>>(line, SerializerSettings)
+                line => JsonConvert.DeserializeObject<ResourceEventV1<TResource>>(line, SerializerSettings)
             );
         }
 

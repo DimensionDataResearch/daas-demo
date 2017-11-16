@@ -1,0 +1,24 @@
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+
+namespace DaaSDemo.KubeClient.Models
+{
+    /// <summary>
+    ///     ResourceQuotaList is a list of ResourceQuota items.
+    /// </summary>
+    public class ResourceQuotaListV1 : KubeResource
+    {
+        /// <summary>
+        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
+        /// </summary>
+        [JsonProperty("metadata")]
+        public ListMetaV1 Metadata { get; set; }
+
+        /// <summary>
+        ///     Items is a list of ResourceQuota objects. More info: https://git.k8s.io/community/contributors/design-proposals/admission_control_resource_quota.md
+        /// </summary>
+        [JsonProperty("items", NullValueHandling = NullValueHandling.Ignore)]
+        public List<ResourceQuotaV1> Items { get; set; } = new List<ResourceQuotaV1>();
+    }
+}

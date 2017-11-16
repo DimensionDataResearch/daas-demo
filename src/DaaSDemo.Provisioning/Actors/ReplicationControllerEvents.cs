@@ -43,7 +43,7 @@ namespace DaaSDemo.Provisioning.Actors
                 kubeNamespace: "default"
             );
 
-            Receive<V1ResourceEvent<V1ReplicationController>>(resourceEvent =>
+            Receive<ResourceEventV1<V1ReplicationController>>(resourceEvent =>
             {
                 EventBus.Publish(resourceEvent);
             });
@@ -74,7 +74,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     An <see cref="IObservable"/> that manages the underlying subscription to the Kubernetes API.
         /// </summary>
-        IObservable<V1ResourceEvent<V1ReplicationController>> EventSource { get; }
+        IObservable<ResourceEventV1<V1ReplicationController>> EventSource { get; }
 
         /// <summary>
         ///     Called when the actor is started.

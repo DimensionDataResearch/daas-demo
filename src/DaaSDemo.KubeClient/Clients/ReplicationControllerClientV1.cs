@@ -71,7 +71,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<V1ResourceEvent<V1ReplicationController>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<V1ReplicationController>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
             return ObserveEvents<V1ReplicationController>(
                 Requests.Collection.WithTemplateParameters(new
