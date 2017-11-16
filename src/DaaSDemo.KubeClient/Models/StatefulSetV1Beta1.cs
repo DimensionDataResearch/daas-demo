@@ -10,14 +10,8 @@ namespace DaaSDemo.KubeClient.Models
     ///      - Storage: As many VolumeClaims as requested.
     ///     The StatefulSet guarantees that a given network identity will always map to the same storage identity.
     /// </summary>
-    public class StatefulSetV1Beta1 : KubeResource
+    public class StatefulSetV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec defines the desired identities of pods in this set.
         /// </summary>

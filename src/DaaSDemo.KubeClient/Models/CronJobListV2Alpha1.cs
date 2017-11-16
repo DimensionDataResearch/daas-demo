@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     CronJobList is a collection of cron jobs.
     /// </summary>
-    public class CronJobListV2Alpha1 : KubeResource
+    public class CronJobListV2Alpha1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     items is the list of CronJobs.
         /// </summary>

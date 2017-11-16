@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     TokenReview attempts to authenticate a token to a known user. Note: TokenReview requests may be cached by the webhook token authenticator plugin in the kube-apiserver.
     /// </summary>
-    public class TokenReviewV1 : KubeResource
+    public class TokenReviewV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec holds information about the request being evaluated
         /// </summary>

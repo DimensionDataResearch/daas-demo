@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ClusterRoleList is a collection of ClusterRoles
     /// </summary>
-    public class ClusterRoleListV1Alpha1 : KubeResource
+    public class ClusterRoleListV1Alpha1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard object's metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is a list of ClusterRoles
         /// </summary>

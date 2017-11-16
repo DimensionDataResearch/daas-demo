@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     Deployment enables declarative updates for Pods and ReplicaSets.
     /// </summary>
-    public class DeploymentV1Beta1 : KubeResource
+    public class DeploymentV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Standard object metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Specification of the desired behavior of the Deployment.
         /// </summary>

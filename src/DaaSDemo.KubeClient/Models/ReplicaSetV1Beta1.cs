@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ReplicaSet represents the configuration of a ReplicaSet.
     /// </summary>
-    public class ReplicaSetV1Beta1 : KubeResource
+    public class ReplicaSetV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     If the Labels of a ReplicaSet are empty, they are defaulted to be the same as the Pod(s) that the ReplicaSet manages. Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec defines the specification of the desired behavior of the ReplicaSet. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
         /// </summary>

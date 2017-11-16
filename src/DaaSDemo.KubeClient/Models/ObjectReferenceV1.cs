@@ -7,8 +7,14 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ObjectReference contains enough information to let you inspect or modify the referred object.
     /// </summary>
-    public class ObjectReferenceV1 : KubeResource
+    public class ObjectReferenceV1
     {
+        /// <summary>
+        ///     Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
+        /// </summary>
+        [JsonProperty("kind")]
+        public string Kind { get; set; }
+
         /// <summary>
         ///     UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
         /// </summary>
@@ -32,6 +38,12 @@ namespace DaaSDemo.KubeClient.Models
         /// </summary>
         [JsonProperty("fieldPath")]
         public string FieldPath { get; set; }
+
+        /// <summary>
+        ///     API version of the referent.
+        /// </summary>
+        [JsonProperty("apiVersion")]
+        public string ApiVersion { get; set; }
 
         /// <summary>
         ///     Specific resourceVersion to which this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency

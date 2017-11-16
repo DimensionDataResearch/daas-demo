@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     DeploymentList is a list of Deployments.
     /// </summary>
-    public class DeploymentListV1Beta1 : KubeResource
+    public class DeploymentListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is the list of Deployments.
         /// </summary>

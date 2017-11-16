@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     DaemonSetList is a collection of daemon sets.
     /// </summary>
-    public class DaemonSetListV1Beta1 : KubeResource
+    public class DaemonSetListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     A list of daemon sets.
         /// </summary>

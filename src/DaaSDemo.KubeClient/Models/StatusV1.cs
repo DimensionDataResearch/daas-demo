@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     Status is a return value for calls that don't return other objects.
     /// </summary>
-    public class StatusV1 : KubeResource
+    public class StatusV1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Suggested HTTP return code for this status, 0 if not set.
         /// </summary>

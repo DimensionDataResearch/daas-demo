@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     Namespace provides a scope for Names. Use of multiple namespaces is optional.
     /// </summary>
-    public class NamespaceV1 : KubeResource
+    public class NamespaceV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec defines the behavior of the Namespace. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
         /// </summary>

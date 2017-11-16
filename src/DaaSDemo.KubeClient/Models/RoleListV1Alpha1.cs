@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     RoleList is a collection of Roles
     /// </summary>
-    public class RoleListV1Alpha1 : KubeResource
+    public class RoleListV1Alpha1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard object's metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is a list of Roles
         /// </summary>

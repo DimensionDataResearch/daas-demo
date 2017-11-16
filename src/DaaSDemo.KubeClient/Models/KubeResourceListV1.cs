@@ -1,11 +1,12 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace DaaSDemo.KubeClient.Models
 {
     /// <summary>
-    ///     The base class for Kubernetes resources.
+    ///     The base class for Kubernetes resource lists.
     /// </summary>
-    public abstract class KubeResource
+    public abstract class KubeResourceListV1
     {
         /// <summary>
         ///     APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources
@@ -18,5 +19,11 @@ namespace DaaSDemo.KubeClient.Models
         /// </summary>
         [JsonProperty("kind")]
         public string Kind { get; set; }
+
+        /// <summary>
+        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+        /// </summary>
+        [JsonProperty("metadata")]
+        public ListMetaV1 Metadata { get; set; }
     }
 }

@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     configuration of a horizontal pod autoscaler.
     /// </summary>
-    public class HorizontalPodAutoscalerV1 : KubeResource
+    public class HorizontalPodAutoscalerV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Standard object metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     behaviour of autoscaler. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status.
         /// </summary>

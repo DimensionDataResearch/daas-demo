@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     IngressList is a collection of Ingress.
     /// </summary>
-    public class IngressListV1Beta1 : KubeResource
+    public class IngressListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is the list of Ingress.
         /// </summary>

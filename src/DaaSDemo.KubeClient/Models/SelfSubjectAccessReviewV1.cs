@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     SelfSubjectAccessReview checks whether or the current user can perform an action.  Not filling in a spec.namespace means "in all namespaces".  Self is a special case, because users should always be able to check whether they can perform an action
     /// </summary>
-    public class SelfSubjectAccessReviewV1 : KubeResource
+    public class SelfSubjectAccessReviewV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec holds information about the request being evaluated.  user and groups must be empty
         /// </summary>

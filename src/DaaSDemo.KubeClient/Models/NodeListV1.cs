@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     NodeList is the whole list of all Nodes which have been registered with master.
     /// </summary>
-    public class NodeListV1 : KubeResource
+    public class NodeListV1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     List of nodes
         /// </summary>

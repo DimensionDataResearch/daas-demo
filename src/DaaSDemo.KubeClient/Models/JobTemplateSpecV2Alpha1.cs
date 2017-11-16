@@ -10,12 +10,6 @@ namespace DaaSDemo.KubeClient.Models
     public class JobTemplateSpecV2Alpha1
     {
         /// <summary>
-        ///     Standard object's metadata of the jobs created from this template. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
-        /// <summary>
         ///     Specification of the desired behavior of the job. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#spec-and-status
         /// </summary>
         [JsonProperty("spec")]

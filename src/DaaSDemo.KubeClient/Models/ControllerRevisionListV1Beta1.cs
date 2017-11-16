@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ControllerRevisionList is a resource containing a list of ControllerRevision objects.
     /// </summary>
-    public class ControllerRevisionListV1Beta1 : KubeResource
+    public class ControllerRevisionListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is the list of ControllerRevisions
         /// </summary>

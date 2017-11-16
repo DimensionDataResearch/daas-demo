@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ServiceList holds a list of services.
     /// </summary>
-    public class ServiceListV1 : KubeResource
+    public class ServiceListV1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     List of services
         /// </summary>

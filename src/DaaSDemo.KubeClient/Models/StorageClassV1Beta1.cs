@@ -9,14 +9,8 @@ namespace DaaSDemo.KubeClient.Models
     ///     
     ///     StorageClasses are non-namespaced; the name of the storage class according to etcd is in ObjectMeta.Name.
     /// </summary>
-    public class StorageClassV1Beta1 : KubeResource
+    public class StorageClassV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Provisioner indicates the type of the provisioner.
         /// </summary>

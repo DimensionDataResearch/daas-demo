@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     StorageClassList is a collection of storage classes.
     /// </summary>
-    public class StorageClassListV1Beta1 : KubeResource
+    public class StorageClassListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is the list of StorageClasses
         /// </summary>

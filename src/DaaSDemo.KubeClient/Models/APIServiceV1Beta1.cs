@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     APIService represents a server for a particular GroupVersion. Name must be "version.group".
     /// </summary>
-    public class APIServiceV1Beta1 : KubeResource
+    public class APIServiceV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec contains information for locating and communicating with a server
         /// </summary>

@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     list of horizontal pod autoscaler objects.
     /// </summary>
-    public class HorizontalPodAutoscalerListV1 : KubeResource
+    public class HorizontalPodAutoscalerListV1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     list of horizontal pod autoscaler objects.
         /// </summary>

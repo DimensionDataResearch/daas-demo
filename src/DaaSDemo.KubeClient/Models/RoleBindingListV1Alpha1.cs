@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     RoleBindingList is a collection of RoleBindings
     /// </summary>
-    public class RoleBindingListV1Alpha1 : KubeResource
+    public class RoleBindingListV1Alpha1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard object's metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is a list of RoleBindings
         /// </summary>

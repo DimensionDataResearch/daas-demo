@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ThirdPartyResourceList is a list of ThirdPartyResources.
     /// </summary>
-    public class ThirdPartyResourceListV1Beta1 : KubeResource
+    public class ThirdPartyResourceListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Items is the list of ThirdPartyResources.
         /// </summary>

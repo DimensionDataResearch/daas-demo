@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     PodDisruptionBudgetList is a collection of PodDisruptionBudgets.
     /// </summary>
-    public class PodDisruptionBudgetListV1Beta1 : KubeResource
+    public class PodDisruptionBudgetListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Description not provided.
         /// </summary>

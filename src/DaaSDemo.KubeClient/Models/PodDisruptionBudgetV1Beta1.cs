@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     PodDisruptionBudget is an object to define the max disruption that can be caused to a collection of pods
     /// </summary>
-    public class PodDisruptionBudgetV1Beta1 : KubeResource
+    public class PodDisruptionBudgetV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Specification of the desired behavior of the PodDisruptionBudget.
         /// </summary>

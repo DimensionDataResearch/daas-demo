@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     ComponentStatus (and ComponentStatusList) holds the cluster validation info.
     /// </summary>
-    public class ComponentStatusV1 : KubeResource
+    public class ComponentStatusV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     List of component conditions observed
         /// </summary>

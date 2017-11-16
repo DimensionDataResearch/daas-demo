@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     APIServiceList is a list of APIService objects.
     /// </summary>
-    public class APIServiceListV1Beta1 : KubeResource
+    public class APIServiceListV1Beta1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Description not provided.
         /// </summary>

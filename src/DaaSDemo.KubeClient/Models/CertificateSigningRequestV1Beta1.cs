@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     Describes a certificate signing request
     /// </summary>
-    public class CertificateSigningRequestV1Beta1 : KubeResource
+    public class CertificateSigningRequestV1Beta1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     The certificate request itself and any additional information.
         /// </summary>

@@ -40,14 +40,35 @@ class KubeModel(object):
         if not api_version_property or api_version_property.data_type.name != 'string':
             return False
 
-        return True
+        return self.has_metadata()
 
-    def has_metadata(self):
-        if not self.is_resource():
+    def is_resource_list(self):
+        kind_property = self.properties.get('kind')
+        if not kind_property or kind_property.data_type.name != 'string':
             return False
 
+        api_version_property = self.properties.get('apiVersion')
+        if not api_version_property or api_version_property.data_type.name != 'string':
+            return False
+
+        return self.has_list_metadata()
+
+    def has_metadata(self):
         metadata_property = self.properties.get('metadata')
-        if not metadata_property or metadata_property.data_type.name != 'ObjectMeta':
+        if not metadata_property:
+            return False
+
+        if metadata_property.data_type.name != 'ObjectMeta':
+            return False
+
+        return True
+
+    def has_list_metadata(self):
+        metadata_property = self.properties.get('metadata')
+        if not metadata_property:
+            return False
+
+        if metadata_property.data_type.name != 'ListMeta':
             return False
 
         return True
@@ -112,11 +133,9 @@ class KubeDataType(object):
         self.name = name
         self.summary = summary
 
-    @property
     def is_intrinsic(self):
         return False
 
-    @property
     def is_collection(self):
         return False
 
@@ -161,7 +180,6 @@ class KubeIntrinsicDataType(KubeDataType):
     def __init__(self, name):
         super().__init__(name, 'Intrinsic data-type.')
 
-    @property
     def is_intrinsic(self):
         return True
 
@@ -172,7 +190,6 @@ class KubeArrayDataType(KubeDataType):
 
         self.element_type = element_type
 
-    @property
     def is_collection(self):
         return True
 
@@ -187,7 +204,6 @@ class KubeDictionaryDataType(KubeDataType):
 
         self.element_type = element_type
 
-    @property
     def is_collection(self):
         return True
 
@@ -290,17 +306,22 @@ def main():
 
             class_file.write('    public class ' + model.clr_name)
             if model.is_resource():
-                class_file.write(' : KubeResource')
+                class_file.write(' : KubeResourceV1')
+            elif model.is_resource_list():
+                class_file.write(' : KubeResourceListV1')
             class_file.write(LINE_ENDING)
 
             class_file.write('    {' + LINE_ENDING)
 
             properties = model.properties
             property_names = [name for name in properties.keys()]
-            
-            if model.is_resource():
+
+            if model.is_resource() or model.is_resource_list():
                 property_names.remove('apiVersion')
                 property_names.remove('kind')
+
+            if model.has_metadata() or model.has_list_metadata():
+                property_names.remove('metadata')
 
             for property_index in range(0, len(property_names)):
                 property_name = property_names[property_index]
@@ -311,7 +332,7 @@ def main():
                     class_file.write('        ///     ' + property_summary_line + LINE_ENDING)
                 class_file.write('        /// </summary>' + LINE_ENDING)
 
-                if model_property.data_type.is_collection:
+                if model_property.data_type.is_collection():
                     class_file.write('        [JsonProperty("%s", NullValueHandling = NullValueHandling.Ignore)]%s' % (model_property.json_name, LINE_ENDING))
                     class_file.write('        public %s %s { get; set; } = new %s();%s' % (
                         model_property.data_type.to_clr_type_name(),

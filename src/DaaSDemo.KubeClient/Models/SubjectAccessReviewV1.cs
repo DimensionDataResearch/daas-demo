@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     SubjectAccessReview checks whether or not a user or group can perform an action.
     /// </summary>
-    public class SubjectAccessReviewV1 : KubeResource
+    public class SubjectAccessReviewV1 : KubeResourceV1
     {
-        /// <summary>
-        ///     Description not provided.
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ObjectMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     Spec holds information about the request being evaluated
         /// </summary>

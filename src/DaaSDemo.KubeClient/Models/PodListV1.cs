@@ -7,14 +7,8 @@ namespace DaaSDemo.KubeClient.Models
     /// <summary>
     ///     PodList is a list of Pods.
     /// </summary>
-    public class PodListV1 : KubeResource
+    public class PodListV1 : KubeResourceListV1
     {
-        /// <summary>
-        ///     Standard list metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds
-        /// </summary>
-        [JsonProperty("metadata")]
-        public ListMetaV1 Metadata { get; set; }
-
         /// <summary>
         ///     List of pods. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md
         /// </summary>
