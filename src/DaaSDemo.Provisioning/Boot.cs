@@ -50,6 +50,13 @@ namespace DaaSDemo.Provisioning
                 daas.kube.volume-claim-name = ""{volumeClaimName}""
             ");
 
+            string enablePrometheus = appConfiguration["Prometheus:Enable"];
+            string prometheusApiEndPoint = appConfiguration["Prometheus:ApiEndPoint"];
+            Config prometheusConfig = ConfigurationFactory.ParseString($@"
+                daas.prometheus.enable = {enablePrometheus}
+                daas.prometheus.api-endpoint = ""{prometheusApiEndPoint}""
+            ");
+
             string sqlApiEndPoint = appConfiguration["SQL:ApiEndPoint"];
             Config sqlConfig = ConfigurationFactory.ParseString($@"
                 daas.sql.api-endpoint = ""{sqlApiEndPoint}""
