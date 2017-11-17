@@ -11,7 +11,7 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     The job label to apply to metrics collected by this job.
         /// </summary>
-        [JsonProperty("selector")]
+        [JsonProperty("jobLabel")]
         public string JobLabel { get; set; }
 
         /// <summary>

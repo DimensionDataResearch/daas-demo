@@ -185,7 +185,7 @@ namespace DaaSDemo.Provisioning
             string baseName = GetBaseName(server);
             
             return Service(
-                name: $"{baseName}-service-internal",
+                name: $"{baseName}",
                 spec: KubeSpecs.InternalService(server),
                 labels: new Dictionary<string, string>
                 {
@@ -213,7 +213,7 @@ namespace DaaSDemo.Provisioning
             string baseName = GetBaseName(server);
             
             return Service(
-                name: $"{baseName}-service-external",
+                name: $"{baseName}-public",
                 spec: KubeSpecs.ExternalService(server),
                 labels: new Dictionary<string, string>
                 {
