@@ -1,5 +1,4 @@
 using Akka.Actor;
-using KubeNET.Swagger.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -43,7 +42,7 @@ namespace DaaSDemo.Provisioning.Actors
                 kubeNamespace: "default"
             );
 
-            Receive<ResourceEventV1<V1beta1Deployment>>(resourceEvent =>
+            Receive<ResourceEventV1<DeploymentV1Beta1>>(resourceEvent =>
             {
                 EventBus.Publish(resourceEvent);
             });
@@ -74,7 +73,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     An <see cref="IObservable"/> that manages the underlying subscription to the Kubernetes API.
         /// </summary>
-        IObservable<ResourceEventV1<V1beta1Deployment>> EventSource { get; }
+        IObservable<ResourceEventV1<DeploymentV1Beta1>> EventSource { get; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -111,23 +110,23 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The underlying event bus.
         /// </summary>
         class ResourceEventBus
-            : ResourceEventBus<V1beta1Deployment, ResourceEventFilter>
+            : ResourceEventBus<DeploymentV1Beta1, ResourceEventFilter>
         {
             /// <summary>
             ///     Get the metadata for the specified resource.
             /// </summary>
-            /// <param name="replicationController">
-            ///     A <see cref="V1beta1Deployment"/> representing the target Deployment.
+            /// <param name="deployment">
+            ///     A <see cref="DeploymentV1Beta1"/> representing the target Deployment.
             /// </param>
             /// <returns>
             ///     The resource metadata.
             /// </returns>
-            protected override V1ObjectMeta GetMetadata(V1beta1Deployment replicationController)
+            protected override ObjectMetaV1 GetMetadata(DeploymentV1Beta1 deployment)
             {
-                if (replicationController == null)
-                    throw new ArgumentNullException(nameof(replicationController));
+                if (deployment == null)
+                    throw new ArgumentNullException(nameof(deployment));
                 
-                return replicationController.Metadata;
+                return deployment.Metadata;
             }
 
             /// <summary>
@@ -139,7 +138,7 @@ namespace DaaSDemo.Provisioning.Actors
             /// <returns>
             ///     A <see cref="ResourceEventFilter"/> describing the filter.
             /// </returns>
-            protected override ResourceEventFilter CreateExactMatchFilter(V1ObjectMeta metadata) => ResourceEventFilter.FromMetatadata(metadata);
+            protected override ResourceEventFilter CreateExactMatchFilter(ObjectMetaV1 metadata) => ResourceEventFilter.FromMetatadata(metadata);
         }
     }
 }

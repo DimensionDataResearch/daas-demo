@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ReplicationControllers, as a list of <see cref="V1ReplicationController"/>s.
+        ///     The ReplicationControllers, as a list of <see cref="ReplicationControllerV1"/>s.
         /// </returns>
-        public async Task<List<V1ReplicationController>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<ReplicationControllerV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1ReplicationControllerList matchingControllers =
+            ReplicationControllerListV1 matchingControllers =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationControllerList, UnversionedStatus>();
+                .ReadContentAsAsync<ReplicationControllerListV1, StatusV1>();
 
             return matchingControllers.Items;
         }
@@ -71,9 +70,9 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<ResourceEventV1<V1ReplicationController>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<ReplicationControllerV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
-            return ObserveEvents<V1ReplicationController>(
+            return ObserveEvents<ReplicationControllerV1>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Namespace = kubeNamespace ?? Client.DefaultNamespace,
@@ -96,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
+        ///     A <see cref="ReplicationControllerV1"/> representing the current state for the ReplicationController, or <c>null</c> if no ReplicationController was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ReplicationController> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<ReplicationControllerV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
 
-            return await GetSingleResource<V1ReplicationController>(
+            return await GetSingleResource<ReplicationControllerV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -117,15 +116,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="ReplicationController"/>.
         /// </summary>
         /// <param name="newController">
-        ///     A <see cref="V1ReplicationController"/> representing the ReplicationController to create.
+        ///     A <see cref="ReplicationControllerV1"/> representing the ReplicationController to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ReplicationController"/> representing the current state for the newly-created ReplicationController.
+        ///     A <see cref="ReplicationControllerV1"/> representing the current state for the newly-created ReplicationController.
         /// </returns>
-        public async Task<V1ReplicationController> Create(V1ReplicationController newController, CancellationToken cancellationToken = default)
+        public async Task<ReplicationControllerV1> Create(ReplicationControllerV1 newController, CancellationToken cancellationToken = default)
         {
             if (newController == null)
                 throw new ArgumentNullException(nameof(newController));
@@ -139,7 +138,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newController,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ReplicationController, UnversionedStatus>();
+                .ReadContentAsAsync<ReplicationControllerV1, StatusV1>();
         }
 
         /// <summary>
@@ -158,9 +157,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return
                 await Http.DeleteAsJsonAsync(
@@ -177,7 +176,7 @@ namespace DaaSDemo.KubeClient.Clients
                     },
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

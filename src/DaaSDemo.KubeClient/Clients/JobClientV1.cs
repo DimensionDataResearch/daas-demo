@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Jobs, as a list of <see cref="V1Job"/>s.
+        ///     The Jobs, as a list of <see cref="JobV1"/>s.
         /// </returns>
-        public async Task<List<V1Job>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<JobV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1JobList matchingJobs =
+            JobListV1 matchingJobs =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1JobList, UnversionedStatus>();
+                .ReadContentAsAsync<JobListV1, StatusV1>();
 
             return matchingJobs.Items;
         }
@@ -71,9 +70,9 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<ResourceEventV1<V1Job>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<JobV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
-            return ObserveEvents<V1Job>(
+            return ObserveEvents<JobV1>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Namespace = kubeNamespace ?? Client.DefaultNamespace,
@@ -96,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Job"/> representing the current state for the Job, or <c>null</c> if no Job was found with the specified name and namespace.
+        ///     A <see cref="JobV1"/> representing the current state for the Job, or <c>null</c> if no Job was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Job> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<JobV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1Job>(
+            return await GetSingleResource<JobV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -117,15 +116,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Job"/>.
         /// </summary>
         /// <param name="newJob">
-        ///     A <see cref="V1Job"/> representing the Job to create.
+        ///     A <see cref="JobV1"/> representing the Job to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Job"/> representing the current state for the newly-created Job.
+        ///     A <see cref="JobV1"/> representing the current state for the newly-created Job.
         /// </returns>
-        public async Task<V1Job> Create(V1Job newJob, CancellationToken cancellationToken = default)
+        public async Task<JobV1> Create(JobV1 newJob, CancellationToken cancellationToken = default)
         {
             if (newJob == null)
                 throw new ArgumentNullException(nameof(newJob));
@@ -139,7 +138,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newJob,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Job, UnversionedStatus>();
+                .ReadContentAsAsync<JobV1, StatusV1>();
         }
 
         /// <summary>
@@ -158,9 +157,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsJsonAsync(
@@ -177,7 +176,7 @@ namespace DaaSDemo.KubeClient.Clients
                     },
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

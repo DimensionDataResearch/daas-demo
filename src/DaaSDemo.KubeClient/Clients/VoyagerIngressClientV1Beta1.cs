@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<VoyagerIngressListV1Beta1, UnversionedStatus>();
+                .ReadContentAsAsync<VoyagerIngressListV1Beta1, StatusV1>();
 
             return matchingPods.Items;
         }
@@ -115,7 +114,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newPod,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<VoyagerIngressV1Beta1, UnversionedStatus>();
+                .ReadContentAsAsync<VoyagerIngressV1Beta1, StatusV1>();
         }
 
         /// <summary>
@@ -131,9 +130,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(
@@ -144,7 +143,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

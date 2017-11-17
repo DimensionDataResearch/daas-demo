@@ -1,4 +1,3 @@
-using KubeNET.Swagger.Model;
 using System.Runtime.Serialization;
 
 namespace DaaSDemo.KubeClient.Models
@@ -13,11 +12,11 @@ namespace DaaSDemo.KubeClient.Models
         public string Kind { get; set; }
 
         [DataMember(Name = "metadata", EmitDefaultValue = false)]
-        public V1ObjectMeta Metadata { get; set; }
+        public ObjectMetaV1 Metadata { get; set; }
 
         [DataMember(Name = "spec", EmitDefaultValue = false)]
         public VoyagerIngressSpecV1Beta1 Spec { get; set; }
 
-        public V1beta1IngressStatus Status { get; set; }
+        public IngressStatusV1Beta1 Status { get; set; }
     }
 }

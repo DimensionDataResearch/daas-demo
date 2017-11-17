@@ -1,4 +1,3 @@
-using KubeNET.Swagger.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -6,6 +5,8 @@ using System.Linq;
 
 namespace DaaSDemo.Provisioning.Filters
 {
+    using KubeClient.Models;
+
     /// <summary>
     ///     A filter for events relating to Kubernetes resources.
     /// </summary>
@@ -65,7 +66,7 @@ namespace DaaSDemo.Provisioning.Filters
         /// <returns>
         ///     <c>true</c>, if the filter matches the metadata; otherwise, <c>false</c>.
         /// </returns>
-        public override bool IsMatch(V1ObjectMeta resourceMetadata)
+        public override bool IsMatch(ObjectMetaV1 resourceMetadata)
         {
             if (resourceMetadata == null)
                 throw new ArgumentNullException(nameof(resourceMetadata));
@@ -199,7 +200,7 @@ namespace DaaSDemo.Provisioning.Filters
         /// <returns>
         ///     The <see cref="ResourceEventFilter"/>.
         /// </returns>
-        public static ResourceEventFilter FromMetatadata(V1ObjectMeta metadata)
+        public static ResourceEventFilter FromMetatadata(ObjectMetaV1 metadata)
         {
             if (metadata == null)
                 throw new ArgumentNullException(nameof(metadata));

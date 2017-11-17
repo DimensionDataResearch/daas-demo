@@ -1,5 +1,4 @@
 using Akka.Actor;
-using KubeNET.Swagger.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -43,7 +42,7 @@ namespace DaaSDemo.Provisioning.Actors
                 kubeNamespace: "default"
             );
 
-            Receive<ResourceEventV1<V1Service>>(resourceEvent =>
+            Receive<ResourceEventV1<ServiceV1>>(resourceEvent =>
             {
                 EventBus.Publish(resourceEvent);
             });
@@ -74,7 +73,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     An <see cref="IObservable"/> that manages the underlying subscription to the Kubernetes API.
         /// </summary>
-        IObservable<ResourceEventV1<V1Service>> EventSource { get; }
+        IObservable<ResourceEventV1<ServiceV1>> EventSource { get; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -111,18 +110,18 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The underlying event bus.
         /// </summary>
         class ResourceEventBus
-            : ResourceEventBus<V1Service, ResourceEventFilter>
+            : ResourceEventBus<ServiceV1, ResourceEventFilter>
         {
             /// <summary>
             ///     Get the metadata for the specified resource.
             /// </summary>
             /// <param name="replicationController">
-            ///     A <see cref="V1Service"/> representing the target Service.
+            ///     A <see cref="ServiceV1"/> representing the target Service.
             /// </param>
             /// <returns>
             ///     The resource metadata.
             /// </returns>
-            protected override V1ObjectMeta GetMetadata(V1Service replicationController)
+            protected override ObjectMetaV1 GetMetadata(ServiceV1 replicationController)
             {
                 if (replicationController == null)
                     throw new ArgumentNullException(nameof(replicationController));
@@ -139,7 +138,7 @@ namespace DaaSDemo.Provisioning.Actors
             /// <returns>
             ///     A <see cref="ResourceEventFilter"/> describing the filter.
             /// </returns>
-            protected override ResourceEventFilter CreateExactMatchFilter(V1ObjectMeta metadata) => ResourceEventFilter.FromMetatadata(metadata);
+            protected override ResourceEventFilter CreateExactMatchFilter(ObjectMetaV1 metadata) => ResourceEventFilter.FromMetatadata(metadata);
         }
     }
 }

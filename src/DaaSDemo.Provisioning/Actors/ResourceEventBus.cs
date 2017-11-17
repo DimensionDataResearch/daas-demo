@@ -1,6 +1,5 @@
 using Akka.Actor;
 using Akka.Event;
-using KubeNET.Swagger.Model;
 using System;
 
 namespace DaaSDemo.Provisioning.Actors
@@ -23,6 +22,7 @@ namespace DaaSDemo.Provisioning.Actors
     /// </typeparam>
     public abstract class ResourceEventBus<TResource, TFilter>
         : ActorEventBus<ResourceEventV1<TResource>, TFilter>
+            where TResource : KubeResourceV1
             where TFilter : EventFilter
     {
         /// <summary>
@@ -41,7 +41,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The resource metadata.
         /// </returns>
-        protected abstract V1ObjectMeta GetMetadata(TResource resource);
+        protected abstract ObjectMetaV1 GetMetadata(TResource resource);
 
         /// <summary>
         ///     Create a filter that exactly matches the specified resource metadata.
@@ -52,7 +52,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     A <typeparamref name="TFilter"/> describing the filter.
         /// </returns>
-        protected abstract TFilter CreateExactMatchFilter(V1ObjectMeta metadata);
+        protected abstract TFilter CreateExactMatchFilter(ObjectMetaV1 metadata);
 
         /// <summary>
         ///		Determine whether <paramref name="child"/> is a sub-classification of <paramref name="parent"/>.

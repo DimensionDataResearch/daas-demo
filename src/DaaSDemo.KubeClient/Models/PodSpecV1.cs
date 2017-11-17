@@ -72,7 +72,7 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
         /// </summary>
-        [JsonProperty("activeDeadlineSeconds")]
+        [JsonProperty("activeDeadlineSeconds", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public int ActiveDeadlineSeconds { get; set; }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process. Defaults to 30 seconds.
         /// </summary>
         [JsonProperty("terminationGracePeriodSeconds")]
-        public int TerminationGracePeriodSeconds { get; set; }
+        public int? TerminationGracePeriodSeconds { get; set; }
 
         /// <summary>
         ///     If specified, the pod's tolerations.

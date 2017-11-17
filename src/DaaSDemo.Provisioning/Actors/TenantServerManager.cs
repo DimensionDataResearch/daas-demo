@@ -1,7 +1,6 @@
 using Akka;
 using Akka.Actor;
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -218,7 +217,7 @@ namespace DaaSDemo.Provisioning.Actors
                             break;
                         }
 
-                        V1ReplicationController replicationController = await FindReplicationController();
+                        ReplicationControllerV1 replicationController = await FindReplicationController();
                         if (replicationController == null)
                         {
                             Log.Warning("{Action} failed - cannot find ReplicationController for server {ServerId}.", actionDescription, _serverId);
@@ -231,7 +230,7 @@ namespace DaaSDemo.Provisioning.Actors
                         {
                             Log.Info("Server {ServerID} is now available ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
                                 _serverId,
-                                replicationController.Status.AvailableReplicas ?? 0,
+                                replicationController.Status.AvailableReplicas,
                                 replicationController.Status.Replicas
                             );
 
@@ -243,7 +242,7 @@ namespace DaaSDemo.Provisioning.Actors
                         {
                             Log.Debug("Server {ServerID} is not available yet ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
                                 _serverId,
-                                replicationController.Status.AvailableReplicas ?? 0,
+                                replicationController.Status.AvailableReplicas,
                                 replicationController.Status.Replicas
                             );
                         }
@@ -295,7 +294,7 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         await ProvisionServer();
                     }
-                    catch (HttpRequestException<UnversionedStatus> provisioningFailed)
+                    catch (HttpRequestException<StatusV1> provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to provision server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
@@ -328,7 +327,7 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         await ReconfigureServer();
                     }
-                    catch (HttpRequestException<UnversionedStatus> reconfigurationFailed)
+                    catch (HttpRequestException<StatusV1> reconfigurationFailed)
                     {
                         Log.Error(reconfigurationFailed, "Failed to reconfigure server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
@@ -361,7 +360,7 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         await DeprovisionServer();
                     }
-                    catch (HttpRequestException<UnversionedStatus> deprovisioningFailed)
+                    catch (HttpRequestException<StatusV1> deprovisioningFailed)
                     {
                         Log.Error(deprovisioningFailed, "Failed to de-provision server {ServerId} ({Reason}): {ErrorMessage}",
                             CurrentState.Id,
@@ -622,9 +621,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The ReplicationController, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1ReplicationController> FindReplicationController()
+        async Task<ReplicationControllerV1> FindReplicationController()
         {
-            List<V1ReplicationController> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
+            List<ReplicationControllerV1> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
                  labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
              );
 
@@ -640,9 +639,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Service> FindInternalService()
+        async Task<ServiceV1> FindInternalService()
         {
-            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await _kubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
             );
             if (matchingServices.Count == 0)
@@ -657,9 +656,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The Service, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<V1Service> FindExternalService()
+        async Task<ServiceV1> FindExternalService()
         {
-            List<V1Service> matchingServices = await _kubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await _kubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)
@@ -672,11 +671,11 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Ensure that a ReplicationController resource exists for the specified database server.
         /// </summary>
         /// <returns>
-        ///     The ReplicationController resource, as a <see cref="V1ReplicationController"/>.
+        ///     The ReplicationController resource, as a <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        async Task<V1ReplicationController> EnsureReplicationControllerPresent()
+        async Task<ReplicationControllerV1> EnsureReplicationControllerPresent()
         {
-            V1ReplicationController existingController = await FindReplicationController();
+            ReplicationControllerV1 existingController = await FindReplicationController();
             if (existingController != null)
             {
                 Log.Info("Found existing replication controller {ReplicationControllerName} for server {ServerId}.",
@@ -691,7 +690,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.Id
             );
 
-            V1ReplicationController createdController = await _kubeClient.ReplicationControllersV1.Create(
+            ReplicationControllerV1 createdController = await _kubeClient.ReplicationControllersV1.Create(
                 KubeResources.ReplicationController(CurrentState,
                     imageName: Context.System.Settings.Config.GetString("daas.kube.sql-image-name"),
                     dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
@@ -714,7 +713,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> EnsureReplicationControllerAbsent()
         {
-            V1ReplicationController controller = await FindReplicationController();
+            ReplicationControllerV1 controller = await FindReplicationController();
             if (controller == null)
                 return true;
 
@@ -730,7 +729,7 @@ namespace DaaSDemo.Provisioning.Actors
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
             }
-            catch (HttpRequestException<UnversionedStatus> deleteFailed)
+            catch (HttpRequestException<StatusV1> deleteFailed)
             {
                 Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     controller.Metadata.Name,
@@ -754,18 +753,18 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Ensure that an internally-facing Service resource exists for the specified database server.
         /// </summary>
         /// <returns>
-        ///     The Service resource, as a <see cref="V1Service"/>.
+        ///     The Service resource, as a <see cref="ServiceV1"/>.
         /// </returns>
         async Task EnsureInternalServicePresent()
         {
-            V1Service existingInternalService = await FindInternalService();
+            ServiceV1 existingInternalService = await FindInternalService();
             if (existingInternalService == null)
             {
                 Log.Info("Creating internal service for server {ServerId}...",
                     CurrentState.Id
                 );
 
-                V1Service createdService = await _kubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
                     KubeResources.InternalService(CurrentState)
                 );
 
@@ -791,14 +790,14 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task EnsureExternalServicePresent()
         {
-            V1Service existingExternalService = await FindExternalService();
+            ServiceV1 existingExternalService = await FindExternalService();
             if (existingExternalService == null)
             {
                 Log.Info("Creating external service for server {ServerId}...",
                     CurrentState.Id
                 );
 
-                V1Service createdService = await _kubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
                     KubeResources.ExternalService(CurrentState)
                 );
 
@@ -821,7 +820,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         async Task EnsureInternalServiceAbsent()
         {
-            V1Service existingInternalService = await FindInternalService();
+            ServiceV1 existingInternalService = await FindInternalService();
             if (existingInternalService != null)
             {
                 Log.Info("Deleting internal service {ServiceName} for server {ServerId}...",
@@ -829,7 +828,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
+                StatusV1 result = await _kubeClient.ServicesV1.Delete(
                     name: existingInternalService.Metadata.Name
                 );
 
@@ -855,7 +854,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         async Task EnsureExternalServiceAbsent()
         {
-            V1Service existingExternalService = await FindExternalService();
+            ServiceV1 existingExternalService = await FindExternalService();
             if (existingExternalService != null)
             {
                 Log.Info("Deleting external service {ServiceName} for server {ServerId}...",
@@ -863,7 +862,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                UnversionedStatus result = await _kubeClient.ServicesV1.Delete(
+                StatusV1 result = await _kubeClient.ServicesV1.Delete(
                     name: existingExternalService.Metadata.Name
                 );
 

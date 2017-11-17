@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ConfigMaps, as a list of <see cref="V1ConfigMap"/>s.
+        ///     The ConfigMaps, as a list of <see cref="ConfigMapV1"/>s.
         /// </returns>
-        public async Task<List<V1ConfigMap>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<ConfigMapV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1ConfigMapList matchingConfigMaps =
+            ConfigMapListV1 matchingConfigMaps =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ConfigMapList, UnversionedStatus>();
+                .ReadContentAsAsync<ConfigMapListV1, StatusV1>();
 
             return matchingConfigMaps.Items;
         }
@@ -72,14 +71,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ConfigMap"/> representing the current state for the ConfigMap, or <c>null</c> if no ConfigMap was found with the specified name and namespace.
+        ///     A <see cref="ConfigMapV1"/> representing the current state for the ConfigMap, or <c>null</c> if no ConfigMap was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1ConfigMap> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<ConfigMapV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1ConfigMap>(
+            return await GetSingleResource<ConfigMapV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -93,15 +92,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="ConfigMap"/>.
         /// </summary>
         /// <param name="newConfigMap">
-        ///     A <see cref="V1ConfigMap"/> representing the ConfigMap to create.
+        ///     A <see cref="ConfigMapV1"/> representing the ConfigMap to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1ConfigMap"/> representing the current state for the newly-created ConfigMap.
+        ///     A <see cref="ConfigMapV1"/> representing the current state for the newly-created ConfigMap.
         /// </returns>
-        public async Task<V1ConfigMap> Create(V1ConfigMap newConfigMap, CancellationToken cancellationToken = default)
+        public async Task<ConfigMapV1> Create(ConfigMapV1 newConfigMap, CancellationToken cancellationToken = default)
         {
             if (newConfigMap == null)
                 throw new ArgumentNullException(nameof(newConfigMap));
@@ -115,7 +114,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newConfigMap,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1ConfigMap, UnversionedStatus>();
+                .ReadContentAsAsync<ConfigMapV1, StatusV1>();
         }
 
         /// <summary>
@@ -131,9 +130,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(
@@ -144,7 +143,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

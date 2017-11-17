@@ -1,7 +1,6 @@
 using Akka;
 using Akka.Actor;
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using System;

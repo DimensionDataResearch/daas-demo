@@ -1,4 +1,3 @@
-using KubeNET.Swagger.Model;
 using System;
 using System.Collections.Generic;
 
@@ -25,7 +24,7 @@ namespace DaaSDemo.Provisioning
         public static string GetBaseName(DatabaseServer server) => $"sql-server-{server.Id}";
 
         /// <summary>
-        ///     Create a new <see cref="V1beta1Deployment"/> for the specified database server.
+        ///     Create a new <see cref="DeploymentV1Beta1"/> for the specified database server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
@@ -37,9 +36,9 @@ namespace DaaSDemo.Provisioning
         ///     The name of the Kubernetes VolumeClaim where the data will be stored.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1beta1Deployment"/>.
+        ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public static V1beta1Deployment Deployment(DatabaseServer server, string imageName, string dataVolumeClaimName)
+        public static DeploymentV1Beta1 Deployment(DatabaseServer server, string imageName, string dataVolumeClaimName)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -56,13 +55,13 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1beta1Deployment"/>.
+        ///     Create a new <see cref="DeploymentV1Beta1"/>.
         /// </summary>
         /// <param name="name">
         ///     The deployment name.
         /// </param>
         /// <param name="spec">
-        ///     A <see cref="V1beta1DeploymentSpec"/> representing the deployment specification.
+        ///     A <see cref="DeploymentSpecV1Beta1"/> representing the deployment specification.
         /// </param>
         /// <param name="labels">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the deployment.
@@ -71,9 +70,9 @@ namespace DaaSDemo.Provisioning
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the deployment.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1beta1Deployment"/>.
+        ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public static V1beta1Deployment Deployment(string name, V1beta1DeploymentSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public static DeploymentV1Beta1 Deployment(string name, DeploymentSpecV1Beta1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -81,11 +80,11 @@ namespace DaaSDemo.Provisioning
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
-            return new V1beta1Deployment
+            return new DeploymentV1Beta1
             {
                 ApiVersion = "apps/v1beta1",
                 Kind = "Deployment",
-                Metadata = new V1ObjectMeta
+                Metadata = new ObjectMetaV1
                 {
                     Name = name,
                     Labels = labels,
@@ -96,7 +95,7 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1ReplicationController"/> for the specified database server.
+        ///     Create a new <see cref="ReplicationControllerV1"/> for the specified database server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
@@ -108,9 +107,9 @@ namespace DaaSDemo.Provisioning
         ///     The name of the Kubernetes VolumeClaim where the data will be stored.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1ReplicationController"/>.
+        ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public static V1ReplicationController ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
+        public static ReplicationControllerV1 ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -130,13 +129,13 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1ReplicationController"/>.
+        ///     Create a new <see cref="ReplicationControllerV1"/>.
         /// </summary>
         /// <param name="name">
         ///     The replication controller name.
         /// </param>
         /// <param name="spec">
-        ///     A <see cref="V1ReplicationControllerSpec"/> representing the controller specification.
+        ///     A <see cref="ReplicationControllerSpecV1"/> representing the controller specification.
         /// </param>
         /// <param name="labels">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the replication controller.
@@ -145,9 +144,9 @@ namespace DaaSDemo.Provisioning
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the replication controller.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1ReplicationController"/>.
+        ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public static V1ReplicationController ReplicationController(string name, V1ReplicationControllerSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public static ReplicationControllerV1 ReplicationController(string name, ReplicationControllerSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -155,11 +154,11 @@ namespace DaaSDemo.Provisioning
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
-            return new V1ReplicationController
+            return new ReplicationControllerV1
             {
                 ApiVersion = "v1",
                 Kind = "ReplicationController",
-                Metadata = new V1ObjectMeta
+                Metadata = new ObjectMetaV1
                 {
                     Name = name,
                     Labels = labels,
@@ -170,15 +169,15 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new internally-facing <see cref="V1Service"/> for the specified database server.
+        ///     Create a new internally-facing <see cref="ServiceV1"/> for the specified database server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1Service"/>.
+        ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static V1Service InternalService(DatabaseServer server)
+        public static ServiceV1 InternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -198,15 +197,15 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new externally-facing <see cref="V1Service"/> for the specified database server.
+        ///     Create a new externally-facing <see cref="ServiceV1"/> for the specified database server.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1Service"/>.
+        ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static V1Service ExternalService(DatabaseServer server)
+        public static ServiceV1 ExternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -226,13 +225,13 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1Service"/>.
+        ///     Create a new <see cref="ServiceV1"/>.
         /// </summary>
         /// <param name="name">
         ///     The service name.
         /// </param>
         /// <param name="spec">
-        ///     A <see cref="V1ServiceSpec"/> representing the service specification.
+        ///     A <see cref="ServiceSpecV1"/> representing the service specification.
         /// </param>
         /// <param name="labels">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the service.
@@ -241,9 +240,9 @@ namespace DaaSDemo.Provisioning
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the service.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1Service"/>.
+        ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static V1Service Service(string name, V1ServiceSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public static ServiceV1 Service(string name, ServiceSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -251,11 +250,11 @@ namespace DaaSDemo.Provisioning
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
-            return new V1Service
+            return new ServiceV1
             {
                 ApiVersion = "v1",
                 Kind = "Service",
-                Metadata = new V1ObjectMeta
+                Metadata = new ObjectMetaV1
                 {
                     Name = name,
                     Labels = labels,
@@ -266,13 +265,13 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Create a new <see cref="V1Job"/>.
+        ///     Create a new <see cref="JobV1"/>.
         /// </summary>
         /// <param name="name">
         ///     The Job name.
         /// </param>
         /// <param name="spec">
-        ///     A <see cref="V1JobSpec"/> representing the Job specification.
+        ///     A <see cref="JobSpecV1"/> representing the Job specification.
         /// </param>
         /// <param name="labels">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the Job.
@@ -281,9 +280,9 @@ namespace DaaSDemo.Provisioning
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the Job.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="V1Job"/>.
+        ///     The configured <see cref="JobV1"/>.
         /// </returns>
-        public static V1Job Job(string name, V1JobSpec spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public static JobV1 Job(string name, JobSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -291,11 +290,11 @@ namespace DaaSDemo.Provisioning
             if (spec == null)
                 throw new ArgumentNullException(nameof(spec));
 
-            return new V1Job
+            return new JobV1
             {
                 ApiVersion = "batch/v1",
                 Kind = "Job",
-                Metadata = new V1ObjectMeta
+                Metadata = new ObjectMetaV1
                 {
                     Name = name,
                     Labels = labels,

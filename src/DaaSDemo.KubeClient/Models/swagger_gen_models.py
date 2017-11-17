@@ -320,8 +320,8 @@ def main():
                 property_names.remove('apiVersion')
                 property_names.remove('kind')
 
-            if model.has_metadata() or model.has_list_metadata():
-                property_names.remove('metadata')
+                if model.has_metadata() or model.has_list_metadata():
+                    property_names.remove('metadata')
 
             for property_index in range(0, len(property_names)):
                 property_name = property_names[property_index]

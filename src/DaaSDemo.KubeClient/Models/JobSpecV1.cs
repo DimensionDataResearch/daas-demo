@@ -36,7 +36,7 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Optional duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer
         /// </summary>
-        [JsonProperty("activeDeadlineSeconds")]
+        [JsonProperty("activeDeadlineSeconds", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public int ActiveDeadlineSeconds { get; set; }
 
         /// <summary>

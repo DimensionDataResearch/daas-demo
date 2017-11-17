@@ -1,7 +1,6 @@
 using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
-using KubeNET.Swagger.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

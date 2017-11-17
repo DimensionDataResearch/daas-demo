@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Deployments, as a list of <see cref="V1beta1Deployment"/>s.
+        ///     The Deployments, as a list of <see cref="DeploymentV1Beta1"/>s.
         /// </returns>
-        public async Task<List<V1beta1Deployment>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<DeploymentV1Beta1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1beta1DeploymentList matchingControllers =
+            DeploymentListV1Beta1 matchingControllers =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1beta1DeploymentList, UnversionedStatus>();
+                .ReadContentAsAsync<DeploymentListV1Beta1, StatusV1>();
 
             return matchingControllers.Items;
         }
@@ -71,9 +70,9 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<ResourceEventV1<V1beta1Deployment>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<DeploymentV1Beta1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
-            return ObserveEvents<V1beta1Deployment>(
+            return ObserveEvents<DeploymentV1Beta1>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Namespace = kubeNamespace ?? Client.DefaultNamespace,
@@ -96,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1beta1Deployment"/> representing the current state for the Deployment, or <c>null</c> if no Deployment was found with the specified name and namespace.
+        ///     A <see cref="DeploymentV1Beta1"/> representing the current state for the Deployment, or <c>null</c> if no Deployment was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1beta1Deployment> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<DeploymentV1Beta1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
 
-            return await GetSingleResource<V1beta1Deployment>(
+            return await GetSingleResource<DeploymentV1Beta1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -117,15 +116,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Deployment"/>.
         /// </summary>
         /// <param name="newController">
-        ///     A <see cref="V1beta1Deployment"/> representing the Deployment to create.
+        ///     A <see cref="DeploymentV1Beta1"/> representing the Deployment to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1beta1Deployment"/> representing the current state for the newly-created Deployment.
+        ///     A <see cref="DeploymentV1Beta1"/> representing the current state for the newly-created Deployment.
         /// </returns>
-        public async Task<V1beta1Deployment> Create(V1beta1Deployment newController, CancellationToken cancellationToken = default)
+        public async Task<DeploymentV1Beta1> Create(DeploymentV1Beta1 newController, CancellationToken cancellationToken = default)
         {
             if (newController == null)
                 throw new ArgumentNullException(nameof(newController));
@@ -139,7 +138,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newController,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1beta1Deployment, UnversionedStatus>();
+                .ReadContentAsAsync<DeploymentV1Beta1, StatusV1>();
         }
 
         /// <summary>
@@ -158,9 +157,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return
                 await Http.DeleteAsJsonAsync(
@@ -177,7 +176,7 @@ namespace DaaSDemo.KubeClient.Clients
                     },
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

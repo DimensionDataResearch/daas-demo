@@ -1,4 +1,3 @@
-using KubeNET.Swagger.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Threading.Tasks;
 namespace DaaSDemo.Provisioning
 {
     using KubeClient;
+    using KubeClient.Models;
     using Models.Data;
 
     /// <summary>
@@ -31,13 +31,13 @@ namespace DaaSDemo.Provisioning
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            List<V1Service> matchingServices = await client.ServicesV1.List(
+            List<ServiceV1> matchingServices = await client.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)
                 return null;
 
-            V1Service externalService = matchingServices[matchingServices.Count - 1];
+            ServiceV1 externalService = matchingServices[matchingServices.Count - 1];
 
             return externalService.Spec.Ports[0].NodePort;
         }

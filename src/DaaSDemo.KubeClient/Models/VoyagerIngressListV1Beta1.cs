@@ -1,4 +1,3 @@
-using KubeNET.Swagger.Model;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 
@@ -36,7 +35,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#types-kinds
         /// </summary>
         [DataMember(Name = "metadata", EmitDefaultValue = false)]
-        public UnversionedListMeta Metadata { get; set; }
+        public ListMetaV1 Metadata { get; set; }
 
         /// <summary>
         ///     List of ingresses.

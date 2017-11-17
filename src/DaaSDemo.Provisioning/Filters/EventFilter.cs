@@ -1,7 +1,7 @@
-using KubeNET.Swagger.Model;
-
 namespace DaaSDemo.Provisioning.Filters
 {
+    using KubeClient.Models;
+
     /// <summary>
     ///     The base class for descriptions of how to filter events relating to Kubernetes resources.
     /// </summary>
@@ -16,6 +16,6 @@ namespace DaaSDemo.Provisioning.Filters
         /// <returns>
         ///     <c>true</c>, if the filter matches the metadata; otherwise, <c>false</c>.
         /// </returns>
-        public abstract bool IsMatch(V1ObjectMeta resourceMetadata);
+        public abstract bool IsMatch(ObjectMetaV1 resourceMetadata);
     }
 }

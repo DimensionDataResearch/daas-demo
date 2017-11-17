@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -84,9 +83,9 @@ namespace DaaSDemo.KubeClient.Clients
                     return await responseMessage.ReadContentAsAsync<TResource>();
 
                 // Ensure that HttpStatusCode.NotFound actually refers to the ReplicationController.
-                UnversionedStatus status = await responseMessage.ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.NotFound);
+                StatusV1 status = await responseMessage.ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.NotFound);
                 if (status.Reason != "NotFound")
-                    throw new HttpRequestException<UnversionedStatus>(responseMessage.StatusCode, status);
+                    throw new HttpRequestException<StatusV1>(responseMessage.StatusCode, status);
 
                 return null;
             }
@@ -105,6 +104,7 @@ namespace DaaSDemo.KubeClient.Clients
         ///     The <see cref="IObservable{T}"/>.
         /// </returns>
         protected IObservable<ResourceEventV1<TResource>> ObserveEvents<TResource>(HttpRequest request)
+            where TResource : KubeResourceV1
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));

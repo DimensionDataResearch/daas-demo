@@ -31,7 +31,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     Optional deadline in seconds for starting the job if it misses scheduled time for any reason.  Missed jobs executions will be counted as failed ones.
         /// </summary>
         [JsonProperty("startingDeadlineSeconds")]
-        public int StartingDeadlineSeconds { get; set; }
+        public int? StartingDeadlineSeconds { get; set; }
 
         /// <summary>
         ///     The number of failed finished jobs to retain. This is a pointer to distinguish between explicit zero and not specified.

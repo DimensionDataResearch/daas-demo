@@ -1,5 +1,4 @@
-﻿using KubeNET.Swagger.Model;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -16,6 +15,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
     using Data;
     using Models.Data;
     using KubeClient;
+    using KubeClient.Models;
     using Models.Sql;
 
     /// <summary>
@@ -318,7 +318,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 return null;
             }
 
-            List<V1Service> matchingServices = await KubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal"
             );
             if (matchingServices.Count == 0)
@@ -331,7 +331,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 return null;
             }
 
-            V1Service serverService = matchingServices[matchingServices.Count - 1];
+            ServiceV1 serverService = matchingServices[matchingServices.Count - 1];
 
             var connectionStringBuilder = new SqlClient.SqlConnectionStringBuilder
             {

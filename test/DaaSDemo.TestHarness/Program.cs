@@ -1,7 +1,6 @@
 ﻿using Akka.Actor;
 using Akka.Actor.Dsl;
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -70,7 +69,7 @@ namespace DaaSDemo.TestHarness
                             Log.Information("Subscribed.");
                         };
 
-                        actor.Receive<ResourceEventV1<V1ReplicationController>>((resourceEvent, context) =>
+                        actor.Receive<ResourceEventV1<ReplicationControllerV1>>((resourceEvent, context) =>
                         {
                             Log.Information("Recieved {EventType} event for ReplicationController {ResourceName}.",
                                 resourceEvent.EventType,

@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Pods, as a list of <see cref="V1Pod"/>s.
+        ///     The Pods, as a list of <see cref="PodV1"/>s.
         /// </returns>
-        public async Task<List<V1Pod>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<PodV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1PodList matchingPods =
+            PodListV1 matchingPods =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1PodList, UnversionedStatus>();
+                .ReadContentAsAsync<PodListV1, StatusV1>();
 
             return matchingPods.Items;
         }
@@ -71,9 +70,9 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<ResourceEventV1<V1Pod>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<PodV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
-            return ObserveEvents<V1Pod>(
+            return ObserveEvents<PodV1>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Namespace = kubeNamespace ?? Client.DefaultNamespace,
@@ -96,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Pod"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
+        ///     A <see cref="PodV1"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Pod> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<PodV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1Pod>(
+            return await GetSingleResource<PodV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -150,8 +149,8 @@ namespace DaaSDemo.KubeClient.Clients
                 if (responseMessage.IsSuccessStatusCode)
                     return await responseMessage.Content.ReadAsStringAsync();
 
-                throw new HttpRequestException<UnversionedStatus>(responseMessage.StatusCode,
-                    response: await responseMessage.ReadContentAsAsync<UnversionedStatus, UnversionedStatus>()
+                throw new HttpRequestException<StatusV1>(responseMessage.StatusCode,
+                    response: await responseMessage.ReadContentAsAsync<StatusV1, StatusV1>()
                 );
             }
         }
@@ -160,15 +159,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Pod"/>.
         /// </summary>
         /// <param name="newPod">
-        ///     A <see cref="V1Pod"/> representing the Pod to create.
+        ///     A <see cref="PodV1"/> representing the Pod to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Pod"/> representing the current state for the newly-created Pod.
+        ///     A <see cref="PodV1"/> representing the current state for the newly-created Pod.
         /// </returns>
-        public async Task<V1Pod> Create(V1Pod newPod, CancellationToken cancellationToken = default)
+        public async Task<PodV1> Create(PodV1 newPod, CancellationToken cancellationToken = default)
         {
             if (newPod == null)
                 throw new ArgumentNullException(nameof(newPod));
@@ -182,7 +181,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newPod,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Pod, UnversionedStatus>();
+                .ReadContentAsAsync<PodV1, StatusV1>();
         }
 
         /// <summary>
@@ -198,9 +197,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(
@@ -211,7 +210,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

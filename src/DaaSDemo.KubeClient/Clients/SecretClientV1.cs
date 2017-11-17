@@ -1,5 +1,4 @@
 using HTTPlease;
-using KubeNET.Swagger.Model;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -41,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Secrets, as a list of <see cref="V1Secret"/>s.
+        ///     The Secrets, as a list of <see cref="SecretV1"/>s.
         /// </returns>
-        public async Task<List<V1Secret>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<SecretV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            V1SecretList matchingSecrets =
+            SecretListV1 matchingSecrets =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -54,7 +53,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1SecretList, UnversionedStatus>();
+                .ReadContentAsAsync<SecretListV1, StatusV1>();
 
             return matchingSecrets.Items;
         }
@@ -72,14 +71,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Secret"/> representing the current state for the Secret, or <c>null</c> if no Secret was found with the specified name and namespace.
+        ///     A <see cref="SecretV1"/> representing the current state for the Secret, or <c>null</c> if no Secret was found with the specified name and namespace.
         /// </returns>
-        public async Task<V1Secret> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<SecretV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<V1Secret>(
+            return await GetSingleResource<SecretV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -93,15 +92,15 @@ namespace DaaSDemo.KubeClient.Clients
         ///     Request creation of a <see cref="Secret"/>.
         /// </summary>
         /// <param name="newSecret">
-        ///     A <see cref="V1Secret"/> representing the Secret to create.
+        ///     A <see cref="SecretV1"/> representing the Secret to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="V1Secret"/> representing the current state for the newly-created Secret.
+        ///     A <see cref="SecretV1"/> representing the current state for the newly-created Secret.
         /// </returns>
-        public async Task<V1Secret> Create(V1Secret newSecret, CancellationToken cancellationToken = default)
+        public async Task<SecretV1> Create(SecretV1 newSecret, CancellationToken cancellationToken = default)
         {
             if (newSecret == null)
                 throw new ArgumentNullException(nameof(newSecret));
@@ -115,7 +114,7 @@ namespace DaaSDemo.KubeClient.Clients
                     postBody: newSecret,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<V1Secret, UnversionedStatus>();
+                .ReadContentAsAsync<SecretV1, StatusV1>();
         }
 
         /// <summary>
@@ -131,9 +130,9 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="UnversionedStatus"/> indicating the result of the request.
+        ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<UnversionedStatus> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             return await Http
                 .DeleteAsync(
@@ -144,7 +143,7 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<UnversionedStatus, UnversionedStatus>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>

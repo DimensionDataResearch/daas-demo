@@ -22,7 +22,7 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
         /// </summary>
-        [JsonProperty("kind")]
+        [JsonProperty("metadata")]
         public ObjectMetaV1 Metadata { get; set; }
     }
 }
