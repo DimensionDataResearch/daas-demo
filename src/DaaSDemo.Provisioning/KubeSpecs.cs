@@ -374,6 +374,7 @@ namespace DaaSDemo.Provisioning
 
             return new PrometheusServiceMonitorSpecV1
             {
+                JobLabel = baseName,
                 Selector = new LabelSelectorV1
                 {
                     MatchLabels = new Dictionary<string, string>

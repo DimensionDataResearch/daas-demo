@@ -9,6 +9,12 @@ namespace DaaSDemo.KubeClient.Models
     public class PrometheusServiceMonitorSpecV1
     {
         /// <summary>
+        ///     The job label to apply to metrics collected by this job.
+        /// </summary>
+        [JsonProperty("selector")]
+        public string JobLabel { get; set; }
+
+        /// <summary>
         ///     The selector used to determine which services are monitored by the ServiceMonitor.
         /// </summary>
         [JsonProperty("selector")]
