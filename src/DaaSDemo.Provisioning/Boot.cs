@@ -33,8 +33,10 @@ namespace DaaSDemo.Provisioning
             ");
 
             string sqlImageName = appConfiguration["Provisioning:Images:SQL"];
+            string sqlExporterImageName = appConfiguration["Provisioning:Images:SQLExporter"];
             Config provisioningConfig = ConfigurationFactory.ParseString($@"
                 daas.kube.sql-image-name = ""{sqlImageName}""
+                daas.kube.sql-exporter-image-name = ""{sqlExporterImageName}""
             ");
 
             string kubeApiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];

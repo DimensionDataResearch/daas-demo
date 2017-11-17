@@ -232,7 +232,7 @@ namespace DaaSDemo.Provisioning
                             new ContainerV1
                             {
                                 Name = "prometheus-exporter",
-                                Image = "awaragi/prometheus-mssql-exporter:v0.4.1",
+                                Image = "tintoy.azurecr.io/daas/prometheus-mssql-exporter:1.0.0-dev", // TODO: Make this configurable.
                                 Env = new List<EnvVarV1>
                                 {
                                     new EnvVarV1
