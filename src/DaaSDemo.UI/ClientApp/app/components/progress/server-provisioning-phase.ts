@@ -39,11 +39,13 @@ export class ServerProvisioningPhaseProgress {
     public get actionPercentComplete(): number {
         switch (this.currentPhase) {
             case ServerProvisioningPhase.Instance:
-                return 25;
+                return 40;
             case ServerProvisioningPhase.Network:
                 return 50;
+            case ServerProvisioningPhase.Monitoring:
+                return 60;
             case ServerProvisioningPhase.Configuration:
-                return 75;
+                return 80;
             case ServerProvisioningPhase.Ingress:
                 return 100;
             default:

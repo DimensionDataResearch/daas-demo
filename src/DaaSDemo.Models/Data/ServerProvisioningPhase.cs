@@ -21,18 +21,23 @@ namespace DaaSDemo.Models.Data
         Network = 2,
 
         /// <summary>
+        ///     The server's monitoring infrastructure.
+        /// </summary>
+        Monitoring = 3,
+
+        /// <summary>
         ///     The server's configuration.
         /// </summary>
-        Configuration = 3,
+        Configuration = 4,
 
         /// <summary>
         ///     The server's external network connectivity.
         /// </summary>
-        Ingress = 4,
+        Ingress = 5,
 
         /// <summary>
         ///     The server's current action has been completed.
         /// </summary>
-        Done = 5
+        Done = 6
     }
 }

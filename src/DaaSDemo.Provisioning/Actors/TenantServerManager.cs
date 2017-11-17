@@ -490,6 +490,14 @@ namespace DaaSDemo.Provisioning.Actors
 
                     await EnsureInternalServicePresent();
 
+                    goto case ServerProvisioningPhase.Monitoring;
+                }
+                case ServerProvisioningPhase.Monitoring:
+                {
+                    StartProvisioningPhase(ServerProvisioningPhase.Monitoring);
+
+                    await EnsureServiceMonitorPresent();
+
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
                     break;
@@ -542,6 +550,14 @@ namespace DaaSDemo.Provisioning.Actors
                     StartReconfigurationPhase(ServerProvisioningPhase.Network);
 
                     await EnsureInternalServicePresent();
+
+                    goto case ServerProvisioningPhase.Monitoring;
+                }
+                case ServerProvisioningPhase.Monitoring:
+                {
+                    StartProvisioningPhase(ServerProvisioningPhase.Monitoring);
+
+                    await EnsureServiceMonitorPresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
 
@@ -596,6 +612,14 @@ namespace DaaSDemo.Provisioning.Actors
                     
                     await EnsureInternalServiceAbsent();
 
+                    goto case ServerProvisioningPhase.Monitoring;
+                }
+                case ServerProvisioningPhase.Monitoring:
+                {
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Monitoring);
+                    
+                    await EnsureServiceMonitorAbsent();
+
                     goto case ServerProvisioningPhase.Ingress;
                 }
                 case ServerProvisioningPhase.Ingress:
@@ -643,6 +667,23 @@ namespace DaaSDemo.Provisioning.Actors
         {
             List<ServiceV1> matchingServices = await _kubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
+            );
+            if (matchingServices.Count == 0)
+                return null;
+
+            return matchingServices[matchingServices.Count - 1];
+        }
+
+        /// <summary>
+        ///     Find the server's associated ServiceMonitor (if it exists).
+        /// </summary>
+        /// <returns>
+        ///     The ServiceMonitor, or <c>null</c> if it was not found.
+        /// </returns>
+        async Task<PrometheusServiceMonitorV1> FindServiceMonitor()
+        {
+            List<PrometheusServiceMonitorV1> matchingServices = await _kubeClient.PrometheusServiceMonitorsV1.List(
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server"
             );
             if (matchingServices.Count == 0)
                 return null;
@@ -783,39 +824,6 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that an externally-facing Service resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
-        /// </returns>
-        async Task EnsureExternalServicePresent()
-        {
-            ServiceV1 existingExternalService = await FindExternalService();
-            if (existingExternalService == null)
-            {
-                Log.Info("Creating external service for server {ServerId}...",
-                    CurrentState.Id
-                );
-
-                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
-                    KubeResources.ExternalService(CurrentState)
-                );
-
-                Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
-                    createdService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-            else
-            {
-                Log.Info("Found existing external service {ServiceName} for server {ServerId}.",
-                    existingExternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
         ///     Ensure that an internally-facing Service resource does not exist for the specified database server.
         /// </summary>
         async Task EnsureInternalServiceAbsent()
@@ -844,6 +852,106 @@ namespace DaaSDemo.Provisioning.Actors
 
                 Log.Info("Deleted internal service {ServiceName} for server {ServerId}.",
                     existingInternalService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Ensure that a ServiceMonitor resource exists for the specified database server.
+        /// </summary>
+        /// <returns>
+        ///     The Service resource, as a <see cref="ServiceV1"/>.
+        /// </returns>
+        async Task EnsureServiceMonitorPresent()
+        {
+            PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
+            if (existingServiceMonitor == null)
+            {
+                Log.Info("Creating service monitor for server {ServerId}...",
+                    CurrentState.Id
+                );
+
+                PrometheusServiceMonitorV1 createdService = await _kubeClient.PrometheusServiceMonitorsV1.Create(
+                    KubeResources.ServiceMonitor(CurrentState)
+                );
+
+                Log.Info("Successfully created service monitor {ServiceName} for server {ServerId}.",
+                    createdService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing service monitor {ServiceName} for server {ServerId}.",
+                    existingServiceMonitor.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Ensure that a ServiceMonitor resource does not exist for the specified database server.
+        /// </summary>
+        async Task EnsureServiceMonitorAbsent()
+        {
+            PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
+            if (existingServiceMonitor != null)
+            {
+                Log.Info("Deleting service monitor {ServiceName} for server {ServerId}...",
+                    existingServiceMonitor.Metadata.Name,
+                    CurrentState.Id
+                );
+
+                StatusV1 result = await _kubeClient.PrometheusServiceMonitorsV1.Delete(
+                    name: existingServiceMonitor.Metadata.Name
+                );
+
+                if (result.Status != "Success" && result.Reason != "NotFound")
+                {
+                    Log.Error("Failed to delete service monitor {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                        existingServiceMonitor.Metadata.Name,
+                        CurrentState.Id,
+                        result.Message,
+                        result.Reason
+                    );
+                }
+
+                Log.Info("Deleted service monitor {ServiceName} for server {ServerId}.",
+                    existingServiceMonitor.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Ensure that an externally-facing Service resource exists for the specified database server.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task EnsureExternalServicePresent()
+        {
+            ServiceV1 existingExternalService = await FindExternalService();
+            if (existingExternalService == null)
+            {
+                Log.Info("Creating external service for server {ServerId}...",
+                    CurrentState.Id
+                );
+
+                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
+                    KubeResources.ExternalService(CurrentState)
+                );
+
+                Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
+                    createdService.Metadata.Name,
+                    CurrentState.Id
+                );
+            }
+            else
+            {
+                Log.Info("Found existing external service {ServiceName} for server {ServerId}.",
+                    existingExternalService.Metadata.Name,
                     CurrentState.Id
                 );
             }

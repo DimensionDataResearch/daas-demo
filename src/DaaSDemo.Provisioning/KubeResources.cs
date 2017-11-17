@@ -265,6 +265,74 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
+        ///     Create a new <see cref="PrometheusServiceMonitorV1"/> for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
+        /// </returns>
+        public static PrometheusServiceMonitorV1 ServiceMonitor(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = GetBaseName(server);
+            
+            return ServiceMonitor(
+                name: $"{baseName}-monitor",
+                spec: KubeSpecs.ServiceMonitor(server),
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = baseName,
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.monitor-type"] = "sql-server"
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="PrometheusServiceMonitorV1"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The service monitor name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="PrometheusServiceMonitorSpecV1"/> representing the service monitor specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the service.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the service.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
+        /// </returns>
+        public static PrometheusServiceMonitorV1 ServiceMonitor(string name, PrometheusServiceMonitorSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            return new PrometheusServiceMonitorV1
+            {
+                ApiVersion = "monitoring.coreos.com/v1",
+                Kind = "ServiceMonitor",
+                Metadata = new ObjectMetaV1
+                {
+                    Name = name,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Spec = spec
+            };
+        }
+
+        /// <summary>
         ///     Create a new <see cref="JobV1"/>.
         /// </summary>
         /// <param name="name">

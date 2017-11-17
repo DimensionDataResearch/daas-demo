@@ -355,5 +355,41 @@ namespace DaaSDemo.Provisioning
                 }
             };
         }
+
+        /// <summary>
+        ///     Build a <see cref="PrometheusServiceMonitorSpecV1"/> for the specified server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PrometheusServiceMonitorSpecV1"/>.
+        /// </returns>
+        public static PrometheusServiceMonitorSpecV1 ServiceMonitor(DatabaseServer server)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            string baseName = KubeResources.GetBaseName(server);
+
+            return new PrometheusServiceMonitorSpecV1
+            {
+                Selector = new LabelSelectorV1
+                {
+                    MatchLabels = new Dictionary<string, string>
+                    {
+                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                        ["cloud.dimensiondata.daas.service-type"] = "internal"
+                    }
+                },
+                EndPoints = new List<PrometheusServiceMonitorEndPointV1>
+                {
+                    new PrometheusServiceMonitorEndPointV1
+                    {
+                        Port = "prometheus-exporter"
+                    }
+                }
+            };
+        }
     }
 }

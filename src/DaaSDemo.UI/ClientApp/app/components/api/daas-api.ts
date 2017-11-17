@@ -574,6 +574,11 @@ export enum ServerProvisioningPhase
     Network = 'Network',
 
     /**
+     * The server's monitoring infrastructure.
+     */
+    Monitoring = 'Monitoring',
+
+    /**
      * The server's configuration.
      */
     Configuration = 'Configuration',

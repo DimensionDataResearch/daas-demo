@@ -25,7 +25,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     The duration in seconds before the object should be deleted. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period for the specified type will be used. Defaults to a per object value if not specified. zero means delete immediately.
         /// </summary>
         [JsonProperty("gracePeriodSeconds")]
-        public int GracePeriodSeconds { get; set; }
+        public int? GracePeriodSeconds { get; set; }
 
         /// <summary>
         ///     Deprecated: please use the PropagationPolicy, this field will be deprecated in 1.7. Should the dependent objects be orphaned. If true/false, the "orphan" finalizer will be added to/removed from the object's finalizers list. Either this field or PropagationPolicy may be set, but not both.

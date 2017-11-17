@@ -38,6 +38,7 @@ namespace DaaSDemo.KubeClient
             ReplicationControllersV1 = new ReplicationControllerClientV1(this);
             ServicesV1 = new ServiceClientV1(this);
             JobsV1 = new JobClientV1(this);
+            PrometheusServiceMonitorsV1 = new PrometheusServiceMonitorClientV1(this);
             VoyagerIngressesV1Beta1 = new VoyagerIngressClientV1Beta1(this);
         }
 
@@ -90,6 +91,11 @@ namespace DaaSDemo.KubeClient
         ///     The client for the Services (v1) API.
         /// </summary>
         public JobClientV1 JobsV1 { get; }
+
+        /// <summary>
+        ///     The client for the Prometheus ServiceMonitors (v1) API.
+        /// </summary>
+        public PrometheusServiceMonitorClientV1 PrometheusServiceMonitorsV1 { get; }
 
         /// <summary>
         ///     The client for the Voyager Ingress (v1beta1) API.

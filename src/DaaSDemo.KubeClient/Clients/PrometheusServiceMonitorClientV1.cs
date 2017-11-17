@@ -11,27 +11,27 @@ namespace DaaSDemo.KubeClient.Clients
     using Models;
 
     /// <summary>
-    ///     A client for the Voyager Ingress (v1beta1) API.
+    ///     A client for the Prometheus ServiceMonitor (v1) API.
     /// </summary>
-    public class VoyagerIngressClientV1Beta1
+    public class PrometheusServiceMonitorClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="VoyagerIngressClientV1Beta1"/>.
+        ///     Create a new <see cref="PrometheusServiceMonitorClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public VoyagerIngressClientV1Beta1(KubeApiClient client)
+        public PrometheusServiceMonitorClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all Pods in the specified namespace, optionally matching a label selector.
+        ///     Get all ServiceMonitors in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the Pods.
+        ///     An optional Kubernetes label selector expression used to filter the ServiceMonitors.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -40,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Pods, as a list of <see cref="VoyagerIngressV1Beta1"/>es.
+        ///     The ServiceMonitors, as a list of <see cref="PrometheusServiceMonitorV1"/>es.
         /// </returns>
-        public async Task<List<VoyagerIngressV1Beta1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<PrometheusServiceMonitorV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            VoyagerIngressListV1Beta1 matchingPods =
+            PrometheusServiceMonitorListV1 matchingServiceMonitors =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -53,16 +53,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<VoyagerIngressListV1Beta1, StatusV1>();
+                .ReadContentAsAsync<PrometheusServiceMonitorListV1, StatusV1>();
 
-            return matchingPods.Items;
+            return matchingServiceMonitors.Items;
         }
 
         /// <summary>
-        ///     Get the Pod with the specified name.
+        ///     Get the ServiceMonitor with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Pod to retrieve.
+        ///     The name of the ServiceMonitor to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -71,14 +71,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
+        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the current state for the ServiceMonitor, or <c>null</c> if no ServiceMonitor was found with the specified name and namespace.
         /// </returns>
-        public async Task<VoyagerIngressV1Beta1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<PrometheusServiceMonitorV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<VoyagerIngressV1Beta1>(
+            return await GetSingleResource<PrometheusServiceMonitorV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -89,39 +89,39 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="Pod"/>.
+        ///     Request creation of a Prometheus ServiceMonitor.
         /// </summary>
-        /// <param name="newPod">
-        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the Pod to create.
+        /// <param name="newServiceMonitor">
+        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the ServiceMonitor to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="VoyagerIngressV1Beta1"/> representing the current state for the newly-created Pod.
+        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the current state for the newly-created ServiceMonitor.
         /// </returns>
-        public async Task<VoyagerIngressV1Beta1> Create(VoyagerIngressV1Beta1 newPod, CancellationToken cancellationToken = default)
+        public async Task<PrometheusServiceMonitorV1> Create(PrometheusServiceMonitorV1 newServiceMonitor, CancellationToken cancellationToken = default)
         {
-            if (newPod == null)
-                throw new ArgumentNullException(nameof(newPod));
+            if (newServiceMonitor == null)
+                throw new ArgumentNullException(nameof(newServiceMonitor));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newPod?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newServiceMonitor?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newPod,
+                    postBody: newServiceMonitor,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<VoyagerIngressV1Beta1, StatusV1>();
+                .ReadContentAsAsync<PrometheusServiceMonitorV1, StatusV1>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified Pod.
+        ///     Request deletion of the specified ServiceMonitor.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Pod to delete.
+        ///     The name of the ServiceMonitor to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -147,19 +147,19 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request templates for the Pods (v1) API.
+        ///     Request templates for the ServiceMonitors (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level Pod (v1) request.
+            ///     A collection-level CoreOS Monitoring (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/monitoring.coreos.com/v1/namespaces/{Namespace}/servicemonitors?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
-            ///     A get-by-name Pod (v1) request.
+            ///     A get-by-name CoreOS Monitoring (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/voyager.appscode.com/v1beta1/namespaces/default/ingresses/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/monitoring.coreos.com/v1/namespaces/{Namespace}/servicemonitors/{Name}", SerializerSettings);
         }
     }
 }

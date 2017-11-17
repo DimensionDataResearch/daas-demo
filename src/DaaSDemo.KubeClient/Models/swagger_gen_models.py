@@ -135,7 +135,7 @@ class KubeModelProperty(object):
     @classmethod
     def from_definition(cls, name, property_definition, data_types):
         summary = property_definition.get('description', 'Description not provided.')
-        is_optional = summary.startswith('Optional')
+        is_optional = summary.startswith('Optional') or 'if not specified' in summary
         data_type = KubeDataType.from_definition(property_definition, data_types)
 
         return KubeModelProperty(name, summary, data_type, is_optional)
