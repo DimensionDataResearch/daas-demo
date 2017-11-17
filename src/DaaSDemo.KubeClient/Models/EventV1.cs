@@ -37,13 +37,13 @@ namespace DaaSDemo.KubeClient.Models
         ///     The time at which the event was first recorded. (Time of server receipt is in TypeMeta.)
         /// </summary>
         [JsonProperty("firstTimestamp")]
-        public DateTime FirstTimestamp { get; set; }
+        public DateTime? FirstTimestamp { get; set; }
 
         /// <summary>
         ///     The time at which the most recent occurrence of this event was recorded.
         /// </summary>
         [JsonProperty("lastTimestamp")]
-        public DateTime LastTimestamp { get; set; }
+        public DateTime? LastTimestamp { get; set; }
 
         /// <summary>
         ///     The number of times this event has occurred.

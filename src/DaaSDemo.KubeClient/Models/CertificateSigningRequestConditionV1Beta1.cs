@@ -13,7 +13,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     timestamp for the last update to this condition
         /// </summary>
         [JsonProperty("lastUpdateTime")]
-        public DateTime LastUpdateTime { get; set; }
+        public DateTime? LastUpdateTime { get; set; }
 
         /// <summary>
         ///     human readable message with details about the request state

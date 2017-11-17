@@ -13,7 +13,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     Last time the condition transitioned from one status to another.
         /// </summary>
         [JsonProperty("lastTransitionTime")]
-        public DateTime LastTransitionTime { get; set; }
+        public DateTime? LastTransitionTime { get; set; }
 
         /// <summary>
         ///     Human-readable message indicating details about last transition.

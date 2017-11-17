@@ -13,7 +13,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     TimeAdded represents the time at which the taint was added. It is only written for NoExecute taints.
         /// </summary>
         [JsonProperty("timeAdded")]
-        public DateTime TimeAdded { get; set; }
+        public DateTime? TimeAdded { get; set; }
 
         /// <summary>
         ///     Required. The taint value corresponding to the taint key.

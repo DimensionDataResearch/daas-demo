@@ -1,11 +1,22 @@
 """
 Generate model classes from Kubernetes swagger.
+
+AF: Yes, this is very ugly, but it's almost never run so probably not worth much more effort than has already been expended on it.
 """
 
 import pprint
 import yaml
 
 ROOT_NAMESPACE = 'DaaSDemo.KubeClient.Models'
+IGNORE_MODELS = [
+    'io.k8s.apimachinery.pkg.apis.meta.v1.Time'
+    'io.k8s.apimachinery.pkg.api.resource.Quantity',
+    'io.k8s.apimachinery.pkg.util.intstr.IntOrString'
+]
+VALUE_TYPE_NAMES = [
+    'int',
+    'DateTime'
+]
 LINE_ENDING = '\n'
 
 
@@ -108,11 +119,12 @@ class KubeModel(object):
 
 
 class KubeModelProperty(object):
-    def __init__(self, name, summary, data_type):
+    def __init__(self, name, summary, data_type, is_optional):
         self.name = capitalize_name(name)
         self.json_name = name
         self.summary = summary or 'No summary provided'
         self.data_type = data_type
+        self.is_optional = is_optional
 
     def __repr__(self):
         return 'Property(name="{}",type="{}")'.format(
@@ -122,10 +134,11 @@ class KubeModelProperty(object):
 
     @classmethod
     def from_definition(cls, name, property_definition, data_types):
-        data_type = KubeDataType.from_definition(property_definition, data_types)
         summary = property_definition.get('description', 'Description not provided.')
+        is_optional = summary.startswith('Optional')
+        data_type = KubeDataType.from_definition(property_definition, data_types)
 
-        return KubeModelProperty(name, summary, data_type)
+        return KubeModelProperty(name, summary, data_type, is_optional)
 
 
 class KubeDataType(object):
@@ -139,7 +152,7 @@ class KubeDataType(object):
     def is_collection(self):
         return False
 
-    def to_clr_type_name(self):
+    def to_clr_type_name(self, is_nullable=False):
         return get_cts_type_name(self.name)
 
     @classmethod
@@ -183,6 +196,13 @@ class KubeIntrinsicDataType(KubeDataType):
     def is_intrinsic(self):
         return True
 
+    def to_clr_type_name(self, is_nullable=False):
+        clr_type_name = super().to_clr_type_name(is_nullable)
+
+        if (is_nullable and clr_type_name in VALUE_TYPE_NAMES) or clr_type_name == 'DateTime':
+            clr_type_name += '?'
+
+        return clr_type_name
 
 class KubeArrayDataType(KubeDataType):
     def __init__(self, element_type):
@@ -193,9 +213,9 @@ class KubeArrayDataType(KubeDataType):
     def is_collection(self):
         return True
 
-    def to_clr_type_name(self):
+    def to_clr_type_name(self, is_nullable=False):
         return 'List<{}>'.format(
-            get_cts_type_name(self.element_type.to_clr_type_name())
+            get_cts_type_name(self.element_type.to_clr_type_name(is_nullable)).replace('?', '') # List<DateTime?> would be odious to deal with.
         )
 
 class KubeDictionaryDataType(KubeDataType):
@@ -207,9 +227,9 @@ class KubeDictionaryDataType(KubeDataType):
     def is_collection(self):
         return True
 
-    def to_clr_type_name(self):
+    def to_clr_type_name(self, is_nullable=False):
         return 'Dictionary<string, {}>'.format( # AFAICT, Kubernetes models only use strings as dictionary keys
-            get_cts_type_name(self.element_type.to_clr_type_name())
+            get_cts_type_name(self.element_type.to_clr_type_name(is_nullable)).replace('?', '') # Dictionary<string, DateTime?> would be odious to deal with.
         )
 
 class KubeModelDataType(KubeDataType):
@@ -218,7 +238,7 @@ class KubeModelDataType(KubeDataType):
         self.model = model
         self.clr_name = self.model.name + self.model.api_version
 
-    def to_clr_type_name(self):
+    def to_clr_type_name(self, is_nullable=False):
         return self.model.clr_name
 
 def capitalize_name(name):
@@ -245,6 +265,7 @@ def parse_models(definitions):
             definitions[definition_name]
         )
         for definition_name in definitions.keys()
+        if definition_name not in IGNORE_MODELS
     }
 
 def get_data_types(models):
@@ -285,7 +306,7 @@ def main():
     parse_properties(models, data_types, definitions)
 
     for definition_name in sorted(definitions.keys(), key=get_defname_sort_key):
-        if definition_name.startswith('apimachinery.pkg.'):
+        if definition_name in IGNORE_MODELS or definition_name.startswith('apimachinery.pkg.'):
             continue
 
         model = models[definition_name]
@@ -343,7 +364,7 @@ def main():
                 else:
                     class_file.write('        [JsonProperty("%s")]%s' % (model_property.json_name, LINE_ENDING))
                     class_file.write('        public %s %s { get; set; }%s' % (
-                        model_property.data_type.to_clr_type_name(),
+                        model_property.data_type.to_clr_type_name(is_nullable=model_property.is_optional),
                         model_property.name,
                         LINE_ENDING
                     ))

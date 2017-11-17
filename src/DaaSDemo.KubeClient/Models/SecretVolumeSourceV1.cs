@@ -15,7 +15,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
         /// </summary>
         [JsonProperty("defaultMode")]
-        public int DefaultMode { get; set; }
+        public int? DefaultMode { get; set; }
 
         /// <summary>
         ///     Name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret

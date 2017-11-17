@@ -43,12 +43,12 @@ namespace DaaSDemo.KubeClient.Models
         ///     Time at which the container last terminated
         /// </summary>
         [JsonProperty("finishedAt")]
-        public DateTime FinishedAt { get; set; }
+        public DateTime? FinishedAt { get; set; }
 
         /// <summary>
         ///     Time at which previous execution of the container started
         /// </summary>
         [JsonProperty("startedAt")]
-        public DateTime StartedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
     }
 }

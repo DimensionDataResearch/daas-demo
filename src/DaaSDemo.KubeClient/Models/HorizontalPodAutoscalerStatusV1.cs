@@ -19,7 +19,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     last time the HorizontalPodAutoscaler scaled the number of pods; used by the autoscaler to control how often the number of pods is changed.
         /// </summary>
         [JsonProperty("lastScaleTime")]
-        public DateTime LastScaleTime { get; set; }
+        public DateTime? LastScaleTime { get; set; }
 
         /// <summary>
         ///     most recent generation observed by this autoscaler.

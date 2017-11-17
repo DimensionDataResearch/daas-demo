@@ -72,8 +72,8 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
         /// </summary>
-        [JsonProperty("activeDeadlineSeconds", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
-        public int ActiveDeadlineSeconds { get; set; }
+        [JsonProperty("activeDeadlineSeconds")]
+        public int? ActiveDeadlineSeconds { get; set; }
 
         /// <summary>
         ///     List of containers belonging to the pod. Containers cannot currently be added or removed. There must be at least one container in a Pod. Cannot be updated.

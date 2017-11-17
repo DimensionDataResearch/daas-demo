@@ -13,13 +13,13 @@ namespace DaaSDemo.KubeClient.Models
         ///     Last time we probed the condition.
         /// </summary>
         [JsonProperty("lastProbeTime")]
-        public DateTime LastProbeTime { get; set; }
+        public DateTime? LastProbeTime { get; set; }
 
         /// <summary>
         ///     Last time the condition transitioned from one status to another.
         /// </summary>
         [JsonProperty("lastTransitionTime")]
-        public DateTime LastTransitionTime { get; set; }
+        public DateTime? LastTransitionTime { get; set; }
 
         /// <summary>
         ///     Human-readable message indicating details about last transition.

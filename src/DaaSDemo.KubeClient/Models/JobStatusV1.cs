@@ -31,13 +31,13 @@ namespace DaaSDemo.KubeClient.Models
         ///     Represents time when the job was completed. It is not guaranteed to be set in happens-before order across separate operations. It is represented in RFC3339 form and is in UTC.
         /// </summary>
         [JsonProperty("completionTime")]
-        public DateTime CompletionTime { get; set; }
+        public DateTime? CompletionTime { get; set; }
 
         /// <summary>
         ///     Represents time when the job was acknowledged by the job controller. It is not guaranteed to be set in happens-before order across separate operations. It is represented in RFC3339 form and is in UTC.
         /// </summary>
         [JsonProperty("startTime")]
-        public DateTime StartTime { get; set; }
+        public DateTime? StartTime { get; set; }
 
         /// <summary>
         ///     The latest available observations of an object's current state. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/

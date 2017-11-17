@@ -37,7 +37,7 @@ namespace DaaSDemo.KubeClient.Models
         ///     RFC 3339 date and time at which the object was acknowledged by the Kubelet. This is before the Kubelet pulled the container image(s) for the pod.
         /// </summary>
         [JsonProperty("startTime")]
-        public DateTime StartTime { get; set; }
+        public DateTime? StartTime { get; set; }
 
         /// <summary>
         ///     A brief CamelCase message indicating details about why the pod is in this state. e.g. 'OutOfDisk'

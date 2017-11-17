@@ -19,6 +19,6 @@ namespace DaaSDemo.KubeClient.Models
         ///     Information when was the last time the job was successfully scheduled.
         /// </summary>
         [JsonProperty("lastScheduleTime")]
-        public DateTime LastScheduleTime { get; set; }
+        public DateTime? LastScheduleTime { get; set; }
     }
 }

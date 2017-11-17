@@ -36,8 +36,8 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Optional duration in seconds relative to the startTime that the job may be active before the system tries to terminate it; value must be positive integer
         /// </summary>
-        [JsonProperty("activeDeadlineSeconds", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
-        public int ActiveDeadlineSeconds { get; set; }
+        [JsonProperty("activeDeadlineSeconds")]
+        public int? ActiveDeadlineSeconds { get; set; }
 
         /// <summary>
         ///     Specifies the desired number of successfully finished pods the job should be run with.  Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value.  Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
