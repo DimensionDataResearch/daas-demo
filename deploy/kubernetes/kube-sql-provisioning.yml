@@ -28,11 +28,16 @@ spec:
         env:
           - name: IN_KUBERNETES
             value: '1'
-          - name: ASPNETCORE_KUBERNETES__ClusterPublicFQDN
+          - name: DAAS_Provisioning__Images__SQL
+            valueFrom:
+              configMapKeyRef:
+                name: sql-provisioning
+                key: image_name_sql
+          - name: DAAS_Kubernetes__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
-          - name: ASPNETCORE_KUBERNETES__VolumeClaimName
+          - name: DAAS_Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
-          - name: ASPNETCORE_DATABASE__ConnectionString
+          - name: DAAS_Database__ConnectionString
             valueFrom:
               secretKeyRef:
                 name: sql-provisioning

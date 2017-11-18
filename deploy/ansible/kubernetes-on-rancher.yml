@@ -26,9 +26,11 @@
   tags:
     - docker
 
-- hosts: role=kube-host
+- hosts:
+    - role=kube-host
+    - role=kube-storage
   vars:
-    agent_target_url: '' # Enter the target URL here (e.g. 'https://foo.bar.com/v1/scripts/XXXXX:YYY:XXX', as shown in the Rancher UI)
+    agent_target_url: 'https://rancherlab.itaas-cloud.com/v1/scripts/0CADE05589B500C4CAB5:1483142400000:XtKPJtzhlpziIOnh3lE9u3gczg' # Enter the target URL here (e.g. 'https://foo.bar.com/v1/scripts/XXXXX:YYY:XXX', as shown in the Rancher UI)
   roles:
     - rancher-agent
   tags:

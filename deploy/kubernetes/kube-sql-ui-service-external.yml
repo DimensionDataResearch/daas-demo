@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-ui-external
+  labels:
+    k8s-app: sql-ui
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    nodePort: 31313
+    targetPort: 5000
+    protocol: TCP
+    name: sql-ui
+  selector:
+    k8s-app: sql-ui

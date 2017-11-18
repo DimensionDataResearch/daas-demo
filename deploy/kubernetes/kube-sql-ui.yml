@@ -1,0 +1,46 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: sql-ui
+  labels:
+    k8s-app: sql-ui
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      k8s-app: sql-ui
+
+  strategy:
+        type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        k8s-app: sql-ui
+    spec:
+      serviceAccountName: sql-ui
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: sql-ui
+        image: tintoy.azurecr.io/daas/ui:1.0.0-dev
+        imagePullPolicy: Always
+        env:
+          - name: PORT
+            value: '5000'
+          - name: IN_KUBERNETES
+            value: '1'
+          - name: ASPNETCORE_URLS
+            value: 'http://*:5000'
+          - name: ASPNETCORE_API__EndPoint
+            value: 'http://kr-cluster.tintoy.io:31200/api/v1/'
+          - name: ASPNETCORE_DATABASE__ConnectionString
+            valueFrom:
+              secretKeyRef:
+                name: sql-ui
+                key: connection_string
+        ports:
+          - containerPort: 5000
+      
+      imagePullSecrets:
+          - name: daas-registry
