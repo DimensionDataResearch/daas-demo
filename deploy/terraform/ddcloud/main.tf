@@ -12,6 +12,9 @@ variable "target_vlan"            { }
 # The number of worker hosts to deploy.
 variable "host_count"             { default = 3 }
 
+# The number of Kubernetes storage hosts to deploy.
+variable "kube_storage_host_count"     { default = 4 }
+
 # The number of storage hosts to deploy (leave this as 1 unless you're planning on deploying something like Gluster or Ceph).
 variable "storage_host_count"     { default = 1 }
 
