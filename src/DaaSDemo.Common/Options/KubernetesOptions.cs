@@ -15,6 +15,16 @@ namespace DaaSDemo.Common.Options
         public string KubeNamespace { get; set; }
 
         /// <summary>
+        ///     The fully-qualified (public) domain name of the Kubernetes cluster.
+        /// </summary>
+        public string ClusterPublicFQDN { get; set; }
+
+        /// <summary>
+        ///     The name of the volume claim representing the volume used to store tenant databases.
+        /// </summary>
+        public string VolumeClaimName { get; set; }
+
+        /// <summary>
         ///     The base address of the Kubernetes API end-point.
         /// </summary>
         public string ApiEndPoint { get; set; }

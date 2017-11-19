@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using System.IO;
 
 namespace DaaSDemo.Provisioning.Host
 {
+    using Common.Options;
     using Data;
 
     /// <summary>
@@ -49,12 +51,21 @@ namespace DaaSDemo.Provisioning.Host
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddOptions()
+                        .Configure<DatabaseOptions>("Database", hostContext.Configuration)
+                        .Configure<SqlExecutorClientOptions>("SQL", hostContext.Configuration)
+                        .Configure<KubernetesOptions>("Kubernetes", hostContext.Configuration)
+                        .Configure<PrometheusOptions>("Prometheus", hostContext.Configuration)
+                        .Configure<ProvisioningOptions>("Provisioning", hostContext.Configuration);
+
+                    DatabaseOptions databaseOptions = DatabaseOptions.From(hostContext.Configuration);
+                    if (String.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
+                        throw new InvalidOperationException("Application configuration is missing database connection string.");
+
                     services.AddEntityFrameworkSqlServer()
                         .AddDbContext<Entities>(entities =>
                         {
-                            entities.UseSqlServer(
-                                connectionString: hostContext.Configuration.GetValue<string>("Database:ConnectionString")
-                            );
+                            entities.UseSqlServer(databaseOptions.ConnectionString);
                         });
 
                     if (Environment.GetEnvironmentVariable("IN_KUBERNETES") == "1")
@@ -69,11 +80,13 @@ namespace DaaSDemo.Provisioning.Host
                         // For debugging purposes only.
                         services.AddTransient<KubeClient.KubeApiClient>(serviceProvider =>
                         {
+                            KubernetesOptions kubernetesOptions = serviceProvider.GetRequiredService<IOptions<KubernetesOptions>>().Value;
+                            if (String.IsNullOrWhiteSpace(kubernetesOptions.ApiEndPoint))
+                                throw new InvalidOperationException("Application configuration is missing Kubernetes API end-point.");
+
                             return KubeClient.KubeApiClient.Create(
-                                endPointUri: new Uri(
-                                    hostContext.Configuration.GetValue<string>("Kubernetes:ApiEndPoint")
-                                ),
-                                accessToken: hostContext.Configuration.GetValue<string>("Kubernetes:Token")
+                                endPointUri: new Uri(kubernetesOptions.ApiEndPoint),
+                                accessToken: kubernetesOptions.Token
                             );
                         });
                     }

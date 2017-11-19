@@ -6,6 +6,8 @@ using System;
 
 namespace DaaSDemo.Provisioning
 {
+    using Common.Options;
+
     /// <summary>
     ///     Startup logic for the provisioning actor system.
     /// </summary>
@@ -22,52 +24,73 @@ namespace DaaSDemo.Provisioning
         /// <summary>
         ///     Start the provisioning actor system.
         /// </summary>
-        /// <param name="appConfiguration">
-        ///     The application-level configuration.
+        /// <param name="databaseOptions">
+        ///     The application's database options.
         /// </param>
-        public static ActorSystem Up(IConfiguration appConfiguration)
+        /// <param name="sqlClientOptions">
+        ///     The application's SQL Executor API client options.
+        /// </param>
+        /// <param name="kubeOptions">
+        ///     The application's Kubernetes options.
+        /// </param>
+        /// <param name="prometheusOptions">
+        ///     The application's Prometheus options.
+        /// </param>
+        /// <param name="provisioningOptions">
+        ///     The application's provisioning options.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="ActorSystem"/>.
+        /// </returns>
+        public static ActorSystem Up(DatabaseOptions databaseOptions, SqlExecutorClientOptions sqlClientOptions, KubernetesOptions kubeOptions, PrometheusOptions prometheusOptions, ProvisioningOptions provisioningOptions)
         {
-            string connectionString = appConfiguration["Database:ConnectionString"];
+            if (databaseOptions == null)
+                throw new ArgumentNullException(nameof(databaseOptions));
+
+            if (sqlClientOptions == null)
+                throw new ArgumentNullException(nameof(sqlClientOptions));
+
+            if (kubeOptions == null)
+                throw new ArgumentNullException(nameof(kubeOptions));
+
+            if (prometheusOptions == null)
+                throw new ArgumentNullException(nameof(prometheusOptions));
+
+            if (provisioningOptions == null)
+                throw new ArgumentNullException(nameof(provisioningOptions));
+
             Config databaseConfig = ConfigurationFactory.ParseString($@"
-                daas.db.connection-string = ""{connectionString}""
+                daas.db.connection-string = ""{databaseOptions.ConnectionString}""
             ");
 
-            string sqlImageName = appConfiguration["Provisioning:Images:SQL"];
-            string sqlExporterImageName = appConfiguration["Provisioning:Images:SQLExporter"];
             Config provisioningConfig = ConfigurationFactory.ParseString($@"
-                daas.kube.sql-image-name = ""{sqlImageName}""
-                daas.kube.sql-exporter-image-name = ""{sqlExporterImageName}""
+                daas.kube.sql-image-name = ""{provisioningOptions.Images.SQL}""
+                daas.kube.sql-exporter-image-name = ""{provisioningOptions.Images.SQLExporter}""
             ");
 
-            string kubeApiEndpoint = appConfiguration["Kubernetes:ApiEndPoint"];
-            string kubeApiToken = appConfiguration["Kubernetes:Token"];
-            string clusterPublicDomainName = appConfiguration["Kubernetes:ClusterPublicFQDN"];
-            string volumeClaimName = appConfiguration["Kubernetes:VolumeClaimName"];
             Config kubeConfig = ConfigurationFactory.ParseString($@"
-                daas.kube.api-endpoint = ""{kubeApiEndpoint}""
-                daas.kube.api-token = ""{kubeApiToken}""
-                daas.kube.cluster-public-fqdn = ""{clusterPublicDomainName}""
-                daas.kube.volume-claim-name = ""{volumeClaimName}""
+                daas.kube.api-endpoint = ""{kubeOptions.ApiEndPoint}""
+                daas.kube.api-token = ""{kubeOptions.Token}""
+                daas.kube.cluster-public-fqdn = ""{kubeOptions.ClusterPublicFQDN}""
+                daas.kube.volume-claim-name = ""{kubeOptions.VolumeClaimName}""
             ");
 
-            string enablePrometheus = appConfiguration["Prometheus:Enable"];
-            string prometheusApiEndPoint = appConfiguration["Prometheus:ApiEndPoint"];
             Config prometheusConfig = ConfigurationFactory.ParseString($@"
-                daas.prometheus.enable = {enablePrometheus}
-                daas.prometheus.api-endpoint = ""{prometheusApiEndPoint}""
+                daas.prometheus.enable = {prometheusOptions.Enable}
+                daas.prometheus.api-endpoint = ""{prometheusOptions.ApiEndPoint}""
             ");
 
-            string sqlApiEndPoint = appConfiguration["SQL:ApiEndPoint"];
-            Config sqlConfig = ConfigurationFactory.ParseString($@"
-                daas.sql.api-endpoint = ""{sqlApiEndPoint}""
+            Config sqlClientConfig = ConfigurationFactory.ParseString($@"
+                daas.sql.api-endpoint = ""{sqlClientOptions.ApiEndPoint}""
             ");
 
             return ActorSystem.Create("daas-demo",
                 BaseConfiguration
                     .WithFallback(databaseConfig)
                     .WithFallback(provisioningConfig)
+                    .WithFallback(prometheusConfig)
                     .WithFallback(kubeConfig)
-                    .WithFallback(sqlConfig)
+                    .WithFallback(sqlClientConfig)
             );
         }
     }
