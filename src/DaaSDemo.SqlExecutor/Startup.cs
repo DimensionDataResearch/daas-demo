@@ -13,6 +13,7 @@ using Newtonsoft.Json.Converters;
 
 namespace DaaSDemo.SqlExecutor
 {
+    using Common.Options;
     using Data;
 
     /// <summary>
@@ -32,12 +33,24 @@ namespace DaaSDemo.SqlExecutor
                 throw new ArgumentNullException(nameof(configuration));
     
             Configuration = configuration;
+            DatabaseOptions = DatabaseOptions.From(Configuration);
+            KubernetesOptions = KubernetesOptions.From(Configuration);
         }
 
         /// <summary>
         ///     The application configuration.
         /// </summary>
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        ///     Database options for the application.
+        /// </summary>
+        public DatabaseOptions DatabaseOptions { get; }
+
+        /// <summary>
+        ///     Database options for the application.
+        /// </summary>
+        public KubernetesOptions KubernetesOptions { get; }
 
         /// <summary>
         ///     Configure application services.
@@ -50,12 +63,18 @@ namespace DaaSDemo.SqlExecutor
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
+            services.AddOptions()
+                .Configure<DatabaseOptions>("Database", Configuration)
+                .Configure<KubernetesOptions>("Kubernetes", Configuration);
+
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {
-                    entities.UseSqlServer(
-                        connectionString: Configuration.GetValue<string>("Database:ConnectionString")
-                    );
+                    string connectionString = DatabaseOptions.ConnectionString;
+                    if (String.IsNullOrWhiteSpace(connectionString))
+                        throw new InvalidOperationException("Application configuration is missing database connection string.");
+
+                    entities.UseSqlServer(connectionString);
                 });
 
             services.AddMvc()
@@ -79,13 +98,17 @@ namespace DaaSDemo.SqlExecutor
             }
             else
             {
+                if (String.IsNullOrWhiteSpace(KubernetesOptions.ApiEndPoint))
+                    throw new InvalidOperationException("Application configuration is missing Kubernetes API end-point.");
+
+                if (String.IsNullOrWhiteSpace(KubernetesOptions.Token))
+                    throw new InvalidOperationException("Application configuration is missing Kubernetes API token.");
+
                 // For debugging purposes only.
                 services.AddSingleton<KubeClient.KubeApiClient>(
                     serviceProvider => KubeClient.KubeApiClient.Create(
-                        endPointUri: new Uri(
-                            Configuration.GetValue<string>("Kubernetes:ApiEndPoint")
-                        ),
-                        accessToken: Configuration.GetValue<string>("Kubernetes:Token")
+                        endPointUri: new Uri(KubernetesOptions.ApiEndPoint),
+                        accessToken: KubernetesOptions.Token
                     )
                 );
             }

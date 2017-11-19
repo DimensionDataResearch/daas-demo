@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ using SqlClient = System.Data.SqlClient;
 
 namespace DaaSDemo.SqlExecutor.Controllers
 {
+    using Common.Options;
     using Data;
     using Models.Data;
     using KubeClient;
@@ -36,10 +38,16 @@ namespace DaaSDemo.SqlExecutor.Controllers
         /// <param name="entities">
         ///     The DaaS entity context.
         /// </param>
+        /// <param name="kubeClient">
+        ///     The Kubernetes API client.
+        /// </param>
+        /// <param name="kubeOptions">
+        ///     The application's Kubernetes options.
+        /// </param>
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public SqlController(Entities entities, KubeApiClient kubeClient, ILogger<SqlController> logger)
+        public SqlController(Entities entities, KubeApiClient kubeClient, IOptions<KubernetesOptions> kubeOptions, ILogger<SqlController> logger)
         {
             if (entities == null)
                 throw new ArgumentNullException(nameof(entities));
@@ -47,11 +55,15 @@ namespace DaaSDemo.SqlExecutor.Controllers
             if (kubeClient == null)
                 throw new ArgumentNullException(nameof(kubeClient));
 
+            if (kubeOptions == null)
+                throw new ArgumentNullException(nameof(kubeOptions));
+
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
             
             Entities = entities;
             KubeClient = kubeClient;
+            KubeOptions = kubeOptions.Value;
             Log = logger;
         }
 
@@ -69,6 +81,11 @@ namespace DaaSDemo.SqlExecutor.Controllers
         ///     The Kubernetes API client.
         /// </summary>
         KubeApiClient KubeClient { get; }
+
+        /// <summary>
+        ///     The application's Kubernetes options.
+        /// </summary>
+        KubernetesOptions KubeOptions { get; }
 
         /// <summary>
         ///     Execute T-SQL as a command (i.e. non-query).
@@ -319,7 +336,8 @@ namespace DaaSDemo.SqlExecutor.Controllers
             }
 
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal",
+                kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)
             {

@@ -15,6 +15,16 @@ namespace DaaSDemo.Common.Options
         public string KubeNamespace { get; set; }
 
         /// <summary>
+        ///     The base address of the Kubernetes API end-point.
+        /// </summary>
+        public string ApiEndPoint { get; set; }
+
+        /// <summary>
+        ///     The access token for the Kubernetes API end-point.
+        /// </summary>
+        public string Token { get; }
+
+        /// <summary>
         ///     Load <see cref="KubernetesOptions"/> from configuration.
         /// </summary>
         /// <param name="configuration">

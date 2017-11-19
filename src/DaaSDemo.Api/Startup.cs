@@ -46,12 +46,12 @@ namespace DaaSDemo.Api
         /// <summary>
         ///     CORS options for the application.
         /// </summary>
-        public CorsOptions CorsOptions { get; } = new CorsOptions();
+        public CorsOptions CorsOptions { get; }
 
         /// <summary>
         ///     Database options for the application.
         /// </summary>
-        public DatabaseOptions DatabaseOptions { get; } = new DatabaseOptions();
+        public DatabaseOptions DatabaseOptions { get; }
 
         /// <summary>
         ///     Configure application services.
@@ -78,15 +78,9 @@ namespace DaaSDemo.Api
                 });
 
             services.AddOptions()
-                .Configure<CorsOptions>(
-                    Configuration.GetSection("CORS")
-                )
-                .Configure<DatabaseOptions>(
-                    Configuration.GetSection("Database")
-                )
-                .Configure<KubernetesOptions>(
-                    Configuration.GetSection("Kubernetes")
-                );
+                .Configure<CorsOptions>("CORS", Configuration)
+                .Configure<DatabaseOptions>("Database", Configuration)
+                .Configure<KubernetesOptions>("Kubernetes", Configuration);
 
             services.AddCors(cors =>
             {
