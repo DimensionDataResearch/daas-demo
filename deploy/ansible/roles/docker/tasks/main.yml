@@ -10,7 +10,7 @@
 - name: add repo for Docker packages
   sudo: yes
   apt_repository:
-    repo: 'deb [arch=amd64] https://apt.dockerproject.org/repo ubuntu-trusty main'
+    repo: 'deb [arch=amd64] https://apt.dockerproject.org/repo ubuntu-xenial main'
     state: present
     update_cache: true
 
