@@ -67,6 +67,13 @@ namespace DaaSDemo.Provisioning
                     Spec = new PodSpecV1
                     {
                         TerminationGracePeriodSeconds = 60,
+                        ImagePullSecrets = new List<LocalObjectReferenceV1>
+                        {
+                            new LocalObjectReferenceV1
+                            {
+                                Name = "daas-registry"
+                            }
+                        },
                         Containers = new List<ContainerV1>
                         {
                             new ContainerV1
@@ -180,6 +187,13 @@ namespace DaaSDemo.Provisioning
                     Spec = new PodSpecV1
                     {
                         TerminationGracePeriodSeconds = 60,
+                        ImagePullSecrets = new List<LocalObjectReferenceV1>
+                        {
+                            new LocalObjectReferenceV1
+                            {
+                                Name = "daas-registry"
+                            }
+                        },
                         Containers = new List<ContainerV1>
                         {
                             // SQL Server
