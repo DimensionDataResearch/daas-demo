@@ -67,6 +67,17 @@ resource "ddcloud_nat" "storage_host" {
 	private_ipv4	= "${element(ddcloud_server.storage_host.*.primary_adapter_ipv4, count.index)}"
 }
 
+resource "cloudflare_record" "storage_host" {
+    count   = "${var.storage_host_count}"
+
+    domain  = "${var.domain_name}"
+    name    = "${element(ddcloud_server.storage_host.*.name, count.index)}.${var.subdomain_name}"
+    value   = "${element(ddcloud_nat.storage_host.*.public_ipv4, count.index)}"
+    type    = "A"
+
+    proxied = false
+}
+
 resource "ddcloud_address_list" "storage_hosts" {
 	name			= "StorageHosts"
 	ip_version		= "IPv4"

@@ -59,6 +59,28 @@ resource "ddcloud_nat" "kube_host" {
 	private_ipv4	= "${element(ddcloud_server.kube_host.*.primary_adapter_ipv4, count.index)}"
 }
 
+resource "cloudflare_record" "kube_host" {
+    count   = "${var.host_count}"
+
+    domain  = "${var.domain_name}"
+    name    = "${element(ddcloud_server.kube_host.*.name, count.index)}.${var.subdomain_name}"
+    value   = "${element(ddcloud_nat.kube_host.*.public_ipv4, count.index)}"
+    type    = "A"
+
+    proxied = false
+}
+
+resource "cloudflare_record" "kube_host_wildcard" {
+    count   = "${var.host_count}"
+
+    domain  = "${var.domain_name}"
+    name    = "*.${var.subdomain_name}"
+    value   = "${element(ddcloud_nat.kube_host.*.public_ipv4, count.index)}"
+    type    = "A"
+
+    proxied = false
+}
+
 resource "ddcloud_address_list" "kube_hosts" {
 	name			= "KubeHosts"
 	ip_version		= "IPv4"

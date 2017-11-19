@@ -66,6 +66,17 @@ resource "ddcloud_nat" "kube_storage_host" {
 	private_ipv4	= "${element(ddcloud_server.kube_storage_host.*.primary_adapter_ipv4, count.index)}"
 }
 
+resource "cloudflare_record" "kube_storage_host" {
+    count   = "${var.kube_storage_host_count}"
+
+    domain  = "${var.domain_name}"
+    name    = "${element(ddcloud_server.kube_storage_host.*.name, count.index)}.${var.subdomain_name}"
+    value   = "${element(ddcloud_nat.kube_storage_host.*.public_ipv4, count.index)}"
+    type    = "A"
+
+    proxied = false
+}
+
 resource "ddcloud_address_list" "kube_storage_hosts" {
 	name			= "KubeStorageHosts"
 	ip_version		= "IPv4"
