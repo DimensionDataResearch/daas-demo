@@ -7,6 +7,15 @@
   tags:
     - common
 
+  # TODO: Add SPECIFIC firewall exceptions for ports used by Kubernetes rather than just disabling UFW
+- hosts: all
+  tasks:
+    - name: Disable firewall (yesyesyes, can't be bothered right now)
+      ufw:
+        state: disabled
+  tags:
+    - firewall
+
 - hosts: role=storage-host
   vars:
     initial_nfs_volume: /dev/sdb
@@ -25,15 +34,6 @@
     - docker
   tags:
     - docker
-
-# TODO: Add SPECIFIC firewall exceptions for ports used by Kubernetes
-- hosts: all
-  tasks:
-    - name: Disable firewall (yesyesyes, can't be bothered right now)
-      ufw:
-        state: disabled
-  tags:
-    - firewall
 
 - hosts:
     - role=kube-host

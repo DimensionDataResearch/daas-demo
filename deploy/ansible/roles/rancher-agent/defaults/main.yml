@@ -1,4 +1,4 @@
 ---
 
 # The version of the Rancher agent to install.
-agent_version: 1.2.6
+agent_version: 1.2.7
