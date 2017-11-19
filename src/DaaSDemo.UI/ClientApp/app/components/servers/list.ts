@@ -1,11 +1,12 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
 
-import { DaaSAPI, Server } from '../api/daas-api';
+import { DaaSAPI, Server, ProvisioningAction } from '../api/daas-api';
 
 @inject(DaaSAPI)
 export class ServerList {
     private routeConfig: RouteConfig;
+    private pollHandle: number = 0;
 
     @bindable public servers: Server[] = [];
     @bindable public errorMessage: string | null = null;
@@ -51,25 +52,65 @@ export class ServerList {
     public activate(params: any, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
 
-        this.load();
+        this.load(false);
+    }
+
+    /**
+     * Called when the component is deactivated.
+     */
+    public deactivate(): void {
+        if (this.pollHandle) {
+            window.clearTimeout(this.pollHandle);
+            this.pollHandle = 0;
+        }
     }
 
     /**
      * Load tenant details.
+     * 
+     * @param isReload False if this is the initial load.
      */
-    private async load(): Promise<void> {
-        this.isLoading = true;
+    private async load(isReload: boolean): Promise<void> {
+        if (!isReload)
+            this.isLoading = true;
 
         try
         {
             this.servers = await this.api.getServers();
+
+            if (this.servers && this.servers.find(server => server.action != ProvisioningAction.None)) {
+                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
+            } else {
+                this.pollHandle = 0;
+            }
         }
         catch (error) {
             this.showError(error as Error)
         }
         finally {
-            this.isLoading = false;
+            if (!isReload)
+                this.isLoading = false;
         }
+    }
+
+    /**
+     * Repair a server.
+     * 
+     * @param server The server to repair.
+     */
+    public async repairServer(server: Server): Promise<void> {
+        await this.api.reconfigureTenantServer(server.tenantId);
+        await this.load(true);
+    }
+
+    /**
+     * Destroy a server.
+     * 
+     * @param server The server to destroy.
+     */
+    public async destroyServer(server: Server): Promise<void> {
+        await this.api.destroyTenantServer(server.tenantId);
+        await this.load(true);
     }
 
     /**

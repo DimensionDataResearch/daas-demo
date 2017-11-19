@@ -4,14 +4,14 @@ import { bindable } from 'aurelia-framework';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { Server, Database } from '../../api/daas-api';
+import { Server } from '../../api/daas-api';
 
 const noAction = () => {};
 
-export class DatabaseActionsMenu {
+export class ServerActionsMenu {
     @bindable private rootElement: Element | null = null;
     
-    @bindable public database: Database | null = null;
+    @bindable public server: Server | null = null;
     @bindable public repairClicked: () => void = noAction;
     @bindable public destroyClicked: () => void = noAction;
 
@@ -24,10 +24,10 @@ export class DatabaseActionsMenu {
     }
 
     public get canRepair(): boolean {
-        if (!this.database)
+        if (!this.server)
             return false;
 
-        switch (this.database.status) {
+        switch (this.server.status) {
             case 'Ready':
             case 'Error':
                 return true;
@@ -37,10 +37,10 @@ export class DatabaseActionsMenu {
     }
 
     public get canDestroy(): boolean {
-        if (!this.database)
+        if (!this.server)
             return false;
 
-        switch (this.database.status) {
+        switch (this.server.status) {
             case 'Ready':
             case 'Error':
                 return true;

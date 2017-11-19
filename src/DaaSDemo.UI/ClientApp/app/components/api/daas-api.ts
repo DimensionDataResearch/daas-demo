@@ -267,6 +267,30 @@ export class DaaSAPI
     }
 
     /**
+     * Reconfigure a tenant's database server.
+     * 
+     * @param tenantId The tenant Id.
+     */
+    public async reconfigureTenantServer(tenantId: number): Promise<void> {
+        await this.configured;
+
+        const response = await this.http.fetch(`tenants/${tenantId}/server/reconfigure`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            return
+        }
+
+        const body = await response.json();
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to reconfigure server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Create a database for a tenant.
      * 
      * @param tenantId The tenant Id.

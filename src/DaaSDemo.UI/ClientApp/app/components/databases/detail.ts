@@ -35,6 +35,14 @@ export class DatabaseDetail {
     }
 
     /**
+     * Is the database ready for use?
+     */
+    @computedFrom('database')
+    public get isDatabaseReady(): boolean {
+        return this.database !== null && this.database.status == ProvisioningStatus.Ready;
+    }
+
+    /**
      * Has an error occurred?
      */
     @computedFrom('errorMessage')

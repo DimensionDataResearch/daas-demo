@@ -5,12 +5,12 @@
         <div class="menu">
             <div class="item" class.bind="!canRepair ? 'disabled' : ''">
                 <a click.delegate="repairClicked()">
-                    <i class="blue circle refresh icon"></i> Repair
+                    <i class="blue refresh icon"></i> Repair
                 </a>
             </div>
             <div class="item" class.bind="!canDestroy ? 'disabled' : ''">
                 <a click.delegate="destroyClicked()">
-                    <i class="red circle delete icon"></i> Destroy
+                    <i class="red delete icon"></i> Destroy
                 </a>
             </div>
         </div>

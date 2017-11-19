@@ -21,6 +21,11 @@
                 <strong>Status</strong>:
                 <database-provisioning-status database.bind="database"></database-provisioning-status>
                 <br/>
+                <br/>
+                <div if.bind="isDatabaseReady">
+                    <h3 class="ui dividing header">Connectivity</h3>
+                    <strong>Connection String</strong>: ${database.connectionString}
+                </div>
             </div>
         </div>
 
