@@ -1,14 +1,11 @@
 ---
 - name: Add GPG key 1 for Docker packages
-  sudo: yes
   apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 
 - name: Add GPG key 2 for Docker packages
-  sudo: yes
   apt_key: keyserver=hkp://p80.pool.sks-keyservers.net:80 id=58118E89F3A912897C070ADBF76221572C52609D
 
 - name: add repo for Docker packages
-  sudo: yes
   apt_repository:
     repo: 'deb [arch=amd64] https://apt.dockerproject.org/repo ubuntu-xenial main'
     state: present
@@ -19,7 +16,6 @@
   register: uname_kernel_version
 
 - name: install docker packages
-  sudo: yes
   apt:
     name: "{{ item }}"
     state: present
@@ -29,12 +25,10 @@
     - "docker-engine={{docker_version}}~{{docker_version_distro}}"
 
 - name: enable docker
-  sudo: yes
   service:
     name: docker
     enabled: yes
     state: started
 
 - name: install latest docker-compose
-  sudo: yes
   shell: "curl -L https://github.com/docker/compose/releases/download/{{docker_compose_version}}/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose"

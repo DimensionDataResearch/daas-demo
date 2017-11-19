@@ -4,11 +4,9 @@
   tasks:
 
   - name: install aptitude
-    sudo: yes
     command: apt-get install -y aptitude
 
   - name: clean apt
-    sudo: yes
     command: apt-get clean
 
   - name: apt-get update
@@ -20,19 +18,16 @@
     register: uname_kernel_version
 
   - name: upgrade kernel package
-    sudo: yes
     apt:
       name: "linux-image-{{uname_kernel_version.stdout}}"
       state: latest
     register: kernel
 
   - name: upgrade all packages
-    sudo: yes
     apt:
       upgrade: safe
 
   - name: reboot host
-    sudo: yes
     shell: nohup bash -c "sleep 2s && reboot" &
     register: reboot
     when: kernel.changed

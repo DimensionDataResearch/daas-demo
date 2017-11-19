@@ -4,7 +4,6 @@
   tasks:
     - name: restart server
       shell: sleep 2 && shutdown -r now "Installed Ansible updates"
-      sudo: true
 
       async: 1
       poll: 0
