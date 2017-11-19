@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: sql-prometheus
+  labels:
+    cloud.dimensiondata.daas.prometheus-type: "sql-server"
+spec:
+  labels:
+    cloud.dimensiondata.daas.prometheus-type: "sql-server"
+  serviceMonitorSelector:
+    matchLabels:
+      cloud.dimensiondata.daas.monitor-type: "sql-server"
+  resources:
+    requests:
+      memory: 400Mi

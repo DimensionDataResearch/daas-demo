@@ -1,0 +1,80 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: rook-agent
+  name: rook-agent
+  namespace: rook-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: rook-agent
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: rook-agent
+    spec:
+      tolerations:
+      - key: role
+        value: storage
+        effect: NoSchedule
+      containers:
+      - args:
+        - agent
+        image: rook/rook:master
+        imagePullPolicy: IfNotPresent
+        name: rook-agent
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        resources: {}
+        securityContext:
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /flexmnt
+          name: flexvolume
+        - mountPath: /dev
+          name: dev
+        - mountPath: /sys
+          name: sys
+        - mountPath: /lib/modules
+          name: libmodules
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: rook-agent
+      serviceAccountName: rook-agent
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet/volumeplugins
+          type: ""
+        name: flexvolume
+      - hostPath:
+          path: /dev
+          type: ""
+        name: dev
+      - hostPath:
+          path: /sys
+          type: ""
+        name: sys
+      - hostPath:
+          path: /lib/modules
+          type: ""
+        name: libmodules
+  updateStrategy:
+    type: OnDelete

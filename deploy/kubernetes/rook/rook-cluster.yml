@@ -1,0 +1,31 @@
+apiVersion: rook.io/v1alpha1
+kind: Cluster
+metadata:
+  name: rook
+  namespace: rook
+spec:
+  versionTag: master
+  dataDirHostPath: /var/lib/rook
+  hostNetwork: false
+  monCount: 3
+  storage:
+    useAllNodes: false
+    useAllDevices: false
+    location:
+    storeConfig:
+      storeType: bluestore
+      databaseSizeMB: 1024
+      journalSizeMB: 1024
+    nodes:
+    - name: "kube-storage-01"
+      devices:
+      - name: "sdb"
+    - name: "kube-storage-02"
+      devices:
+      - name: "sdb"
+    - name: "kube-storage-03"
+      devices:
+      - name: "sdb"
+    - name: "kube-storage-04"
+      devices:
+      - name: "sdb"
