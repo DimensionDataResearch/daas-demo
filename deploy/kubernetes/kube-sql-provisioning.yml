@@ -33,8 +33,12 @@ spec:
               configMapKeyRef:
                 name: sql-provisioning
                 key: image_name_sql
+          - name: DAAS_Prometheus__ApiEndPoint
+            value: http://prometheus.kr-cluster.tintoy.io:30900/
+          - name: DAAS_SQL__ApiEndPoint
+            value: http://sql-executor-internal.default.svc.cluster.local:5000/
           - name: DAAS_Kubernetes__ClusterPublicFQDN
-            value: 'kr-cluster.tintoy.io'
+            value: 'sql.kr-cluster.tintoy.io'
           - name: DAAS_Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
           - name: DAAS_Database__ConnectionString
