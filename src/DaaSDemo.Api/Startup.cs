@@ -13,6 +13,7 @@ using Newtonsoft.Json.Converters;
 
 namespace DaaSDemo.Api
 {
+    using Common.Options;
     using Data;
     using Serilog;
 
@@ -33,12 +34,24 @@ namespace DaaSDemo.Api
                 throw new ArgumentNullException(nameof(configuration));
 
             Configuration = configuration;
+            CorsOptions = CorsOptions.From(Configuration);
+            DatabaseOptions = DatabaseOptions.From(Configuration);
         }
 
         /// <summary>
         ///     The application configuration.
         /// </summary>
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        ///     CORS options for the application.
+        /// </summary>
+        public CorsOptions CorsOptions { get; } = new CorsOptions();
+
+        /// <summary>
+        ///     Database options for the application.
+        /// </summary>
+        public DatabaseOptions DatabaseOptions { get; } = new DatabaseOptions();
 
         /// <summary>
         ///     Configure application services.
@@ -54,7 +67,9 @@ namespace DaaSDemo.Api
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {
-                    string connectionString = Configuration.GetValue<string>("Database:ConnectionString");
+                    string connectionString = DatabaseOptions.ConnectionString;
+                    if (String.IsNullOrWhiteSpace(connectionString))
+                        throw new InvalidOperationException("Application configuration is missing database connection string.");
 
                     entities.UseSqlServer(connectionString, sqlServer =>
                     {
@@ -62,10 +77,24 @@ namespace DaaSDemo.Api
                     });
                 });
 
+            services.AddOptions()
+                .Configure<CorsOptions>(
+                    Configuration.GetSection("CORS")
+                )
+                .Configure<DatabaseOptions>(
+                    Configuration.GetSection("Database")
+                )
+                .Configure<KubernetesOptions>(
+                    Configuration.GetSection("Kubernetes")
+                );
+
             services.AddCors(cors =>
             {
-                // Allow requests from the UI.
-                string[] uiBaseAddresses = Configuration.GetValue<string>("CORS:UI").Split(';');
+                if (String.IsNullOrWhiteSpace(CorsOptions.UI))
+                    throw new InvalidOperationException("Application configuration is missing CORS base address for UI.");
+
+                // Allow requests from the UI.                
+                string[] uiBaseAddresses = CorsOptions.UI.Split(';');
                 Log.Information("CORS enabled for UI: {@BaseAddresses}", uiBaseAddresses);
 
                 cors.AddPolicy("UI", policy =>
