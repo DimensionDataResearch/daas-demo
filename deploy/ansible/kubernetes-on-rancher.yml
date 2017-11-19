@@ -26,6 +26,8 @@
   tags:
     - docker
 
+# TODO: Add firewall exceptions for ports used by Kubernetes
+
 - hosts:
     - role=kube-host
     - role=kube-storage
