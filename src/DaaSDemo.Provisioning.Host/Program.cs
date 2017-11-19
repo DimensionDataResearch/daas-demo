@@ -52,11 +52,21 @@ namespace DaaSDemo.Provisioning.Host
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddOptions()
-                        .Configure<DatabaseOptions>("Database", hostContext.Configuration)
-                        .Configure<SqlExecutorClientOptions>("SQL", hostContext.Configuration)
-                        .Configure<KubernetesOptions>("Kubernetes", hostContext.Configuration)
-                        .Configure<PrometheusOptions>("Prometheus", hostContext.Configuration)
-                        .Configure<ProvisioningOptions>("Provisioning", hostContext.Configuration);
+                        .Configure<DatabaseOptions>(
+                            hostContext.Configuration.GetSection("Database")
+                        )
+                        .Configure<SqlExecutorClientOptions>(
+                            hostContext.Configuration.GetSection("SQL")
+                        )
+                        .Configure<KubernetesOptions>(
+                            hostContext.Configuration.GetSection("Kubernetes")
+                        )
+                        .Configure<PrometheusOptions>(
+                            hostContext.Configuration.GetSection("Prometheus")
+                        )
+                        .Configure<ProvisioningOptions>(
+                            hostContext.Configuration.GetSection("Provisioning")
+                        );
 
                     DatabaseOptions databaseOptions = DatabaseOptions.From(hostContext.Configuration);
                     if (String.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
