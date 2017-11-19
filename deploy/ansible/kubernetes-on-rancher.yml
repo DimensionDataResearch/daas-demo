@@ -26,7 +26,14 @@
   tags:
     - docker
 
-# TODO: Add firewall exceptions for ports used by Kubernetes
+# TODO: Add SPECIFIC firewall exceptions for ports used by Kubernetes
+- hosts: all
+  tasks:
+    - name: Disable firewall (yesyesyes, can't be bothered right now)
+      ufw:
+        state: disabled
+  tags:
+    - firewall
 
 - hosts:
     - role=kube-host
