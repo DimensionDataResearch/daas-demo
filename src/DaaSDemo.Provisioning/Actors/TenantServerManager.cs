@@ -151,17 +151,6 @@ namespace DaaSDemo.Provisioning.Actors
         protected override void PreStart() => Become(Initializing);
 
         /// <summary>
-        ///     Called when the actor has stopped.
-        /// </summary>
-        protected override void PostStop()
-        {
-            KubeClient.Dispose();
-            SqlClient.Dispose();
-
-            base.PostStop();
-        }
-
-        /// <summary>
         ///     Called when the actor is waiting for its <see cref="Initialize"/> message.
         /// </summary>
         void Initializing()
@@ -727,8 +716,9 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<PersistentVolumeClaimV1> FindDataVolumeClaim()
         {
             List<PersistentVolumeClaimV1> matchingPersistentVolumeClaims = await KubeClient.PersistentVolumeClaimsV1().List(
-                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}, cloud.dimensiondata.daas.volume-type = data"
-             );
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}, cloud.dimensiondata.daas.volume-type = data",
+                kubeNamespace: KubeOptions.KubeNamespace
+            );
 
             if (matchingPersistentVolumeClaims.Count == 0)
                 return null;
@@ -745,8 +735,9 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<DeploymentV1Beta1> FindDeployment()
         {
             List<DeploymentV1Beta1> matchingDeployments = await KubeClient.DeploymentsV1Beta1().List(
-                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
-             );
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}",
+                kubeNamespace: KubeOptions.KubeNamespace
+            );
 
             if (matchingDeployments.Count == 0)
                 return null;
@@ -763,7 +754,8 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<ServiceV1> FindInternalService()
         {
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal",
+                kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)
                 return null;
@@ -780,7 +772,8 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<PrometheusServiceMonitorV1> FindServiceMonitor()
         {
             List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server",
+                kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)
                 return null;
@@ -797,7 +790,8 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<ServiceV1> FindExternalService()
         {
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external",
+                kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)
                 return null;
@@ -830,7 +824,8 @@ namespace DaaSDemo.Provisioning.Actors
 
             PersistentVolumeClaimV1 createdPersistentVolumeClaim = await KubeClient.PersistentVolumeClaimsV1().Create(
                 KubeResources.DataVolumeClaim(CurrentState,
-                    requestedSizeMB: 200
+                    requestedSizeMB: 200,
+                    kubeNamespace: KubeOptions.KubeNamespace
                 )
             );
 
@@ -850,28 +845,41 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> EnsureDataVolumeClaimAbsent()
         {
-            PersistentVolumeClaimV1 controller = await FindDataVolumeClaim();
-            if (controller == null)
+            PersistentVolumeClaimV1 dataVolumeClaim = await FindDataVolumeClaim();
+            if (dataVolumeClaim == null)
                 return true;
 
             Log.Info("Deleting data-volume claim {PersistentVolumeClaimName} for server {ServerId}...",
-                controller.Metadata.Name,
+                dataVolumeClaim.Metadata.Name,
                 CurrentState.Id
             );
 
             try
             {
-                // TODO: First, find the claimed volume, and delete it once the PVC has been deleted.
-
                 await KubeClient.PersistentVolumeClaimsV1().Delete(
-                    name: controller.Metadata.Name,
+                    name: dataVolumeClaim.Metadata.Name,
+                    kubeNamespace: KubeOptions.KubeNamespace,
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
+
+                string dataVolumeName = dataVolumeClaim.Spec.VolumeName;
+                if (!String.IsNullOrWhiteSpace(dataVolumeClaim.Spec.VolumeName))
+                {
+                    Log.Info("Deleting data volume {PersistentVolumeName} for server {ServerId}...",
+                        dataVolumeName,
+                        CurrentState.Id
+                    );
+
+                    await KubeClient.PersistentVolumesV1().Delete(
+                        name: dataVolumeName,
+                        kubeNamespace: KubeOptions.KubeNamespace
+                    );
+                }
             }
             catch (HttpRequestException<StatusV1> deleteFailed)
             {
                 Log.Error("Failed to delete data-volume claim {PersistentVolumeClaimName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    controller.Metadata.Name,
+                    dataVolumeClaim.Metadata.Name,
                     CurrentState.Id,
                     deleteFailed.Response.Message,
                     deleteFailed.Response.Reason
@@ -881,7 +889,7 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             Log.Info("Deleted data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
-                controller.Metadata.Name,
+                dataVolumeClaim.Metadata.Name,
                 CurrentState.Id
             );
 
@@ -912,7 +920,9 @@ namespace DaaSDemo.Provisioning.Actors
             );
 
             DeploymentV1Beta1 createdDeployment = await KubeClient.DeploymentsV1Beta1().Create(
-                KubeResources.Deployment(CurrentState)
+                KubeResources.Deployment(CurrentState,
+                    kubeNamespace: KubeOptions.KubeNamespace
+                )
             );
 
             Log.Info("Successfully created deployment {DeploymentName} for server {ServerId}.",
@@ -944,6 +954,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 await KubeClient.DeploymentsV1Beta1().Delete(
                     name: controller.Metadata.Name,
+                    kubeNamespace: KubeOptions.KubeNamespace,
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
             }
@@ -983,7 +994,9 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 ServiceV1 createdService = await KubeClient.ServicesV1().Create(
-                    KubeResources.InternalService(CurrentState)
+                    KubeResources.InternalService(CurrentState,
+                        kubeNamespace: KubeOptions.KubeNamespace
+                    )
                 );
 
                 Log.Info("Successfully created internal service {ServiceName} for server {ServerId}.",
@@ -1014,7 +1027,8 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 StatusV1 result = await KubeClient.ServicesV1().Delete(
-                    name: existingInternalService.Metadata.Name
+                    name: existingInternalService.Metadata.Name,
+                    kubeNamespace: KubeOptions.KubeNamespace
                 );
 
                 if (result.Status != "Success" && result.Reason != "NotFound")
@@ -1050,7 +1064,9 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 PrometheusServiceMonitorV1 createdService = await KubeClient.PrometheusServiceMonitorsV1().Create(
-                    KubeResources.ServiceMonitor(CurrentState)
+                    KubeResources.ServiceMonitor(CurrentState,
+                        kubeNamespace: KubeOptions.KubeNamespace
+                    )
                 );
 
                 Log.Info("Successfully created service monitor {ServiceName} for server {ServerId}.",
@@ -1081,7 +1097,8 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 StatusV1 result = await KubeClient.PrometheusServiceMonitorsV1().Delete(
-                    name: existingServiceMonitor.Metadata.Name
+                    name: existingServiceMonitor.Metadata.Name,
+                    kubeNamespace: KubeOptions.KubeNamespace
                 );
 
                 if (result.Status != "Success" && result.Reason != "NotFound")
@@ -1117,7 +1134,9 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 ServiceV1 createdService = await KubeClient.ServicesV1().Create(
-                    KubeResources.ExternalService(CurrentState)
+                    KubeResources.ExternalService(CurrentState,
+                        kubeNamespace: KubeOptions.KubeNamespace
+                    )
                 );
 
                 Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
@@ -1148,7 +1167,8 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 StatusV1 result = await KubeClient.ServicesV1().Delete(
-                    name: existingExternalService.Metadata.Name
+                    name: existingExternalService.Metadata.Name,
+                    kubeNamespace: KubeOptions.KubeNamespace
                 );
 
                 if (result.Status != "Success" && result.Reason != "NotFound")
@@ -1176,7 +1196,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task UpdateServerIngressDetails()
         {
-            int? externalPort = await KubeClient.GetServerPublicPort(CurrentState);
+            int? externalPort = await KubeClient.GetServerPublicPort(CurrentState,
+                kubeNamespace: KubeOptions.KubeNamespace
+            );
             if (externalPort != null)
             {
                 if (KubeOptions.ClusterPublicFQDN != CurrentState.PublicFQDN || externalPort != CurrentState.PublicPort)

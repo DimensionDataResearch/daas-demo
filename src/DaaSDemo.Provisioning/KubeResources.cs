@@ -66,16 +66,20 @@ namespace DaaSDemo.Provisioning
         /// <param name="requestedSizeMB">
         ///     The requested volume size (in MB).
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="PersistentVolumeClaimV1"/>.
         /// </returns>
-        public PersistentVolumeClaimV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB)
+        public PersistentVolumeClaimV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
             return DataVolumeClaim(
                 name: Names.DataVolumeClaim(server),
+                kubeNamespace: kubeNamespace,
                 spec: Specs.DataVolumeClaim(server, requestedSizeMB),
                 labels: new Dictionary<string, string>
                 {
@@ -101,10 +105,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the persistent volume claim.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="PersistentVolumeClaimV1"/>.
         /// </returns>
-        public PersistentVolumeClaimV1 DataVolumeClaim(string name, PersistentVolumeClaimSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public PersistentVolumeClaimV1 DataVolumeClaim(string name, PersistentVolumeClaimSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -119,6 +126,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },
@@ -132,10 +140,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public DeploymentV1Beta1 Deployment(DatabaseServer server)
+        public DeploymentV1Beta1 Deployment(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -144,6 +155,7 @@ namespace DaaSDemo.Provisioning
             
             return Deployment(
                 name: baseName,
+                kubeNamespace: kubeNamespace,
                 spec: Specs.Deployment(server),
                 labels: new Dictionary<string, string>
                 {
@@ -168,10 +180,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the deployment.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public DeploymentV1Beta1 Deployment(string name, DeploymentSpecV1Beta1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public DeploymentV1Beta1 Deployment(string name, DeploymentSpecV1Beta1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -186,6 +201,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },
@@ -199,16 +215,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
-        /// <param name="imageName">
-        ///     The name (and tag) of the SQL Server for Linux image to use.
-        /// </param>
-        /// <param name="dataVolumeClaimName">
-        ///     The name of the Kubernetes VolumeClaim where the data will be stored.
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
         /// </param>
         /// <returns>
         ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public ReplicationControllerV1 ReplicationController(DatabaseServer server)
+        public ReplicationControllerV1 ReplicationController(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -217,6 +230,7 @@ namespace DaaSDemo.Provisioning
             
             return ReplicationController(
                 name: baseName,
+                kubeNamespace: kubeNamespace,
                 spec: Specs.ReplicationController(server),
                 labels: new Dictionary<string, string>
                 {
@@ -241,10 +255,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the replication controller.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public ReplicationControllerV1 ReplicationController(string name, ReplicationControllerSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public ReplicationControllerV1 ReplicationController(string name, ReplicationControllerSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -259,6 +276,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },
@@ -272,10 +290,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public ServiceV1 InternalService(DatabaseServer server)
+        public ServiceV1 InternalService(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -284,6 +305,7 @@ namespace DaaSDemo.Provisioning
             
             return Service(
                 name: $"{baseName}",
+                kubeNamespace: kubeNamespace,
                 spec: Specs.InternalService(server),
                 labels: new Dictionary<string, string>
                 {
@@ -300,10 +322,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public ServiceV1 ExternalService(DatabaseServer server)
+        public ServiceV1 ExternalService(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -312,6 +337,7 @@ namespace DaaSDemo.Provisioning
             
             return Service(
                 name: $"{baseName}-public",
+                kubeNamespace: kubeNamespace,
                 spec: Specs.ExternalService(server),
                 labels: new Dictionary<string, string>
                 {
@@ -337,10 +363,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the service.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public ServiceV1 Service(string name, ServiceSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public ServiceV1 Service(string name, ServiceSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -355,6 +384,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },
@@ -368,10 +398,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
         /// </returns>
-        public PrometheusServiceMonitorV1 ServiceMonitor(DatabaseServer server)
+        public PrometheusServiceMonitorV1 ServiceMonitor(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -380,6 +413,7 @@ namespace DaaSDemo.Provisioning
             
             return ServiceMonitor(
                 name: $"{baseName}-monitor",
+                kubeNamespace: kubeNamespace,
                 spec: Specs.ServiceMonitor(server),
                 labels: new Dictionary<string, string>
                 {
@@ -405,10 +439,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the service.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
         /// </returns>
-        public PrometheusServiceMonitorV1 ServiceMonitor(string name, PrometheusServiceMonitorSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public PrometheusServiceMonitorV1 ServiceMonitor(string name, PrometheusServiceMonitorSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -423,6 +460,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },
@@ -445,10 +483,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="annotations">
         ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the Job.
         /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
         /// <returns>
         ///     The configured <see cref="JobV1"/>.
         /// </returns>
-        public JobV1 Job(string name, JobSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public JobV1 Job(string name, JobSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -463,6 +504,7 @@ namespace DaaSDemo.Provisioning
                 Metadata = new ObjectMetaV1
                 {
                     Name = name,
+                    Namespace = kubeNamespace,
                     Labels = labels,
                     Annotations = annotations
                 },

@@ -32,13 +32,17 @@ spec:
             value: '1'
           - name: ASPNETCORE_URLS
             value: 'http://*:5000'
-          - name: ASPNETCORE_API__EndPoint
+          - name: DAAS_API__EndPoint
             value: 'http://kr-cluster.tintoy.io:31200/api/v1/'
-          - name: ASPNETCORE_Kubernetes__PodName
+          - name: DAAS_Kubernetes__PodName
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-          - name: ASPNETCORE_DATABASE__ConnectionString
+          - name: DAAS_Kubernetes__KubeNamespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: DAAS_Database__ConnectionString
             valueFrom:
               secretKeyRef:
                 name: sql-ui

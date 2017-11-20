@@ -45,12 +45,12 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-          - name: DAAS_Kubernetes__SqlStorageClass
-            value: 'sql-data'
-          - name: DAAS_Kubernetes__PodName
+          - name: DAAS_Kubernetes__KubeNamespace
             valueFrom:
               fieldRef:
-                fieldPath: metadata.name
+                fieldPath: metadata.namespace
+          - name: DAAS_Kubernetes__SqlStorageClass
+            value: 'sql-data'
           - name: DAAS_Database__ConnectionString
             valueFrom:
               secretKeyRef:
