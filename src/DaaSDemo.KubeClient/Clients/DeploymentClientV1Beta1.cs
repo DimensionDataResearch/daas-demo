@@ -44,7 +44,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// </returns>
         public async Task<List<DeploymentV1Beta1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            DeploymentListV1Beta1 matchingControllers =
+            DeploymentListV1Beta1 matchingDeployments =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -55,7 +55,7 @@ namespace DaaSDemo.KubeClient.Clients
                 )
                 .ReadContentAsAsync<DeploymentListV1Beta1, StatusV1>();
 
-            return matchingControllers.Items;
+            return matchingDeployments.Items;
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace DaaSDemo.KubeClient.Clients
         /// <summary>
         ///     Request creation of a <see cref="Deployment"/>.
         /// </summary>
-        /// <param name="newController">
+        /// <param name="newDeployment">
         ///     A <see cref="DeploymentV1Beta1"/> representing the Deployment to create.
         /// </param>
         /// <param name="cancellationToken">
@@ -124,18 +124,55 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     A <see cref="DeploymentV1Beta1"/> representing the current state for the newly-created Deployment.
         /// </returns>
-        public async Task<DeploymentV1Beta1> Create(DeploymentV1Beta1 newController, CancellationToken cancellationToken = default)
+        public async Task<DeploymentV1Beta1> Create(DeploymentV1Beta1 newDeployment, CancellationToken cancellationToken = default)
         {
-            if (newController == null)
-                throw new ArgumentNullException(nameof(newController));
+            if (newDeployment == null)
+                throw new ArgumentNullException(nameof(newDeployment));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newController?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newDeployment?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newController,
+                    postBody: newDeployment,
+                    cancellationToken: cancellationToken
+                )
+                .ReadContentAsAsync<DeploymentV1Beta1, StatusV1>();
+        }
+
+        /// <summary>
+        ///     Request update (PATCH) of a <see cref="Deployment"/>.
+        /// </summary>
+        /// <param name="deployment">
+        ///     A <see cref="DeploymentV1Beta1"/> representing the Deployment to update.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="DeploymentV1Beta1"/> representing the current state for the newly-created Deployment.
+        /// </returns>
+        public async Task<DeploymentV1Beta1> Update(DeploymentV1Beta1 deployment, CancellationToken cancellationToken = default)
+        {
+            if (deployment == null)
+                throw new ArgumentNullException(nameof(deployment));
+
+            if (String.IsNullOrWhiteSpace(deployment.Metadata?.Name))
+                throw new ArgumentException("Cannot update Deployment without a value for its Metadata.Name property.", nameof(deployment));
+
+            if (String.IsNullOrWhiteSpace(deployment.Metadata?.Namespace))
+                throw new ArgumentException("Cannot update Deployment without a value for its Metadata.Namespace property.", nameof(deployment));
+            
+            return await Http
+                .PatchAsync(
+                    Requests.ByName.WithTemplateParameters(new
+                    {
+                        Name = deployment.Metadata.Name,
+                        Namespace = deployment.Metadata.Namespace
+                    }),
+                    patchBody: deployment,
+                    mediaType: PatchMediaType,
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<DeploymentV1Beta1, StatusV1>();

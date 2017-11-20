@@ -20,6 +20,11 @@ namespace DaaSDemo.KubeClient.Clients
     public abstract class KubeResourceClient
     {
         /// <summary>
+        ///     The media type used to indicate that request is a Kubernetes PATCH request.
+        /// </summary>
+        protected static readonly string PatchMediaType = "application/merge-patch+json";
+
+        /// <summary>
         ///     JSON serialisation settings.
         /// </summary>
         protected internal static JsonSerializerSettings SerializerSettings => new JsonSerializerSettings
