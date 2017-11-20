@@ -32,6 +32,10 @@ spec:
             value: '1'
           - name: ASPNETCORE_URLS
             value: 'http://*:5000'
+          - name: Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: Kubernetes__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
           - name: Kubernetes__ClusterPublicPort

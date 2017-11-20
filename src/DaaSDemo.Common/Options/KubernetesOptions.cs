@@ -13,6 +13,11 @@ namespace DaaSDemo.Common.Options
         ///     The Kubernetes namespace in which DaaS components are hosted.
         /// </summary>
         public string KubeNamespace { get; set; }
+        
+        /// <summary>
+        ///     The name of the Kubernetes pod (if any) where the application is running.
+        /// </summary>
+        public string PodName { get; set; }
 
         /// <summary>
         ///     The fully-qualified (public) domain name of the Kubernetes cluster.

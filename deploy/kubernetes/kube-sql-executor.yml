@@ -32,6 +32,10 @@ spec:
             value: 'http://*:5000'
           - name: IN_KUBERNETES
             value: '1'
+          - name: ASPNETCORE_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: ASPNETCORE_DATABASE__CONNECTIONSTRING
             valueFrom:
               secretKeyRef:

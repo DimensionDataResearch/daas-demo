@@ -41,6 +41,10 @@ spec:
             value: 'sql.kr-cluster.tintoy.io'
           - name: DAAS_Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
+          - name: DAAS_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: DAAS_Database__ConnectionString
             valueFrom:
               secretKeyRef:

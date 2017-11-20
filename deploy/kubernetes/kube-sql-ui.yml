@@ -34,6 +34,10 @@ spec:
             value: 'http://*:5000'
           - name: ASPNETCORE_API__EndPoint
             value: 'http://kr-cluster.tintoy.io:31200/api/v1/'
+          - name: ASPNETCORE_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: ASPNETCORE_DATABASE__ConnectionString
             valueFrom:
               secretKeyRef:
