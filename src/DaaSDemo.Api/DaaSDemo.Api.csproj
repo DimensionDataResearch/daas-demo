@@ -17,6 +17,7 @@
     <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
     <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
     <ProjectReference Include="..\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Logging\DaaSDemo.Logging.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
   </ItemGroup>
 
@@ -29,6 +30,7 @@
     <PackageReference Include="Serilog.Enrichers.Demystify" Version="0.1.0-dev-00011" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.0" />
+    <PackageReference Include="Serilog.Sinks.ElasticSearch" Version="5.4.0" />
     <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />
   </ItemGroup>
 

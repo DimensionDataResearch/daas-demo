@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace DaaSDemo.UI
 {
+    using Logging;
+
     /// <summary>
     ///     The Database-as-a-Service demo UI.
     /// </summary>
@@ -36,22 +38,20 @@ namespace DaaSDemo.UI
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .ConfigureLogging(logging =>
+                .ConfigureAppConfiguration((context, config) =>
                 {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .WriteTo.LiterateConsole()
-                        .WriteTo.Debug()
-                        .Enrich.FromLogContext()
-                        .Enrich.WithDemystifiedStackTraces()
-                        .CreateLogger();
+                    config.AddJsonFile("appsettings.json");
+                    config.AddUserSecrets<Startup>();
+                    config.AddEnvironmentVariables(prefix: "DAAS_");
+                })
+                .ConfigureLogging((context, logging) =>
+                {
+                    Log.Logger = StandardLogging.ConfigureSerilog(context.Configuration,
+                        daasComponentName: "UI"
+                    );
 
                     logging.ClearProviders();
                     logging.AddSerilog(Log.Logger);
-                })
-                .ConfigureAppConfiguration((context, config) =>
-                {
-                    config.AddUserSecrets<Startup>();
                 })
                 .Build();
     }

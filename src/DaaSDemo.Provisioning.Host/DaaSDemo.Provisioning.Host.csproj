@@ -13,6 +13,7 @@
     <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
     <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
     <ProjectReference Include="..\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Logging\DaaSDemo.Logging.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
     <ProjectReference Include="..\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj" />
     <ProjectReference Include="..\DaaSDemo.SqlExecutor.Client\DaaSDemo.SqlExecutor.Client.csproj" />

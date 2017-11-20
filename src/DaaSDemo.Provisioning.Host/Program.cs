@@ -13,6 +13,7 @@ namespace DaaSDemo.Provisioning.Host
 {
     using Common.Options;
     using Data;
+    using Logging;
 
     /// <summary>
     ///     Host for the Database-as-a-Service provisioning engine.
@@ -28,19 +29,6 @@ namespace DaaSDemo.Provisioning.Host
         static async Task Main(string[] args)
         {
             await new HostBuilder()
-                .ConfigureLogging(logging =>
-                {
-                    Log.Logger = new LoggerConfiguration()
-                        .MinimumLevel.Information()
-                        .WriteTo.LiterateConsole()
-                        .WriteTo.Debug()
-                        .Enrich.FromLogContext()
-                        .Enrich.WithDemystifiedStackTraces()
-                        .CreateLogger();
-
-                    logging.ClearProviders();
-                    logging.AddSerilog(Log.Logger);
-                })
                 .ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddJsonFile("appsettings.json");
@@ -48,6 +36,15 @@ namespace DaaSDemo.Provisioning.Host
                         typeof(Program).Assembly
                     );
                     config.AddEnvironmentVariables(prefix: "DAAS_");
+                })
+                .ConfigureLogging((context, logging) =>
+                {
+                    Log.Logger = StandardLogging.ConfigureSerilog(context.Configuration,
+                        daasComponentName: "Provisioning"
+                    );
+
+                    logging.ClearProviders();
+                    logging.AddSerilog(Log.Logger);
                 })
                 .ConfigureServices((hostContext, services) =>
                 {

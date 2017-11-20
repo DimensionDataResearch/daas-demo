@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using Serilog.Sinks.Elasticsearch;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,6 +13,8 @@ using Microsoft.Extensions.Logging;
 
 namespace DaaSDemo.Api
 {
+    using Logging;
+
     /// <summary>
     ///     The Database-as-a-Service demo API.
     /// </summary>
@@ -36,24 +39,22 @@ namespace DaaSDemo.Api
         /// </returns>
         public static IWebHost BuildWebHost(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .WriteTo.LiterateConsole()
-                .WriteTo.Debug()
-                .Enrich.FromLogContext()
-                .Enrich.WithDemystifiedStackTraces()
-                .CreateLogger();
-
             return WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .ConfigureLogging(logging =>
-                {
-                    logging.ClearProviders();
-                    logging.AddSerilog(Log.Logger);
-                })
                 .ConfigureAppConfiguration((context, config) =>
                 {
+                    config.AddJsonFile("appsettings.json");
                     config.AddUserSecrets<Startup>();
+                    config.AddEnvironmentVariables(prefix: "DAAS_");
+                })
+                .ConfigureLogging((context, logging) =>
+                {
+                    Log.Logger = StandardLogging.ConfigureSerilog(context.Configuration,
+                        daasComponentName: "API"
+                    );
+
+                    logging.ClearProviders();
+                    logging.AddSerilog(Log.Logger);
                 })
                 .Build();
         }
