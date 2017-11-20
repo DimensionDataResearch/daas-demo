@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 
 namespace DaaSDemo.Provisioning
 {
+    using Common.Options;
     using KubeClient.Models;
     using Messages;
     using Models.Data;
@@ -10,18 +12,50 @@ namespace DaaSDemo.Provisioning
     /// <summary>
     ///     Factory methods for common Kubernetes resources.
     /// </summary>
-    public static class KubeResources
+    public class KubeResources
     {
         /// <summary>
-        ///     Get the base resource name for the specified server.
+        ///     Create a new <see cref="KubeResources"/>.
         /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server
+        /// <param name="names">
+        ///     The Kubernetes resource-naming strategy.
         /// </param>
-        /// <returns>
-        ///     The base resource name.
-        /// </returns>
-        public static string GetBaseName(DatabaseServer server) => $"sql-server-{server.Id}";
+        /// <param name="specs">
+        ///     The factory for Kubernetes specifications.
+        /// </param>
+        /// <param name="kubeOptions">
+        ///     Application-level Kubernetes options.
+        /// </param>
+        public KubeResources(KubeNames names, KubeSpecs specs, IOptions<KubernetesOptions> kubeOptions)
+        {
+            if (names == null)
+                throw new ArgumentNullException(nameof(names));
+
+            if (specs == null)
+                throw new ArgumentNullException(nameof(specs));
+
+            if (kubeOptions == null)
+                throw new ArgumentNullException(nameof(kubeOptions));
+            
+            Names = names;
+            Specs = specs;
+            KubeOptions = kubeOptions.Value;
+        }
+
+        /// <summary>
+        ///     The factory for Kubernetes specifications.
+        /// </summary>
+        public KubeNames Names { get; }
+
+        /// <summary>
+        ///     The factory for Kubernetes specifications.
+        /// </summary>
+        public KubeSpecs Specs { get; }
+
+        /// <summary>
+        ///     Application-level Kubernetes options.
+        /// </summary>
+        public KubernetesOptions KubeOptions { get;}
 
         /// <summary>
         ///     Create a new <see cref="DeploymentV1Beta1"/> for the specified database server.
@@ -29,28 +63,19 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
-        /// <param name="imageName">
-        ///     The name (and tag) of the SQL Server for Linux image to use.
-        /// </param>
-        /// <param name="dataVolumeClaimName">
-        ///     The name of the Kubernetes VolumeClaim where the data will be stored.
-        /// </param>
         /// <returns>
         ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public static DeploymentV1Beta1 Deployment(DatabaseServer server, string imageName, string dataVolumeClaimName)
+        public DeploymentV1Beta1 Deployment(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
-
-            string baseName = GetBaseName(server);
+            string baseName = Names.BaseName(server);
             
             return Deployment(
                 name: baseName,
-                spec: KubeSpecs.Deployment(server, imageName, dataVolumeClaimName)
+                spec: Specs.Deployment(server)
             );
         }
 
@@ -72,7 +97,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        public static DeploymentV1Beta1 Deployment(string name, DeploymentSpecV1Beta1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public DeploymentV1Beta1 Deployment(string name, DeploymentSpecV1Beta1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -109,7 +134,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public static ReplicationControllerV1 ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
+        public ReplicationControllerV1 ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -120,11 +145,11 @@ namespace DaaSDemo.Provisioning
             if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
 
-            string baseName = GetBaseName(server);
+            string baseName = Names.BaseName(server);
             
             return ReplicationController(
                 name: baseName,
-                spec: KubeSpecs.ReplicationController(server, imageName, dataVolumeClaimName)
+                spec: Specs.ReplicationController(server)
             );
         }
 
@@ -146,7 +171,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public static ReplicationControllerV1 ReplicationController(string name, ReplicationControllerSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public ReplicationControllerV1 ReplicationController(string name, ReplicationControllerSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -177,16 +202,16 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static ServiceV1 InternalService(DatabaseServer server)
+        public ServiceV1 InternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string baseName = GetBaseName(server);
+            string baseName = Names.BaseName(server);
             
             return Service(
                 name: $"{baseName}",
-                spec: KubeSpecs.InternalService(server),
+                spec: Specs.InternalService(server),
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
@@ -205,16 +230,16 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static ServiceV1 ExternalService(DatabaseServer server)
+        public ServiceV1 ExternalService(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string baseName = GetBaseName(server);
+            string baseName = Names.BaseName(server);
             
             return Service(
                 name: $"{baseName}-public",
-                spec: KubeSpecs.ExternalService(server),
+                spec: Specs.ExternalService(server),
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
@@ -242,7 +267,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ServiceV1"/>.
         /// </returns>
-        public static ServiceV1 Service(string name, ServiceSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public ServiceV1 Service(string name, ServiceSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -273,16 +298,16 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
         /// </returns>
-        public static PrometheusServiceMonitorV1 ServiceMonitor(DatabaseServer server)
+        public PrometheusServiceMonitorV1 ServiceMonitor(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            string baseName = GetBaseName(server);
+            string baseName = Names.BaseName(server);
             
             return ServiceMonitor(
                 name: $"{baseName}-monitor",
-                spec: KubeSpecs.ServiceMonitor(server),
+                spec: Specs.ServiceMonitor(server),
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
@@ -310,7 +335,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="PrometheusServiceMonitorV1"/>.
         /// </returns>
-        public static PrometheusServiceMonitorV1 ServiceMonitor(string name, PrometheusServiceMonitorSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public PrometheusServiceMonitorV1 ServiceMonitor(string name, PrometheusServiceMonitorSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
@@ -350,7 +375,7 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="JobV1"/>.
         /// </returns>
-        public static JobV1 Job(string name, JobSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        public JobV1 Job(string name, JobSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));

@@ -88,19 +88,26 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
         /// </summary>
+        /// <param name="kubeResources">
+        ///     The Kubernetes resource factory.
+        /// </param>
         /// <param name="serverId">
         ///     The Id of the target server.
         /// </param>
         /// <param name="databaseWatcher">
         ///     A reference to the <see cref="DataAccess"/> actor.
         /// </param>
-        public TenantServerManager(int serverId, IActorRef databaseWatcher)
+        public TenantServerManager(int serverId, IActorRef databaseWatcher, KubeResources kubeResources)
         {
             if (databaseWatcher == null)
                 throw new ArgumentNullException(nameof(databaseWatcher));
 
+            if (kubeResources == null)
+                throw new ArgumentNullException(nameof(kubeResources));
+
             _serverId = serverId;
             _dataAccess = databaseWatcher;
+            KubeResources = kubeResources;
 
             _kubeClient = CreateKubeApiClient();
             _sqlClient = CreateSqlApiClient();
@@ -110,6 +117,11 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The actor's local message-stash facility.
         /// </summary>
         public IStash Stash { get; set; }
+
+        /// <summary>
+        ///     The Kubernetes resource factory.
+        /// </summary>
+        KubeResources KubeResources { get; }
 
         /// <summary>
         ///     Current state (if known) from the database.

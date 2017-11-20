@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.UI
 {
+    using Common.Options;
     using Data;
 
     /// <summary>
@@ -46,6 +47,12 @@ namespace DaaSDemo.UI
         /// </param>
         public void ConfigureServices(IServiceCollection services)
         {
+            if (services == null)
+                throw new ArgumentNullException(nameof(services));
+
+            services.AddOptions();
+            services.AddDaaSOptions(Configuration);
+
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {

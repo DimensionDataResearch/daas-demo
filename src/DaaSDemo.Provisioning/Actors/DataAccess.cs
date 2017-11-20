@@ -34,8 +34,16 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="DataAccess"/>.
         /// </summary>
-        public DataAccess()
+        /// <param name="kubeResources">
+        ///     The Kubernetes resource factory.
+        /// </param>
+        public DataAccess(KubeResources kubeResources)
         {
+            if (kubeResources == null)
+                throw new ArgumentNullException(nameof(kubeResources));
+            
+            KubeResources = kubeResources;
+
             ReceiveAsync<Command>(async command =>
             {
                 switch (command)
@@ -74,6 +82,11 @@ namespace DaaSDemo.Provisioning.Actors
                     Unhandled(terminated);
             });
         }
+
+        /// <summary>
+        ///     The Kubernetes resource factory.
+        /// </summary>
+        KubeResources KubeResources { get; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -117,7 +130,7 @@ namespace DaaSDemo.Provisioning.Actors
                 if (!_serverManagers.TryGetValue(server.TenantId, out serverManager))
                 {
                     serverManager = Context.ActorOf(
-                        Props.Create(() => new TenantServerManager(server.Id, Self)),
+                        Props.Create(() => new TenantServerManager(server.Id, Self, KubeResources)),
                         name: TenantServerManager.ActorName(server.TenantId)
                     );
                     Context.Watch(serverManager);

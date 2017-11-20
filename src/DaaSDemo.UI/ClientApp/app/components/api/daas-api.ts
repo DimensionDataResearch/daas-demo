@@ -588,6 +588,11 @@ export enum ServerProvisioningPhase
     None = 'None',
 
     /**
+     * Server storage.
+     */
+    Storage = 'Storage',
+
+    /**
      * The server instance.
      */
     Instance = 'Instance',

@@ -63,13 +63,8 @@ namespace DaaSDemo.SqlExecutor
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
-            services.AddOptions()
-                .Configure<DatabaseOptions>(
-                    Configuration.GetSection("Database")
-                )
-                .Configure<KubernetesOptions>(
-                    Configuration.GetSection("Kubernetes")
-                );
+            services.AddOptions();
+            services.AddDaaSOptions(Configuration);
 
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>

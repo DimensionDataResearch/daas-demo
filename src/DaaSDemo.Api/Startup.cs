@@ -64,6 +64,9 @@ namespace DaaSDemo.Api
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
 
+            services.AddOptions();
+            services.AddDaaSOptions(Configuration);
+
             services.AddEntityFrameworkSqlServer()
                 .AddDbContext<Entities>(entities =>
                 {
@@ -76,17 +79,6 @@ namespace DaaSDemo.Api
                         sqlServer.MigrationsAssembly("DaaSDemo.Api");
                     });
                 });
-
-            services.AddOptions()
-                .Configure<CorsOptions>(
-                    Configuration.GetSection("CORS")
-                )
-                .Configure<DatabaseOptions>(
-                    Configuration.GetSection("Database")
-                )
-                .Configure<KubernetesOptions>(
-                    Configuration.GetSection("Kubernetes")
-                );
 
             services.AddCors(cors =>
             {
