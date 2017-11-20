@@ -15,11 +15,6 @@ namespace DaaSDemo.Provisioning
         : IDisposable
     {
         /// <summary>
-        ///     The application-level configuration.
-        /// </summary>
-        readonly IConfiguration _configuration;
-
-        /// <summary>
         ///     The underlying actor system.
         /// </summary>
         ActorSystem _actorSystem;
@@ -27,8 +22,20 @@ namespace DaaSDemo.Provisioning
         /// <summary>
         ///     Create a new <see cref="ProvisioningEngine"/>.
         /// </summary>
-        /// <param name="configuration">
-        ///     The application-level configuration.
+        /// <param name="databaseOptions">
+        ///     The application-level database options.
+        /// </param>
+        /// <param name="sqlClientOptions">
+        ///     The application-level SQL Executor API client options.
+        /// </param>
+        /// <param name="kubeOptions">
+        ///     The application-level Kubernetes options.
+        /// </param>
+        /// <param name="prometheusOptions">
+        ///     The application-level Prometheus options.
+        /// </param>
+        /// <param name="provisioningOptions">
+        ///     The application-level provisioning options.
         /// </param>
         public ProvisioningEngine(IOptions<DatabaseOptions> databaseOptions, IOptions<SqlExecutorClientOptions> sqlClientOptions, IOptions<KubernetesOptions> kubeOptions, IOptions<PrometheusOptions> prometheusOptions, IOptions<ProvisioningOptions> provisioningOptions)
         {
@@ -54,10 +61,29 @@ namespace DaaSDemo.Provisioning
             ProvisioningOptions = provisioningOptions.Value;
         }
 
+        /// <summary>
+        ///     The application-level database options.
+        /// </summary>
         DatabaseOptions DatabaseOptions { get; set; }
+
+        /// <summary>
+        ///     The application-level SQL Executor API client options.
+        /// </summary>
         SqlExecutorClientOptions SqlClientOptions { get; set; }
+
+        /// <summary>
+        ///     The application-level Kubernetes options.
+        /// </summary>
         KubernetesOptions KubeOptions { get; set; }
+
+        /// <summary>
+        ///     The application-level Prometheus options.
+        /// </summary>
         PrometheusOptions PrometheusOptions { get; set; }
+
+        /// <summary>
+        ///     The application-level provisioning options.
+        /// </summary>
         ProvisioningOptions ProvisioningOptions { get; set; }
 
         /// <summary>
