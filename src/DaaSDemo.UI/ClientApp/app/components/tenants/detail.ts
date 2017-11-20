@@ -90,6 +90,8 @@ export class TenantDetail {
         switch (this.server.phase) {
             case ServerProvisioningPhase.None:
                 return 'Waiting';
+                case ServerProvisioningPhase.Storage:
+                return 'Storage';
             case ServerProvisioningPhase.Instance:
                 return 'Server Instance';
             case ServerProvisioningPhase.Network:

@@ -132,15 +132,21 @@ namespace DaaSDemo.KubeClient.ResourceClients
         /// <returns>
         ///     An <see cref="StatusV1"/> indicating the result of the request.
         /// </returns>
-        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
-            return await Http
-                .DeleteAsync(
+            return
+                await Http.DeleteAsJsonAsync(
                     Requests.ByName.WithTemplateParameters(new
                     {
                         Name = name,
                         Namespace = kubeNamespace ?? Client.DefaultNamespace
                     }),
+                    deleteBody: new
+                    {
+                        apiVersion = "v1",
+                        kind = "DeleteOptions",
+                        propagationPolicy = propagationPolicy
+                    },
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);

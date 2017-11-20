@@ -25,9 +25,9 @@ namespace DaaSDemo.Common.Options
         public string ClusterPublicFQDN { get; set; }
 
         /// <summary>
-        ///     The name of the volume claim representing the volume used to store tenant databases.
+        ///     The storage class used for PersistentVolumes that hold SQL Server data.
         /// </summary>
-        public string VolumeClaimName { get; set; }
+        public string SqlStorageClass { get; set; }
 
         /// <summary>
         ///     The base address of the Kubernetes API end-point.

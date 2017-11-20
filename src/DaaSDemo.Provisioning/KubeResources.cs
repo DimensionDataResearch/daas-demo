@@ -55,7 +55,76 @@ namespace DaaSDemo.Provisioning
         /// <summary>
         ///     Application-level Kubernetes options.
         /// </summary>
-        public KubernetesOptions KubeOptions { get;}
+        public KubernetesOptions KubeOptions { get; }
+
+        /// <summary>
+        ///     Create a new <see cref="PersistentVolumeClaimV1"/> for the specified database server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <param name="requestedSizeMB">
+        ///     The requested volume size (in MB).
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PersistentVolumeClaimV1"/>.
+        /// </returns>
+        public PersistentVolumeClaimV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            return DataVolumeClaim(
+                name: Names.DataVolumeClaim(server),
+                spec: Specs.DataVolumeClaim(server, requestedSizeMB),
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = Names.BaseName(server),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.volume-type"] = "data"
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="PersistentVolumeClaimV1"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The deployment name.
+        /// </param>
+        /// <param name="spec">
+        ///     A <see cref="PersistentVolumeClaimSpecV1"/> representing the persistent volume claim specification.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the persistent volume claim.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the persistent volume claim.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PersistentVolumeClaimV1"/>.
+        /// </returns>
+        public PersistentVolumeClaimV1 DataVolumeClaim(string name, PersistentVolumeClaimSpecV1 spec, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (spec == null)
+                throw new ArgumentNullException(nameof(spec));
+
+            return new PersistentVolumeClaimV1
+            {
+                ApiVersion = "v1",
+                Kind = "PersistentVolumeClaim",
+                Metadata = new ObjectMetaV1
+                {
+                    Name = name,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Spec = spec
+            };
+        }
 
         /// <summary>
         ///     Create a new <see cref="DeploymentV1Beta1"/> for the specified database server.

@@ -529,6 +529,14 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
+                    goto case ServerProvisioningPhase.Storage;
+                }
+                case ServerProvisioningPhase.Storage:
+                {
+                    StartProvisioningPhase(ServerProvisioningPhase.Storage);
+
+                    await EnsureDataVolumeClaimPresent();
+                    
                     goto case ServerProvisioningPhase.Instance;
                 }
                 case ServerProvisioningPhase.Instance:
@@ -590,6 +598,14 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
+                    goto case ServerProvisioningPhase.Storage;
+                }
+                case ServerProvisioningPhase.Storage:
+                {
+                    StartReconfigurationPhase(ServerProvisioningPhase.Storage);
+
+                    await EnsureDataVolumeClaimPresent();
+                    
                     goto case ServerProvisioningPhase.Instance;
                 }
                 case ServerProvisioningPhase.Instance:
@@ -651,6 +667,14 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ServerProvisioningPhase.None:
                 {
+                    goto case ServerProvisioningPhase.Storage;
+                }
+                case ServerProvisioningPhase.Storage:
+                {
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Storage);
+
+                    await EnsureDataVolumeClaimAbsent();
+                    
                     goto case ServerProvisioningPhase.Instance;
                 }
                 case ServerProvisioningPhase.Instance:
@@ -692,6 +716,24 @@ namespace DaaSDemo.Provisioning.Actors
                     break;
                 }
             }
+        }
+
+        /// <summary>
+        ///     Find the server's associated PersistentVolumeClaim for data (if it exists).
+        /// </summary>
+        /// <returns>
+        ///     The PersistentVolumeClaim, or <c>null</c> if it was not found.
+        /// </returns>
+        async Task<PersistentVolumeClaimV1> FindDataVolumeClaim()
+        {
+            List<PersistentVolumeClaimV1> matchingPersistentVolumeClaims = await KubeClient.PersistentVolumeClaimsV1().List(
+                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}, cloud.dimensiondata.daas.volume-type = data"
+             );
+
+            if (matchingPersistentVolumeClaims.Count == 0)
+                return null;
+
+            return matchingPersistentVolumeClaims[matchingPersistentVolumeClaims.Count - 1];
         }
 
         /// <summary>
@@ -761,6 +803,89 @@ namespace DaaSDemo.Provisioning.Actors
                 return null;
 
             return matchingServices[matchingServices.Count - 1];
+        }
+
+        /// <summary>
+        ///     Ensure that a PersistentVolumeClaim for data exists for the specified database server.
+        /// </summary>
+        /// <returns>
+        ///     The PersistentVolumeClaim resource, as a <see cref="PersistentVolumeClaimV1"/>.
+        /// </returns>
+        async Task<PersistentVolumeClaimV1> EnsureDataVolumeClaimPresent()
+        {
+            PersistentVolumeClaimV1 existingPersistentVolumeClaim = await FindDataVolumeClaim();
+            if (existingPersistentVolumeClaim != null)
+            {
+                Log.Info("Found existing data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
+                    existingPersistentVolumeClaim.Metadata.Name,
+                    CurrentState.Id
+                );
+
+                return existingPersistentVolumeClaim;
+            }
+
+            Log.Info("Creating data-volume claim for server {ServerId}...",
+                CurrentState.Id
+            );
+
+            PersistentVolumeClaimV1 createdPersistentVolumeClaim = await KubeClient.PersistentVolumeClaimsV1().Create(
+                KubeResources.DataVolumeClaim(CurrentState,
+                    requestedSizeMB: 200
+                )
+            );
+
+            Log.Info("Successfully created data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
+                createdPersistentVolumeClaim.Metadata.Name,
+                CurrentState.Id
+            );
+
+            return createdPersistentVolumeClaim;
+        }
+
+        /// <summary>
+        ///     Ensure that a PersistentVolumeClaim for data does not exist for the specified database server.
+        /// </summary>
+        /// <returns>
+        ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
+        /// </returns>
+        async Task<bool> EnsureDataVolumeClaimAbsent()
+        {
+            PersistentVolumeClaimV1 controller = await FindDataVolumeClaim();
+            if (controller == null)
+                return true;
+
+            Log.Info("Deleting data-volume claim {PersistentVolumeClaimName} for server {ServerId}...",
+                controller.Metadata.Name,
+                CurrentState.Id
+            );
+
+            try
+            {
+                // TODO: First, find the claimed volume, and delete it once the PVC has been deleted.
+
+                await KubeClient.PersistentVolumeClaimsV1().Delete(
+                    name: controller.Metadata.Name,
+                    propagationPolicy: DeletePropagationPolicy.Background
+                );
+            }
+            catch (HttpRequestException<StatusV1> deleteFailed)
+            {
+                Log.Error("Failed to delete data-volume claim {PersistentVolumeClaimName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                    controller.Metadata.Name,
+                    CurrentState.Id,
+                    deleteFailed.Response.Message,
+                    deleteFailed.Response.Reason
+                );
+
+                return false;
+            }
+
+            Log.Info("Deleted data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
+                controller.Metadata.Name,
+                CurrentState.Id
+            );
+
+            return true;
         }
 
         /// <summary>

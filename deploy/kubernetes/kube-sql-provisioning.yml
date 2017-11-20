@@ -45,8 +45,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-          - name: DAAS_Kubernetes__VolumeClaimName
-            value: 'sql-data-claim'
+          - name: DAAS_Kubernetes__SqlStorageClass
+            value: 'sql-data'
           - name: DAAS_Kubernetes__PodName
             valueFrom:
               fieldRef:

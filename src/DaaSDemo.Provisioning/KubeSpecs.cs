@@ -57,6 +57,40 @@ namespace DaaSDemo.Provisioning
         public ProvisioningOptions ProvisioningOptions { get; }
 
         /// <summary>
+        ///     Build a <see cref="PersistentVolumeClaimSpecV1"/> for the specified server.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <param name="requestedSizeMB">
+        ///     The requested volume size (in MB).
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="PersistentVolumeClaimSpecV1"/>.
+        /// </returns>
+        public PersistentVolumeClaimSpecV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            return new PersistentVolumeClaimSpecV1
+            {
+                AccessModes = new List<string>
+                {
+                    "ReadWriteOnce"
+                },
+                StorageClassName = KubeOptions.SqlStorageClass,
+                Resources = new ResourceRequirementsV1
+                {
+                    Requests = new Dictionary<string, string>
+                    {
+                        ["storage"] = $"{requestedSizeMB}Mi"
+                    }
+                }
+            };
+        }
+
+        /// <summary>
         ///     Build a <see cref="DeploymentSpecV1Beta1"/> for the specified server.
         /// </summary>
         /// <param name="server">
@@ -200,7 +234,7 @@ namespace DaaSDemo.Provisioning
                                 Name = "sql-data",
                                 PersistentVolumeClaim = new PersistentVolumeClaimVolumeSourceV1
                                 {
-                                    ClaimName = KubeOptions.VolumeClaimName
+                                    ClaimName = Names.DataVolumeClaim(server)
                                 }
                             }
                         }
@@ -346,7 +380,7 @@ namespace DaaSDemo.Provisioning
                                 Name = "sql-data",
                                 PersistentVolumeClaim = new PersistentVolumeClaimVolumeSourceV1
                                 {
-                                    ClaimName = KubeOptions.VolumeClaimName
+                                    ClaimName = Names.DataVolumeClaim(server)
                                 }
                             }
                         }
