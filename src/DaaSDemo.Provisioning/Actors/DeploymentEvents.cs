@@ -38,7 +38,7 @@ namespace DaaSDemo.Provisioning.Actors
                 throw new ArgumentNullException(nameof(kubeClient));
             
             KubeClient = kubeClient;
-            EventSource = KubeClient.DeploymentsV1Beta1.WatchAll(
+            EventSource = KubeClient.DeploymentsV1Beta1().WatchAll(
                 kubeNamespace: "default"
             );
 

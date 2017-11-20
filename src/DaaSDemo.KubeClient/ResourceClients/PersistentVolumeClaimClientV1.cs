@@ -6,32 +6,32 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 
     /// <summary>
-    ///     A client for the Kubernetes ConfigMaps (v1) API.
+    ///     A client for the Kubernetes PersistentVolumeClaims (v1) API.
     /// </summary>
-    public class ConfigMapClientV1
+    public class PersistentVolumeClaimClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="ConfigMapClientV1"/>.
+        ///     Create a new <see cref="PersistentVolumeClaimClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public ConfigMapClientV1(KubeApiClient client)
+        public PersistentVolumeClaimClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all ConfigMaps in the specified namespace, optionally matching a label selector.
+        ///     Get all PersistentVolumeClaims in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the ConfigMaps.
+        ///     An optional Kubernetes label selector expression used to filter the PersistentVolumeClaims.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -40,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ConfigMaps, as a list of <see cref="ConfigMapV1"/>s.
+        ///     The PersistentVolumeClaims, as a list of <see cref="PersistentVolumeClaimV1"/>s.
         /// </returns>
-        public async Task<List<ConfigMapV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<PersistentVolumeClaimV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            ConfigMapListV1 matchingConfigMaps =
+            PersistentVolumeClaimListV1 matchingPersistentVolumeClaims =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -53,16 +53,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<ConfigMapListV1, StatusV1>();
+                .ReadContentAsAsync<PersistentVolumeClaimListV1, StatusV1>();
 
-            return matchingConfigMaps.Items;
+            return matchingPersistentVolumeClaims.Items;
         }
 
         /// <summary>
-        ///     Get the ConfigMap with the specified name.
+        ///     Get the PersistentVolumeClaim with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ConfigMap to retrieve.
+        ///     The name of the PersistentVolumeClaim to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -71,14 +71,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="ConfigMapV1"/> representing the current state for the ConfigMap, or <c>null</c> if no ConfigMap was found with the specified name and namespace.
+        ///     A <see cref="PersistentVolumeClaimV1"/> representing the current state for the PersistentVolumeClaim, or <c>null</c> if no PersistentVolumeClaim was found with the specified name and namespace.
         /// </returns>
-        public async Task<ConfigMapV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<PersistentVolumeClaimV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<ConfigMapV1>(
+            return await GetSingleResource<PersistentVolumeClaimV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -89,39 +89,39 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="ConfigMap"/>.
+        ///     Request creation of a <see cref="PersistentVolumeClaim"/>.
         /// </summary>
-        /// <param name="newConfigMap">
-        ///     A <see cref="ConfigMapV1"/> representing the ConfigMap to create.
+        /// <param name="newPersistentVolumeClaim">
+        ///     A <see cref="PersistentVolumeClaimV1"/> representing the PersistentVolumeClaim to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="ConfigMapV1"/> representing the current state for the newly-created ConfigMap.
+        ///     A <see cref="PersistentVolumeClaimV1"/> representing the current state for the newly-created PersistentVolumeClaim.
         /// </returns>
-        public async Task<ConfigMapV1> Create(ConfigMapV1 newConfigMap, CancellationToken cancellationToken = default)
+        public async Task<PersistentVolumeClaimV1> Create(PersistentVolumeClaimV1 newPersistentVolumeClaim, CancellationToken cancellationToken = default)
         {
-            if (newConfigMap == null)
-                throw new ArgumentNullException(nameof(newConfigMap));
+            if (newPersistentVolumeClaim == null)
+                throw new ArgumentNullException(nameof(newPersistentVolumeClaim));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newConfigMap?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newPersistentVolumeClaim?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newConfigMap,
+                    postBody: newPersistentVolumeClaim,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<ConfigMapV1, StatusV1>();
+                .ReadContentAsAsync<PersistentVolumeClaimV1, StatusV1>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified ConfigMap.
+        ///     Request deletion of the specified PersistentVolumeClaim.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ConfigMap to delete.
+        ///     The name of the PersistentVolumeClaim to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -147,19 +147,19 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request templates for the ConfigMap (v1) API.
+        ///     Request templates for the PersistentVolumeClaim (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level ConfigMap (v1) request.
+            ///     A collection-level PersistentVolumeClaim (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/configmaps?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/persistentvolumeclaims?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
-            ///     A get-by-name ConfigMap (v1) request.
+            ///     A get-by-name PersistentVolumeClaim (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/configmaps/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/persistentvolumeclaims/{Name}", SerializerSettings);
         }
     }
 }

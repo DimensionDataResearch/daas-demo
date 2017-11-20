@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 

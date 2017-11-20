@@ -10,7 +10,7 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 

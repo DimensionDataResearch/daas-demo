@@ -335,7 +335,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 return null;
             }
 
-            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal",
                 kubeNamespace: KubeOptions.KubeNamespace
             );

@@ -6,32 +6,32 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 
     /// <summary>
-    ///     A client for the Kubernetes Services (v1) API.
+    ///     A client for the Kubernetes Pods (v1) API.
     /// </summary>
-    public class ServiceClientV1
+    public class PodClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="ServiceClientV1"/>.
+        ///     Create a new <see cref="PodClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public ServiceClientV1(KubeApiClient client)
+        public PodClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all Services in the specified namespace, optionally matching a label selector.
+        ///     Get all Pods in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the Services.
+        ///     An optional Kubernetes label selector expression used to filter the Pods.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -40,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Services, as a list of <see cref="ServiceV1"/>s.
+        ///     The Pods, as a list of <see cref="PodV1"/>s.
         /// </returns>
-        public async Task<List<ServiceV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<PodV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            ServiceListV1 matchingServices =
+            PodListV1 matchingPods =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -53,16 +53,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<ServiceListV1, StatusV1>();
+                .ReadContentAsAsync<PodListV1, StatusV1>();
 
-            return matchingServices.Items;
+            return matchingPods.Items;
         }
 
         /// <summary>
-        ///     Watch for events relating to Services.
+        ///     Watch for events relating to Pods.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the Services.
+        ///     An optional Kubernetes label selector expression used to filter the Pods.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -70,9 +70,9 @@ namespace DaaSDemo.KubeClient.Clients
         /// <returns>
         ///     An <see cref="IObservable{T}"/> representing the event stream.
         /// </returns>
-        public IObservable<ResourceEventV1<ServiceV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        public IObservable<ResourceEventV1<PodV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
         {
-            return ObserveEvents<ServiceV1>(
+            return ObserveEvents<PodV1>(
                 Requests.Collection.WithTemplateParameters(new
                 {
                     Namespace = kubeNamespace ?? Client.DefaultNamespace,
@@ -83,10 +83,10 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Get the Service with the specified name.
+        ///     Get the Pod with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Service to retrieve.
+        ///     The name of the Pod to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -95,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="ServiceV1"/> representing the current state for the Service, or <c>null</c> if no Service was found with the specified name and namespace.
+        ///     A <see cref="PodV1"/> representing the current state for the Pod, or <c>null</c> if no Pod was found with the specified name and namespace.
         /// </returns>
-        public async Task<ServiceV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<PodV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<ServiceV1>(
+            return await GetSingleResource<PodV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -113,39 +113,82 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="Service"/>.
+        ///     Get the combined logs for the Pod with the specified name.
         /// </summary>
-        /// <param name="newService">
-        ///     A <see cref="ServiceV1"/> representing the Service to create.
+        /// <param name="name">
+        ///     The name of the target Pod.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <param name="limitBytes">
+        ///     Limit the number of bytes returned.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="ServiceV1"/> representing the current state for the newly-created Service.
+        ///     A string containing the logs.
         /// </returns>
-        public async Task<ServiceV1> Create(ServiceV1 newService, CancellationToken cancellationToken = default)
+        public async Task<string> Logs(string name, string kubeNamespace = null, int? limitBytes = null, CancellationToken cancellationToken = default)
         {
-            if (newService == null)
-                throw new ArgumentNullException(nameof(newService));
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            HttpResponseMessage responseMessage = await Http.GetAsync(
+                Requests.Logs.WithTemplateParameters(new
+                {
+                    Name = name,
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LimitBytes = limitBytes
+                }),
+                cancellationToken
+            );
+            using (responseMessage)
+            {
+                if (responseMessage.IsSuccessStatusCode)
+                    return await responseMessage.Content.ReadAsStringAsync();
+
+                throw new HttpRequestException<StatusV1>(responseMessage.StatusCode,
+                    response: await responseMessage.ReadContentAsAsync<StatusV1, StatusV1>()
+                );
+            }
+        }
+
+        /// <summary>
+        ///     Request creation of a <see cref="Pod"/>.
+        /// </summary>
+        /// <param name="newPod">
+        ///     A <see cref="PodV1"/> representing the Pod to create.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="PodV1"/> representing the current state for the newly-created Pod.
+        /// </returns>
+        public async Task<PodV1> Create(PodV1 newPod, CancellationToken cancellationToken = default)
+        {
+            if (newPod == null)
+                throw new ArgumentNullException(nameof(newPod));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newService?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newPod?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newService,
+                    postBody: newPod,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<ServiceV1, StatusV1>();
+                .ReadContentAsAsync<PodV1, StatusV1>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified Service.
+        ///     Request deletion of the specified Pod.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Service to delete.
+        ///     The name of the Pod to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -171,19 +214,24 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request templates for the Service (v1) API.
+        ///     Request templates for the Pods (v1) API.
         /// </summary>
-        static class Requests
+        public static class Requests
         {
             /// <summary>
-            ///     A collection-level Service (v1) request.
+            ///     A collection-level Pod (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
 
             /// <summary>
-            ///     A get-by-name Service (v1) request.
+            ///     A get-by-name Pod (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/pods/{Name}", SerializerSettings);
+
+            /// <summary>
+            ///     A get-logs Pod (v1) request.
+            /// </summary>
+            public static readonly HttpRequest Logs = ByName.WithRelativeUri("log?limitBytes={LimitBytes?}");
         }
     }
 }

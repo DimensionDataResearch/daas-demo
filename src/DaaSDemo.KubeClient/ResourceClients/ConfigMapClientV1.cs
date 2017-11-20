@@ -6,32 +6,32 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 
     /// <summary>
-    ///     A client for the Kubernetes Secrets (v1) API.
+    ///     A client for the Kubernetes ConfigMaps (v1) API.
     /// </summary>
-    public class SecretClientV1
+    public class ConfigMapClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="SecretClientV1"/>.
+        ///     Create a new <see cref="ConfigMapClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public SecretClientV1(KubeApiClient client)
+        public ConfigMapClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all Secrets in the specified namespace, optionally matching a label selector.
+        ///     Get all ConfigMaps in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the Secrets.
+        ///     An optional Kubernetes label selector expression used to filter the ConfigMaps.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -40,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The Secrets, as a list of <see cref="SecretV1"/>s.
+        ///     The ConfigMaps, as a list of <see cref="ConfigMapV1"/>s.
         /// </returns>
-        public async Task<List<SecretV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<ConfigMapV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            SecretListV1 matchingSecrets =
+            ConfigMapListV1 matchingConfigMaps =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -53,16 +53,16 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<SecretListV1, StatusV1>();
+                .ReadContentAsAsync<ConfigMapListV1, StatusV1>();
 
-            return matchingSecrets.Items;
+            return matchingConfigMaps.Items;
         }
 
         /// <summary>
-        ///     Get the Secret with the specified name.
+        ///     Get the ConfigMap with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Secret to retrieve.
+        ///     The name of the ConfigMap to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -71,14 +71,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="SecretV1"/> representing the current state for the Secret, or <c>null</c> if no Secret was found with the specified name and namespace.
+        ///     A <see cref="ConfigMapV1"/> representing the current state for the ConfigMap, or <c>null</c> if no ConfigMap was found with the specified name and namespace.
         /// </returns>
-        public async Task<SecretV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<ConfigMapV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<SecretV1>(
+            return await GetSingleResource<ConfigMapV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -89,39 +89,39 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a <see cref="Secret"/>.
+        ///     Request creation of a <see cref="ConfigMap"/>.
         /// </summary>
-        /// <param name="newSecret">
-        ///     A <see cref="SecretV1"/> representing the Secret to create.
+        /// <param name="newConfigMap">
+        ///     A <see cref="ConfigMapV1"/> representing the ConfigMap to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="SecretV1"/> representing the current state for the newly-created Secret.
+        ///     A <see cref="ConfigMapV1"/> representing the current state for the newly-created ConfigMap.
         /// </returns>
-        public async Task<SecretV1> Create(SecretV1 newSecret, CancellationToken cancellationToken = default)
+        public async Task<ConfigMapV1> Create(ConfigMapV1 newConfigMap, CancellationToken cancellationToken = default)
         {
-            if (newSecret == null)
-                throw new ArgumentNullException(nameof(newSecret));
+            if (newConfigMap == null)
+                throw new ArgumentNullException(nameof(newConfigMap));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newSecret?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newConfigMap?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newSecret,
+                    postBody: newConfigMap,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<SecretV1, StatusV1>();
+                .ReadContentAsAsync<ConfigMapV1, StatusV1>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified Secret.
+        ///     Request deletion of the specified ConfigMap.
         /// </summary>
         /// <param name="name">
-        ///     The name of the Secret to delete.
+        ///     The name of the ConfigMap to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -147,19 +147,19 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request templates for the Secret (v1) API.
+        ///     Request templates for the ConfigMap (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level Secret (v1) request.
+            ///     A collection-level ConfigMap (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/configmaps?labelSelector={LabelSelector?}", SerializerSettings);
 
             /// <summary>
-            ///     A get-by-name Secret (v1) request.
+            ///     A get-by-name ConfigMap (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/secrets/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/configmaps/{Name}", SerializerSettings);
         }
     }
 }

@@ -702,7 +702,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<DeploymentV1Beta1> FindDeployment()
         {
-            List<DeploymentV1Beta1> matchingDeployments = await KubeClient.DeploymentsV1Beta1.List(
+            List<DeploymentV1Beta1> matchingDeployments = await KubeClient.DeploymentsV1Beta1().List(
                  labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
              );
 
@@ -720,7 +720,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<ServiceV1> FindInternalService()
         {
-            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
             );
             if (matchingServices.Count == 0)
@@ -737,7 +737,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<PrometheusServiceMonitorV1> FindServiceMonitor()
         {
-            List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1.List(
+            List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server"
             );
             if (matchingServices.Count == 0)
@@ -754,7 +754,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<ServiceV1> FindExternalService()
         {
-            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)
@@ -786,7 +786,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.Id
             );
 
-            DeploymentV1Beta1 createdDeployment = await KubeClient.DeploymentsV1Beta1.Create(
+            DeploymentV1Beta1 createdDeployment = await KubeClient.DeploymentsV1Beta1().Create(
                 KubeResources.Deployment(CurrentState)
             );
 
@@ -817,7 +817,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await KubeClient.DeploymentsV1Beta1.Delete(
+                await KubeClient.DeploymentsV1Beta1().Delete(
                     name: controller.Metadata.Name,
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
@@ -857,7 +857,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                ServiceV1 createdService = await KubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await KubeClient.ServicesV1().Create(
                     KubeResources.InternalService(CurrentState)
                 );
 
@@ -888,7 +888,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await KubeClient.ServicesV1.Delete(
+                StatusV1 result = await KubeClient.ServicesV1().Delete(
                     name: existingInternalService.Metadata.Name
                 );
 
@@ -924,7 +924,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                PrometheusServiceMonitorV1 createdService = await KubeClient.PrometheusServiceMonitorsV1.Create(
+                PrometheusServiceMonitorV1 createdService = await KubeClient.PrometheusServiceMonitorsV1().Create(
                     KubeResources.ServiceMonitor(CurrentState)
                 );
 
@@ -955,7 +955,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await KubeClient.PrometheusServiceMonitorsV1.Delete(
+                StatusV1 result = await KubeClient.PrometheusServiceMonitorsV1().Delete(
                     name: existingServiceMonitor.Metadata.Name
                 );
 
@@ -991,7 +991,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                ServiceV1 createdService = await KubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await KubeClient.ServicesV1().Create(
                     KubeResources.ExternalService(CurrentState)
                 );
 
@@ -1022,7 +1022,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await KubeClient.ServicesV1.Delete(
+                StatusV1 result = await KubeClient.ServicesV1().Delete(
                     name: existingExternalService.Metadata.Name
                 );
 

@@ -17,7 +17,6 @@ namespace DaaSDemo.TestHarness
 {
     using Akka.Configuration;
     using KubeClient;
-    using KubeClient.Clients;
     using KubeClient.Models;
     using Provisioning.Actors;
     using Provisioning.Filters;

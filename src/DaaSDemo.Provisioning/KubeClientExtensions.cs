@@ -31,7 +31,7 @@ namespace DaaSDemo.Provisioning
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
 
-            List<ServiceV1> matchingServices = await client.ServicesV1.List(
+            List<ServiceV1> matchingServices = await client.ServicesV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {server.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)

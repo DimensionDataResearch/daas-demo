@@ -6,32 +6,32 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 
-namespace DaaSDemo.KubeClient.Clients
+namespace DaaSDemo.KubeClient.ResourceClients
 {
     using Models;
 
     /// <summary>
-    ///     A client for the Prometheus ServiceMonitor (v1) API.
+    ///     A client for the Kubernetes Services (v1) API.
     /// </summary>
-    public class PrometheusServiceMonitorClientV1
+    public class ServiceClientV1
         : KubeResourceClient
     {
         /// <summary>
-        ///     Create a new <see cref="PrometheusServiceMonitorClientV1"/>.
+        ///     Create a new <see cref="ServiceClientV1"/>.
         /// </summary>
         /// <param name="client">
         ///     The Kubernetes API client.
         /// </param>
-        public PrometheusServiceMonitorClientV1(KubeApiClient client)
+        public ServiceClientV1(KubeApiClient client)
             : base(client)
         {
         }
 
         /// <summary>
-        ///     Get all ServiceMonitors in the specified namespace, optionally matching a label selector.
+        ///     Get all Services in the specified namespace, optionally matching a label selector.
         /// </summary>
         /// <param name="labelSelector">
-        ///     An optional Kubernetes label selector expression used to filter the ServiceMonitors.
+        ///     An optional Kubernetes label selector expression used to filter the Services.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -40,11 +40,11 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     The ServiceMonitors, as a list of <see cref="PrometheusServiceMonitorV1"/>es.
+        ///     The Services, as a list of <see cref="ServiceV1"/>s.
         /// </returns>
-        public async Task<List<PrometheusServiceMonitorV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<List<ServiceV1>> List(string labelSelector = null, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
-            PrometheusServiceMonitorListV1 matchingServiceMonitors =
+            ServiceListV1 matchingServices =
                 await Http.GetAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
@@ -53,16 +53,40 @@ namespace DaaSDemo.KubeClient.Clients
                     }),
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<PrometheusServiceMonitorListV1, StatusV1>();
+                .ReadContentAsAsync<ServiceListV1, StatusV1>();
 
-            return matchingServiceMonitors.Items;
+            return matchingServices.Items;
         }
 
         /// <summary>
-        ///     Get the ServiceMonitor with the specified name.
+        ///     Watch for events relating to Services.
+        /// </summary>
+        /// <param name="labelSelector">
+        ///     An optional Kubernetes label selector expression used to filter the Services.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IObservable{T}"/> representing the event stream.
+        /// </returns>
+        public IObservable<ResourceEventV1<ServiceV1>> WatchAll(string labelSelector = null, string kubeNamespace = null)
+        {
+            return ObserveEvents<ServiceV1>(
+                Requests.Collection.WithTemplateParameters(new
+                {
+                    Namespace = kubeNamespace ?? Client.DefaultNamespace,
+                    LabelSelector = labelSelector,
+                    Watch = true
+                })
+            );
+        }
+
+        /// <summary>
+        ///     Get the Service with the specified name.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ServiceMonitor to retrieve.
+        ///     The name of the Service to retrieve.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -71,14 +95,14 @@ namespace DaaSDemo.KubeClient.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the current state for the ServiceMonitor, or <c>null</c> if no ServiceMonitor was found with the specified name and namespace.
+        ///     A <see cref="ServiceV1"/> representing the current state for the Service, or <c>null</c> if no Service was found with the specified name and namespace.
         /// </returns>
-        public async Task<PrometheusServiceMonitorV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
+        public async Task<ServiceV1> Get(string name, string kubeNamespace = null, CancellationToken cancellationToken = default)
         {
             if (String.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
             
-            return await GetSingleResource<PrometheusServiceMonitorV1>(
+            return await GetSingleResource<ServiceV1>(
                 Requests.ByName.WithTemplateParameters(new
                 {
                     Name = name,
@@ -89,39 +113,39 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request creation of a Prometheus ServiceMonitor.
+        ///     Request creation of a <see cref="Service"/>.
         /// </summary>
-        /// <param name="newServiceMonitor">
-        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the ServiceMonitor to create.
+        /// <param name="newService">
+        ///     A <see cref="ServiceV1"/> representing the Service to create.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="PrometheusServiceMonitorV1"/> representing the current state for the newly-created ServiceMonitor.
+        ///     A <see cref="ServiceV1"/> representing the current state for the newly-created Service.
         /// </returns>
-        public async Task<PrometheusServiceMonitorV1> Create(PrometheusServiceMonitorV1 newServiceMonitor, CancellationToken cancellationToken = default)
+        public async Task<ServiceV1> Create(ServiceV1 newService, CancellationToken cancellationToken = default)
         {
-            if (newServiceMonitor == null)
-                throw new ArgumentNullException(nameof(newServiceMonitor));
+            if (newService == null)
+                throw new ArgumentNullException(nameof(newService));
             
             return await Http
                 .PostAsJsonAsync(
                     Requests.Collection.WithTemplateParameters(new
                     {
-                        Namespace = newServiceMonitor?.Metadata?.Namespace ?? Client.DefaultNamespace
+                        Namespace = newService?.Metadata?.Namespace ?? Client.DefaultNamespace
                     }),
-                    postBody: newServiceMonitor,
+                    postBody: newService,
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<PrometheusServiceMonitorV1, StatusV1>();
+                .ReadContentAsAsync<ServiceV1, StatusV1>();
         }
 
         /// <summary>
-        ///     Request deletion of the specified ServiceMonitor.
+        ///     Request deletion of the specified Service.
         /// </summary>
         /// <param name="name">
-        ///     The name of the ServiceMonitor to delete.
+        ///     The name of the Service to delete.
         /// </param>
         /// <param name="kubeNamespace">
         ///     The target Kubernetes namespace (defaults to <see cref="KubeApiClient.DefaultNamespace"/>).
@@ -147,19 +171,19 @@ namespace DaaSDemo.KubeClient.Clients
         }
 
         /// <summary>
-        ///     Request templates for the ServiceMonitors (v1) API.
+        ///     Request templates for the Service (v1) API.
         /// </summary>
         static class Requests
         {
             /// <summary>
-            ///     A collection-level CoreOS Monitoring (v1) request.
+            ///     A collection-level Service (v1) request.
             /// </summary>
-            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("apis/monitoring.coreos.com/v1/namespaces/{Namespace}/servicemonitors?labelSelector={LabelSelector?}", SerializerSettings);
+            public static readonly HttpRequest Collection = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services?labelSelector={LabelSelector?}&watch={Watch?}", SerializerSettings);
 
             /// <summary>
-            ///     A get-by-name CoreOS Monitoring (v1) request.
+            ///     A get-by-name Service (v1) request.
             /// </summary>
-            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("apis/monitoring.coreos.com/v1/namespaces/{Namespace}/servicemonitors/{Name}", SerializerSettings);
+            public static readonly HttpRequest ByName = HttpRequest.Factory.Json("api/v1/namespaces/{Namespace}/services/{Name}", SerializerSettings);
         }
     }
 }

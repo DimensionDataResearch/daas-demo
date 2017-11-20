@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -10,8 +11,8 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace DaaSDemo.KubeClient
 {
-    using Clients;
     using Models;
+    using ResourceClients;
 
     /// <summary>
     ///     Client for the Kubernetes API.
@@ -19,6 +20,11 @@ namespace DaaSDemo.KubeClient
     public sealed class KubeApiClient
         : IDisposable
     {
+        /// <summary>
+        ///     Kubernetes resource clients.
+        /// </summary>
+        readonly ConcurrentDictionary<Type, KubeResourceClient> _clients = new ConcurrentDictionary<Type, KubeResourceClient>();
+
         /// <summary>
         ///     Create a new <see cref="KubeApiClient"/>.
         /// </summary>
@@ -31,15 +37,6 @@ namespace DaaSDemo.KubeClient
                 throw new ArgumentNullException(nameof(httpClient));
 
             Http = httpClient;
-            SecretsV1 = new SecretClientV1(this);
-            ConfigMapsV1 = new ConfigMapClientV1(this);
-            PodsV1 = new PodClientV1(this);
-            DeploymentsV1Beta1 = new DeploymentClientV1Beta1(this);
-            ReplicationControllersV1 = new ReplicationControllerClientV1(this);
-            ServicesV1 = new ServiceClientV1(this);
-            JobsV1 = new JobClientV1(this);
-            PrometheusServiceMonitorsV1 = new PrometheusServiceMonitorClientV1(this);
-            VoyagerIngressesV1Beta1 = new VoyagerIngressClientV1Beta1(this);
         }
 
         /// <summary>
@@ -58,49 +55,60 @@ namespace DaaSDemo.KubeClient
         public HttpClient Http { get; }
 
         /// <summary>
-        ///     The client for the Secrets (v1) API.
+        ///     Get or create a Kubernetes resource client of the specified type.
         /// </summary>
-        public SecretClientV1 SecretsV1 { get; }
+        /// <typeparam name="TClient">
+        ///     The type of Kubernetes resource client to get or create.
+        /// </typeparam>
+        /// <param name="clientFactory">
+        ///     A delegate that creates the resource client.
+        /// </param>
+        /// <returns>
+        ///     The resource client.
+        /// </returns>
+        public TClient ResourceClient<TClient>(Func<TClient> clientFactory)
+            where TClient : KubeResourceClient
+        {
+            if (clientFactory == null)
+                throw new ArgumentNullException(nameof(clientFactory));
+
+            return (TClient)_clients.GetOrAdd(typeof(TClient), clientType =>
+            {
+                TClient resourceClient = clientFactory();
+                if (resourceClient == null)
+                    throw new InvalidOperationException($"Factory for Kubernetes resource client of type '{clientType.FullName}' returned null.");
+
+                return (KubeResourceClient)resourceClient;
+            });
+        }
 
         /// <summary>
-        ///     The client for the ConfigMaps (v1) API.
+        ///     Get or create a Kubernetes resource client of the specified type.
         /// </summary>
-        public ConfigMapClientV1 ConfigMapsV1 { get; }
+        /// <typeparam name="TClient">
+        ///     The type of Kubernetes resource client to get or create.
+        /// </typeparam>
+        /// <param name="clientFactory">
+        ///     A delegate that creates the resource client.
+        /// </param>
+        /// <returns>
+        ///     The resource client.
+        /// </returns>
+        public TClient ResourceClient<TClient>(Func<KubeApiClient, TClient> clientFactory)
+            where TClient : KubeResourceClient
+        {
+            if (clientFactory == null)
+                throw new ArgumentNullException(nameof(clientFactory));
 
-        /// <summary>
-        ///     The client for the Pods (v1) API.
-        /// </summary>
-        public PodClientV1 PodsV1 { get; }
+            return (TClient)_clients.GetOrAdd(typeof(TClient), clientType =>
+            {
+                TClient resourceClient = clientFactory(this);
+                if (resourceClient == null)
+                    throw new InvalidOperationException($"Factory for Kubernetes resource client of type '{clientType.FullName}' returned null.");
 
-        /// <summary>
-        ///     The client for the Deployments (v1beta1) API.
-        /// </summary>
-        public DeploymentClientV1Beta1 DeploymentsV1Beta1 { get; }
-
-        /// <summary>
-        ///     The client for the ReplicationControllers (v1) API.
-        /// </summary>
-        public ReplicationControllerClientV1 ReplicationControllersV1 { get; }
-
-        /// <summary>
-        ///     The client for the Services (v1) API.
-        /// </summary>
-        public ServiceClientV1 ServicesV1 { get; }
-
-        /// <summary>
-        ///     The client for the Services (v1) API.
-        /// </summary>
-        public JobClientV1 JobsV1 { get; }
-
-        /// <summary>
-        ///     The client for the Prometheus ServiceMonitors (v1) API.
-        /// </summary>
-        public PrometheusServiceMonitorClientV1 PrometheusServiceMonitorsV1 { get; }
-
-        /// <summary>
-        ///     The client for the Voyager Ingress (v1beta1) API.
-        /// </summary>
-        public VoyagerIngressClientV1Beta1 VoyagerIngressesV1Beta1 { get; }
+                return (KubeResourceClient)resourceClient;
+            });
+        }
 
         /// <summary>
         ///     Create a new <see cref="KubeApiClient"/>.
