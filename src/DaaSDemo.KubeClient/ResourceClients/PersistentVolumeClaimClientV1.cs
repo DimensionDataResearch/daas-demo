@@ -130,9 +130,9 @@ namespace DaaSDemo.KubeClient.ResourceClients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     An <see cref="StatusV1"/> indicating the result of the request.
+        ///     A <see cref="PersistentVolumeClaimV1"/> representing the state of the PersistentVolumeClaim before it was deleted.
         /// </returns>
-        public async Task<StatusV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
+        public async Task<PersistentVolumeClaimV1> Delete(string name, string kubeNamespace = null, DeletePropagationPolicy propagationPolicy = DeletePropagationPolicy.Background, CancellationToken cancellationToken = default)
         {
             return
                 await Http.DeleteAsJsonAsync(
@@ -149,7 +149,7 @@ namespace DaaSDemo.KubeClient.ResourceClients
                     },
                     cancellationToken: cancellationToken
                 )
-                .ReadContentAsAsync<StatusV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
+                .ReadContentAsAsync<PersistentVolumeClaimV1, StatusV1>(HttpStatusCode.OK, HttpStatusCode.NotFound);
         }
 
         /// <summary>
