@@ -240,7 +240,7 @@ namespace DaaSDemo.Provisioning
                         Labels = new Dictionary<string, string>
                         {
                             ["k8s-app"] = baseName,
-                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString() // TODO: Use tenant Id instead
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
                         }
                     },
                     Spec = new PodSpecV1

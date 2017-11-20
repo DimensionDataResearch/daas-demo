@@ -116,7 +116,7 @@ namespace DaaSDemo.Provisioning
             if (_actorSystem != null)
                 throw new InvalidOperationException("Cannot start the provisioning engine because it is already running.");
 
-            _actorSystem = Boot.Up(_scopeFactory, DatabaseOptions, SqlClientOptions, KubeOptions, PrometheusOptions, ProvisioningOptions);
+            _actorSystem = Boot.Up(_scopeFactory);
 
             DataAccess = _actorSystem.ActorOf(
                 _actorSystem.DI().Props<Actors.DataAccess>(),

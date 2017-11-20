@@ -215,13 +215,13 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Called when the actor is waiting for the server's ReplicationController to indicate that all replicas are Available.
+        ///     Called when the actor is waiting for the server's Deployment to indicate that all replicas are Available.
         /// </summary>
         void WaitForServerAvailable()
         {
-            Log.Info("Waiting for server {ServerId}'s ReplicationController to become Available...", ServerId);
+            Log.Info("Waiting for server {ServerId}'s Deployment to become Available...", ServerId);
 
-            StartPolling(Signal.PollReplicationController);
+            StartPolling(Signal.PollDeployment);
 
             ReceiveAsync<Signal>(async signal =>
             {
@@ -254,7 +254,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                 switch (signal)
                 {
-                    case Signal.PollReplicationController:
+                    case Signal.PollDeployment:
                     {
                         if (CurrentState.Status == ProvisioningStatus.Ready)
                         {
@@ -263,24 +263,24 @@ namespace DaaSDemo.Provisioning.Actors
                             break;
                         }
 
-                        ReplicationControllerV1 replicationController = await FindReplicationController();
-                        if (replicationController == null)
+                        DeploymentV1Beta1 deployment = await FindDeployment();
+                        if (deployment == null)
                         {
-                            Log.Warning("{Action} failed - cannot find ReplicationController for server {ServerId}.", actionDescription, ServerId);
+                            Log.Warning("{Action} failed - cannot find Deployment for server {ServerId}.", actionDescription, ServerId);
 
                             FailCurrentAction();
 
                             Become(Ready);
                         }
-                        else if (replicationController.Status.AvailableReplicas == replicationController.Status.Replicas)
+                        else if (deployment.Status.AvailableReplicas == deployment.Status.Replicas)
                         {
                             Log.Info("Server {ServerID} is now available ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
                                 ServerId,
-                                replicationController.Status.AvailableReplicas,
-                                replicationController.Status.Replicas
+                                deployment.Status.AvailableReplicas,
+                                deployment.Status.Replicas
                             );
 
-                            // We're done with the ReplicationController now that it's marked as Available, so we're ready to initialise the server configuration.
+                            // We're done with the Deployment now that it's marked as Available, so we're ready to initialise the server configuration.
                             StartProvisioningPhase(ServerProvisioningPhase.Ingress);
                             Become(Ready);
                         }
@@ -288,8 +288,8 @@ namespace DaaSDemo.Provisioning.Actors
                         {
                             Log.Debug("Server {ServerID} is not available yet ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
                                 ServerId,
-                                replicationController.Status.AvailableReplicas,
-                                replicationController.Status.Replicas
+                                deployment.Status.AvailableReplicas,
+                                deployment.Status.Replicas
                             );
                         }
 
@@ -297,7 +297,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     case Signal.Timeout:
                     {
-                        Log.Warning("{Action} failed - timed out waiting server {ServerId}'s ReplicationController to become ready.", actionDescription, ServerId);
+                        Log.Warning("{Action} failed - timed out waiting server {ServerId}'s Deployment to become ready.", actionDescription, ServerId);
 
                         FailCurrentAction();
 
@@ -315,7 +315,7 @@ namespace DaaSDemo.Provisioning.Actors
             });
             Receive<DatabaseServer>(_ =>
             {
-                Log.Debug("Ignoring DatabaseServer state message (waiting for server's ReplicationController to become Available).'");
+                Log.Debug("Ignoring DatabaseServer state message (waiting for server's Deployment to become Available).'");
             });
             Receive<Terminated>(
                 terminated => HandleTermination(terminated)
@@ -535,7 +535,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Instance);
 
-                    await EnsureReplicationControllerPresent();
+                    await EnsureDeploymentPresent();
                     
                     goto case ServerProvisioningPhase.Network;
                 }
@@ -553,7 +553,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     await EnsureServiceMonitorPresent();
 
-                    Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
+                    Become(WaitForServerAvailable); // We can't proceed until the deployment becomes available.
 
                     break;
                 }
@@ -596,7 +596,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Instance);
 
-                    await EnsureReplicationControllerPresent();
+                    await EnsureDeploymentPresent();
                     
                     goto case ServerProvisioningPhase.Network;
                 }
@@ -614,7 +614,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                     await EnsureServiceMonitorPresent();
 
-                    Become(WaitForServerAvailable); // We can't proceed until the replication controller becomes available.
+                    Become(WaitForServerAvailable); // We can't proceed until the deployment becomes available.
 
                     break;
                 }
@@ -657,7 +657,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartDeprovisioningPhase(ServerProvisioningPhase.Instance);
 
-                    await EnsureReplicationControllerAbsent();
+                    await EnsureDeploymentAbsent();
                     
                     goto case ServerProvisioningPhase.Network;
                 }
@@ -695,21 +695,21 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Find the server's associated ReplicationController (if it exists).
+        ///     Find the server's associated Deployment (if it exists).
         /// </summary>
         /// <returns>
-        ///     The ReplicationController, or <c>null</c> if it was not found.
+        ///     The Deployment, or <c>null</c> if it was not found.
         /// </returns>
-        async Task<ReplicationControllerV1> FindReplicationController()
+        async Task<DeploymentV1Beta1> FindDeployment()
         {
-            List<ReplicationControllerV1> matchingControllers = await KubeClient.ReplicationControllersV1.List(
+            List<DeploymentV1Beta1> matchingDeployments = await KubeClient.DeploymentsV1Beta1.List(
                  labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
              );
 
-            if (matchingControllers.Count == 0)
+            if (matchingDeployments.Count == 0)
                 return null;
 
-            return matchingControllers[matchingControllers.Count - 1];
+            return matchingDeployments[matchingDeployments.Count - 1];
         }
 
         /// <summary>
@@ -764,67 +764,67 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Ensure that a ReplicationController resource exists for the specified database server.
+        ///     Ensure that a Deployment resource exists for the specified database server.
         /// </summary>
         /// <returns>
-        ///     The ReplicationController resource, as a <see cref="ReplicationControllerV1"/>.
+        ///     The Deployment resource, as a <see cref="DeploymentV1Beta1"/>.
         /// </returns>
-        async Task<ReplicationControllerV1> EnsureReplicationControllerPresent()
+        async Task<DeploymentV1Beta1> EnsureDeploymentPresent()
         {
-            ReplicationControllerV1 existingController = await FindReplicationController();
-            if (existingController != null)
+            DeploymentV1Beta1 existingDeployment = await FindDeployment();
+            if (existingDeployment != null)
             {
-                Log.Info("Found existing replication controller {ReplicationControllerName} for server {ServerId}.",
-                    existingController.Metadata.Name,
+                Log.Info("Found existing deployment {DeploymentName} for server {ServerId}.",
+                    existingDeployment.Metadata.Name,
                     CurrentState.Id
                 );
 
-                return existingController;
+                return existingDeployment;
             }
 
-            Log.Info("Creating replication controller for server {ServerId}...",
+            Log.Info("Creating deployment for server {ServerId}...",
                 CurrentState.Id
             );
 
-            ReplicationControllerV1 createdController = await KubeClient.ReplicationControllersV1.Create(
-                KubeResources.ReplicationController(CurrentState)
+            DeploymentV1Beta1 createdDeployment = await KubeClient.DeploymentsV1Beta1.Create(
+                KubeResources.Deployment(CurrentState)
             );
 
-            Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
-                createdController.Metadata.Name,
+            Log.Info("Successfully created deployment {DeploymentName} for server {ServerId}.",
+                createdDeployment.Metadata.Name,
                 CurrentState.Id
             );
 
-            return createdController;
+            return createdDeployment;
         }
 
         /// <summary>
-        ///     Ensure that a ReplicationController resource does not exist for the specified database server.
+        ///     Ensure that a Deployment resource does not exist for the specified database server.
         /// </summary>
         /// <returns>
         ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
         /// </returns>
-        async Task<bool> EnsureReplicationControllerAbsent()
+        async Task<bool> EnsureDeploymentAbsent()
         {
-            ReplicationControllerV1 controller = await FindReplicationController();
+            DeploymentV1Beta1 controller = await FindDeployment();
             if (controller == null)
                 return true;
 
-            Log.Info("Deleting replication controller {ControllerName} for server {ServerId}...",
+            Log.Info("Deleting deployment {DeploymentName} for server {ServerId}...",
                 controller.Metadata.Name,
                 CurrentState.Id
             );
 
             try
             {
-                await KubeClient.ReplicationControllersV1.Delete(
+                await KubeClient.DeploymentsV1Beta1.Delete(
                     name: controller.Metadata.Name,
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
             }
             catch (HttpRequestException<StatusV1> deleteFailed)
             {
-                Log.Error("Failed to delete replication controller {ControllerName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
+                Log.Error("Failed to delete deployment {DeploymentName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
                     controller.Metadata.Name,
                     CurrentState.Id,
                     deleteFailed.Response.Message,
@@ -834,7 +834,7 @@ namespace DaaSDemo.Provisioning.Actors
                 return false;
             }
 
-            Log.Info("Deleted replication controller {ControllerName} for server {ServerId}.",
+            Log.Info("Deleted deployment {DeploymentName} for server {ServerId}.",
                 controller.Metadata.Name,
                 CurrentState.Id
             );
@@ -1350,9 +1350,9 @@ namespace DaaSDemo.Provisioning.Actors
         public enum Signal
         {
             /// <summary>
-            ///     Poll the status of the server's ReplicationController.
+            ///     Poll the status of the server's Deployment.
             /// </summary>
-            PollReplicationController = 1,
+            PollDeployment = 1,
 
             /// <summary>
             ///     The current polling operation timed out.

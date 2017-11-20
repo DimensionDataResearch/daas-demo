@@ -2,6 +2,7 @@ using Akka;
 using Akka.Actor;
 using Akka.DI.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -44,12 +45,12 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="kubeResources">
         ///     The Kubernetes resource factory.
         /// </param>
-        public DataAccess(DatabaseOptions databaseOptions)
+        public DataAccess(IOptions<DatabaseOptions> databaseOptions)
         {
             if (databaseOptions == null)
                 throw new ArgumentNullException(nameof(databaseOptions));
             
-            _databaseOptions = databaseOptions;
+            _databaseOptions = databaseOptions.Value;
 
             ReceiveAsync<Command>(async command =>
             {

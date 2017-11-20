@@ -75,7 +75,12 @@ namespace DaaSDemo.Provisioning
             
             return Deployment(
                 name: baseName,
-                spec: Specs.Deployment(server)
+                spec: Specs.Deployment(server),
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = baseName,
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                }
             );
         }
 
@@ -143,7 +148,12 @@ namespace DaaSDemo.Provisioning
             
             return ReplicationController(
                 name: baseName,
-                spec: Specs.ReplicationController(server)
+                spec: Specs.ReplicationController(server),
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = baseName,
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                }
             );
         }
 

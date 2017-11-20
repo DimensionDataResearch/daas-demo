@@ -36,25 +36,25 @@ namespace DaaSDemo.KubeClient.Models
         /// <summary>
         ///     Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)
         /// </summary>
-        [JsonProperty("minReadySeconds")]
+        [JsonProperty("minReadySeconds", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int MinReadySeconds { get; set; }
 
         /// <summary>
         ///     The maximum time in seconds for a deployment to make progress before it is considered to be failed. The deployment controller will continue to process failed deployments and a condition with a ProgressDeadlineExceeded reason will be surfaced in the deployment status. Once autoRollback is implemented, the deployment controller will automatically rollback failed deployments. Note that progress will not be estimated during the time a deployment is paused. This is not set by default.
         /// </summary>
-        [JsonProperty("progressDeadlineSeconds")]
+        [JsonProperty("progressDeadlineSeconds", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int ProgressDeadlineSeconds { get; set; }
 
         /// <summary>
         ///     Number of desired pods. This is a pointer to distinguish between explicit zero and not specified. Defaults to 1.
         /// </summary>
-        [JsonProperty("replicas")]
+        [JsonProperty("replicas", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int Replicas { get; set; }
 
         /// <summary>
         ///     The number of old ReplicaSets to retain to allow rollback. This is a pointer to distinguish between explicit zero and not specified.
         /// </summary>
-        [JsonProperty("revisionHistoryLimit")]
+        [JsonProperty("revisionHistoryLimit", DefaultValueHandling = DefaultValueHandling.Ignore)]
         public int RevisionHistoryLimit { get; set; }
 
         /// <summary>
