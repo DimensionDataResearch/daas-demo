@@ -96,12 +96,14 @@ export class TenantDetail {
                 return 'Server Instance';
             case ServerProvisioningPhase.Network:
                 return 'Internal Network';
+            case ServerProvisioningPhase.Monitoring:
+                return 'Monitoring';
             case ServerProvisioningPhase.Configuration:
                 return 'Server Configuration';
             case ServerProvisioningPhase.Ingress:
                 return 'External Network';
             default:
-                return null;
+                return this.server.phase;
         }
     }
 
