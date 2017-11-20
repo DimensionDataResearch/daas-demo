@@ -41,6 +41,10 @@ spec:
             value: http://sql-executor-internal.default.svc.cluster.local:5000/
           - name: DAAS_Kubernetes__ClusterPublicFQDN
             value: 'sql.kr-cluster.tintoy.io'
+          - name: DAAS_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: DAAS_Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
           - name: DAAS_Kubernetes__PodName

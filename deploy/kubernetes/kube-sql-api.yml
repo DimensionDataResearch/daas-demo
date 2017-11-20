@@ -34,14 +34,14 @@ spec:
             value: 'http://*:5000'
           - name: DAAS_Logging__ElasticSearch__EndPoint
             value: 'http://elasticsearch-logging.kube-system.svc.cluster.local:9200'
-          - name: DAAS_Kubernetes__PodName
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
           - name: DAAS_Kubernetes__ClusterPublicFQDN
             value: 'kr-cluster.tintoy.io'
           - name: DAAS_Kubernetes__ClusterPublicPort
             value: '31201'
+          - name: DAAS_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: DAAS_Kubernetes__VolumeClaimName
             value: 'sql-data-claim'
           - name: DAAS_Database__ConnectionString
