@@ -1,5 +1,6 @@
 using Akka;
 using Akka.Actor;
+using Akka.DI.Core;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using Common.Options;
     using Data;
     using Messages;
     using Models.Data;
@@ -32,17 +34,22 @@ namespace DaaSDemo.Provisioning.Actors
         readonly Dictionary<int, IActorRef> _serverManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
+        ///     Application-level database options.
+        /// </summary>
+        readonly DatabaseOptions _databaseOptions;
+
+        /// <summary>
         ///     Create a new <see cref="DataAccess"/>.
         /// </summary>
         /// <param name="kubeResources">
         ///     The Kubernetes resource factory.
         /// </param>
-        public DataAccess(KubeResources kubeResources)
+        public DataAccess(DatabaseOptions databaseOptions)
         {
-            if (kubeResources == null)
-                throw new ArgumentNullException(nameof(kubeResources));
+            if (databaseOptions == null)
+                throw new ArgumentNullException(nameof(databaseOptions));
             
-            KubeResources = kubeResources;
+            _databaseOptions = databaseOptions;
 
             ReceiveAsync<Command>(async command =>
             {
@@ -82,11 +89,6 @@ namespace DaaSDemo.Provisioning.Actors
                     Unhandled(terminated);
             });
         }
-
-        /// <summary>
-        ///     The Kubernetes resource factory.
-        /// </summary>
-        KubeResources KubeResources { get; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -130,12 +132,17 @@ namespace DaaSDemo.Provisioning.Actors
                 if (!_serverManagers.TryGetValue(server.TenantId, out serverManager))
                 {
                     serverManager = Context.ActorOf(
-                        Props.Create(() => new TenantServerManager(server.Id, Self, KubeResources)),
+                        Context.DI().Props<TenantServerManager>(),
                         name: TenantServerManager.ActorName(server.TenantId)
                     );
                     Context.Watch(serverManager);
                     
                     _serverManagers.Add(server.TenantId, serverManager);
+
+                    serverManager.Tell(new TenantServerManager.Initialize(
+                        initialState: server,
+                        dataAccess: Self
+                    ));
 
                     Log.Info("Created TenantServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
                         serverManager.Path.Name,
@@ -143,9 +150,11 @@ namespace DaaSDemo.Provisioning.Actors
                         server.TenantId
                     );
                 }
-
-                Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
-                serverManager.Tell(server);
+                else
+                {
+                    Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
+                    serverManager.Tell(server);
+                }
             }
 
             Log.Debug("Tenant scan complete.");
@@ -320,9 +329,7 @@ namespace DaaSDemo.Provisioning.Actors
         Entities CreateEntityContext()
         {
             DbContextOptionsBuilder optionsBuilder = new DbContextOptionsBuilder()
-                .UseSqlServer(
-                    connectionString: Context.System.Settings.Config.GetString("daas.db.connection-string")
-                );
+                .UseSqlServer(_databaseOptions.ConnectionString);
 
             return new Entities(optionsBuilder.Options);
         }

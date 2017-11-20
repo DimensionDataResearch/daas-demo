@@ -134,16 +134,10 @@ namespace DaaSDemo.Provisioning
         /// <returns>
         ///     The configured <see cref="ReplicationControllerV1"/>.
         /// </returns>
-        public ReplicationControllerV1 ReplicationController(DatabaseServer server, string imageName, string dataVolumeClaimName)
+        public ReplicationControllerV1 ReplicationController(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
-
-            if (String.IsNullOrWhiteSpace(imageName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'imageName'.", nameof(imageName));
-
-            if (String.IsNullOrWhiteSpace(dataVolumeClaimName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'dataVolumeClaimName'.", nameof(dataVolumeClaimName));
 
             string baseName = Names.BaseName(server);
             

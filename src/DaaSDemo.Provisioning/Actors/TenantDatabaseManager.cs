@@ -28,41 +28,94 @@ namespace DaaSDemo.Provisioning.Actors
         : ReceiveActorEx
     {
         /// <summary>
-        ///     A reference to the <see cref="TenantServerManager"/> actor.
-        /// </summary>
-        readonly IActorRef _serverManager;
-
-        /// <summary>
-        ///     A reference to the <see cref="DataAccess"/> actor.
-        /// </summary>
-        readonly IActorRef _dataAccess;
-
-        /// <summary>
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL executor API.
-        /// </summary>
-        SqlApiClient _sqlClient;
-
-        /// <summary>
         ///     Create a new <see cref="TenantDatabaseManager"/>.
         /// </summary>
         /// <param name="serverManager">
         ///     A reference to the <see cref="TenantServerManager"/> actor.
         /// </param>
         /// <param name="dataAccess">
-        ///     A reference to the <see cref="DataAccess"/> actor.
+        ///     A reference to the <see cref="Actors.DataAccess"/> actor.
         /// </param>
-        public TenantDatabaseManager(IActorRef serverManager, IActorRef dataAccess)
+        public TenantDatabaseManager(SqlApiClient sqlClient)
         {
-            if (serverManager == null)
-                throw new ArgumentNullException(nameof(serverManager));
+            if (sqlClient == null)
+                throw new ArgumentNullException(nameof(sqlClient));
 
-            if (dataAccess == null)
-                throw new ArgumentNullException(nameof(dataAccess));
+            SqlClient = sqlClient;
+        }
 
-            _serverManager = serverManager;
-            _dataAccess = dataAccess;
-            _sqlClient = CreateSqlApiClient();
+        /// <summary>
+        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL executor API.
+        /// </summary>
+        SqlApiClient SqlClient { get; set; }
 
+        /// <summary>
+        ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
+        /// </summary>
+        IActorRef ServerManager { get; set; }
+
+        /// <summary>
+        ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+        /// </summary>
+        IActorRef DataAccess { get; set; }
+
+        /// <summary>
+        ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
+        /// </summary>
+        DatabaseInstance CurrentState { get; set; }
+
+        /// <summary>
+        ///     Called when the actor is started.
+        /// </summary>
+        protected override void PreStart()
+        {
+            Become(Initializing);
+        }
+
+        /// <summary>
+        ///     Called when the actor is stopped.
+        /// </summary>
+        protected override void PostStop()
+        {
+            if (SqlClient != null)
+            {
+                SqlClient.Dispose();
+                SqlClient = null;
+            }
+        }
+
+        /// <summary>
+        ///     Called when the actor is initialising.
+        /// </summary>
+        void Initializing()
+        {
+            Receive<Initialize>(initialize =>
+            {
+                ServerManager = initialize.ServerManager;
+                DataAccess = initialize.DataAccess;
+                CurrentState = initialize.InitialState;
+
+                Self.Tell(CurrentState); // Kick off initial state-management actions.
+
+                Become(Ready);
+            });
+
+            SetReceiveTimeout(
+                TimeSpan.FromSeconds(5)
+            );
+            Receive<ReceiveTimeout>(_ =>
+            {
+                Log.Error("Failed to receive Initialize message within 5 seconds of being created.");
+
+                Context.Stop(Self);
+            });  
+        }
+
+        /// <summary>
+        ///     Called when the actor is ready to process requests.
+        /// </summary>
+        void Ready()
+        {
             ReceiveAsync<DatabaseInstance>(async database =>
             {
                 CurrentState = database;
@@ -92,23 +145,6 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     A <see cref="DatabaseInstance"/> representing the currently-desired database state.
-        /// </summary>
-        DatabaseInstance CurrentState { get; set; }
-
-        /// <summary>
-        ///     Called when the actor is stopped.
-        /// </summary>
-        protected override void PostStop()
-        {
-            if (_sqlClient != null)
-            {
-                _sqlClient.Dispose();
-                _sqlClient = null;
-            }
-        }
-
-        /// <summary>
         ///     Provision the database.
         /// </summary>
         /// <returns>
@@ -121,7 +157,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServerId
             );
 
-            _dataAccess.Tell(
+            DataAccess.Tell(
                 new DatabaseProvisioning(CurrentState.Id)
             );
 
@@ -137,7 +173,7 @@ namespace DaaSDemo.Provisioning.Actors
                     );
                 }
 
-                _dataAccess.Tell(
+                DataAccess.Tell(
                     new DatabaseProvisioned(CurrentState.Id)
                 );
             }
@@ -148,7 +184,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                _dataAccess.Tell(
+                DataAccess.Tell(
                     new DatabaseProvisioningFailed(CurrentState.Id)
                 );
             }
@@ -167,7 +203,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServerId
             );
 
-            _dataAccess.Tell(
+            DataAccess.Tell(
                 new DatabaseDeprovisioning(CurrentState.Id)
             );
 
@@ -183,7 +219,7 @@ namespace DaaSDemo.Provisioning.Actors
                     );
                 }
 
-                _dataAccess.Tell(
+                DataAccess.Tell(
                     new DatabaseDeprovisioned(CurrentState.Id)
                 );
 
@@ -208,7 +244,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> DoesDatabaseExist()
         {
-            QueryResult result = await _sqlClient.ExecuteQuery(
+            QueryResult result = await SqlClient.ExecuteQuery(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.CheckDatabaseExists(),
@@ -236,7 +272,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Id
             );
 
-            CommandResult commandResult = await _sqlClient.ExecuteCommand(
+            CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.CreateDatabase(CurrentState.Name, CurrentState.DatabaseUser, CurrentState.DatabasePassword),
@@ -293,7 +329,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.DatabaseServer.Id
             );
 
-            CommandResult commandResult = await _sqlClient.ExecuteCommand(
+            CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.DatabaseServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),
@@ -339,18 +375,57 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Create a new <see cref="SqlApiClient"/> for communicating with the SQL Executor API.
+        ///     Initialise the actor.
         /// </summary>
-        /// <returns>
-        ///     The configured <see cref="SqlApiClient"/>.
-        /// </returns>
-        SqlApiClient CreateSqlApiClient()
+        public class Initialize
         {
-            return SqlApiClient.Create(
-                endPointUri: new Uri(
-                    Context.System.Settings.Config.GetString("daas.sql.api-endpoint")
-                )
-            );
+            /// <summary>
+            ///     Create a new <see cref="Initialize"/> message.
+            /// </summary>
+            /// <param name="serverManager">
+            ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
+            /// </param>
+            /// <param name="dataAccess">
+            ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+            /// </param>
+            /// <param name="initialState">
+            ///     A <see cref="DatabaseInstance"/> representing the actor's initial state.
+            /// </param>
+            public Initialize(IActorRef serverManager, IActorRef dataAccess, DatabaseInstance initialState)
+            {
+                if (serverManager == null)
+                    throw new ArgumentNullException(nameof(serverManager));
+                
+                if (dataAccess == null)
+                    throw new ArgumentNullException(nameof(dataAccess));
+                
+                if (initialState == null)
+                    throw new ArgumentNullException(nameof(initialState));
+
+                InitialState = initialState;
+                ServerManager = serverManager;
+                DataAccess = dataAccess;
+            }
+
+            /// <summary>
+            ///     The Id of the target database.
+            /// </summary>
+            public int DatabaseId => InitialState.Id;
+
+            /// <summary>
+            ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
+            /// </summary>
+            public IActorRef ServerManager { get; }
+
+            /// <summary>
+            ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+            /// </summary>
+            public IActorRef DataAccess { get; }
+
+            /// <summary>
+            ///     A <see cref="DatabaseInstance"/> representing the actor's initial state.
+            /// </summary>
+            public DatabaseInstance InitialState { get; }
         }
 
         /// <summary>

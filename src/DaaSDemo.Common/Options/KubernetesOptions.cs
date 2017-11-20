@@ -37,7 +37,7 @@ namespace DaaSDemo.Common.Options
         /// <summary>
         ///     The access token for the Kubernetes API end-point.
         /// </summary>
-        public string Token { get; }
+        public string Token { get; set; }
 
         /// <summary>
         ///     Load <see cref="KubernetesOptions"/> from configuration.

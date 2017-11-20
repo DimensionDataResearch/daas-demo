@@ -1,6 +1,8 @@
 using Akka.Actor;
+using Akka.DI.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 
@@ -15,6 +17,11 @@ namespace DaaSDemo.Provisioning
         : IDisposable
     {
         /// <summary>
+        ///     A factory for actor-level dependency injection scopes.
+        /// </summary>
+        readonly IServiceScopeFactory _scopeFactory;
+
+        /// <summary>
         ///     The underlying actor system.
         /// </summary>
         ActorSystem _actorSystem;
@@ -22,6 +29,9 @@ namespace DaaSDemo.Provisioning
         /// <summary>
         ///     Create a new <see cref="ProvisioningEngine"/>.
         /// </summary>
+        /// <param name="scopeFactory">
+        ///     A factory for actor-level dependency injection scopes.
+        /// </param>
         /// <param name="databaseOptions">
         ///     The application-level database options.
         /// </param>
@@ -37,8 +47,11 @@ namespace DaaSDemo.Provisioning
         /// <param name="provisioningOptions">
         ///     The application-level provisioning options.
         /// </param>
-        public ProvisioningEngine(IOptions<DatabaseOptions> databaseOptions, IOptions<SqlExecutorClientOptions> sqlClientOptions, IOptions<KubernetesOptions> kubeOptions, IOptions<PrometheusOptions> prometheusOptions, IOptions<ProvisioningOptions> provisioningOptions)
+        public ProvisioningEngine(IServiceScopeFactory scopeFactory, IOptions<DatabaseOptions> databaseOptions, IOptions<SqlExecutorClientOptions> sqlClientOptions, IOptions<KubernetesOptions> kubeOptions, IOptions<PrometheusOptions> prometheusOptions, IOptions<ProvisioningOptions> provisioningOptions)
         {
+            if (scopeFactory == null)
+                throw new ArgumentNullException(nameof(scopeFactory));
+
             if (databaseOptions == null)
                 throw new ArgumentNullException(nameof(databaseOptions));
             
@@ -54,6 +67,7 @@ namespace DaaSDemo.Provisioning
             if (provisioningOptions == null)
                 throw new ArgumentNullException(nameof(provisioningOptions));
             
+            _scopeFactory = scopeFactory;
             DatabaseOptions = databaseOptions.Value;
             SqlClientOptions = sqlClientOptions.Value;
             KubeOptions = kubeOptions.Value;
@@ -102,10 +116,10 @@ namespace DaaSDemo.Provisioning
             if (_actorSystem != null)
                 throw new InvalidOperationException("Cannot start the provisioning engine because it is already running.");
 
-            _actorSystem = Boot.Up(DatabaseOptions, SqlClientOptions, KubeOptions, PrometheusOptions, ProvisioningOptions);
+            _actorSystem = Boot.Up(_scopeFactory, DatabaseOptions, SqlClientOptions, KubeOptions, PrometheusOptions, ProvisioningOptions);
 
             DataAccess = _actorSystem.ActorOf(
-                Props.Create<Actors.DataAccess>(),
+                _actorSystem.DI().Props<Actors.DataAccess>(),
                 name: Actors.DataAccess.ActorName
             );
         }

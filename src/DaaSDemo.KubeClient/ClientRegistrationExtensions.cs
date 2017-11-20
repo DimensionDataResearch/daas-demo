@@ -42,10 +42,10 @@ namespace DaaSDemo.KubeClient
                     KubernetesOptions kubeOptions = serviceProvider.GetRequiredService<IOptions<KubernetesOptions>>().Value;
 
                     if (String.IsNullOrWhiteSpace(kubeOptions.ApiEndPoint))
-                    throw new InvalidOperationException("Application configuration is missing Kubernetes API end-point.");
+                        throw new InvalidOperationException("Application configuration is missing Kubernetes API end-point.");
 
                     if (String.IsNullOrWhiteSpace(kubeOptions.Token))
-                    throw new InvalidOperationException("Application configuration is missing Kubernetes API token.");
+                        throw new InvalidOperationException("Application configuration is missing Kubernetes API token.");
 
                     return KubeClient.KubeApiClient.Create(
                         endPointUri: new Uri(kubeOptions.ApiEndPoint),

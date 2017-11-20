@@ -26,6 +26,10 @@ namespace DaaSDemo.Provisioning
             services.AddTransient<KubeSpecs>();
             services.AddTransient<KubeResources>();
 
+            services.AddTransient<Actors.DataAccess>();
+            services.AddTransient<Actors.TenantServerManager>();
+            services.AddTransient<Actors.TenantDatabaseManager>();
+
             services.AddSingleton<ProvisioningEngine>();
         }
     }

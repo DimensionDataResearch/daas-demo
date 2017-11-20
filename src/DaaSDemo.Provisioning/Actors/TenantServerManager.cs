@@ -2,6 +2,7 @@ using Akka;
 using Akka.Actor;
 using HTTPlease;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -25,12 +26,16 @@ namespace DaaSDemo.Provisioning.Actors
     using Models.Sql;
     using Exceptions;
     using SqlExecutor.Client;
+    using DaaSDemo.Common.Options;
+    using Akka.DI.Core;
 
     /// <summary>
     ///     Actor that represents a tenant's database server and manages its life-cycle.
     /// </summary>
     /// <remarks>
     ///     Management of the server's databases is delegated to a child <see cref="TenantDatabaseManager"/> actor.
+    ///
+    ///     AF: UGH - this has become a God Class; break it up, please.
     /// </remarks>
     public class TenantServerManager
         : ReceiveActorEx, IWithUnboundedStash
@@ -51,31 +56,6 @@ namespace DaaSDemo.Provisioning.Actors
         readonly Dictionary<int, IActorRef> _databaseManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
-        ///     The Id of the target server.
-        /// </summary>
-        readonly int _serverId;
-
-        /// <summary>
-        ///     A reference to the <see cref="DataAccess"/> actor.
-        /// </summary>
-        readonly IActorRef _dataAccess;
-
-        /// <summary>
-        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
-        /// </summary>
-        readonly KubeApiClient _kubeClient;
-
-        /// <summary>
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL executor API.
-        /// </summary>
-        readonly SqlApiClient _sqlClient;
-
-        /// <summary>
-        ///     The Kubernetes cluster's fully-qualified domain name.
-        /// </summary>
-        string _clusterPublicDomainName;
-
-        /// <summary>
         ///     Cancellation for the current poll timer (if any).
         /// </summary>
         ICancelable _pollCancellation;
@@ -91,26 +71,33 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="kubeResources">
         ///     The Kubernetes resource factory.
         /// </param>
-        /// <param name="serverId">
-        ///     The Id of the target server.
+        /// <param name="kubeClient">
+        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
         /// </param>
-        /// <param name="databaseWatcher">
-        ///     A reference to the <see cref="DataAccess"/> actor.
+        /// <param name="kubeOptions">
+        ///     Application-level Kubernetes options.
         /// </param>
-        public TenantServerManager(int serverId, IActorRef databaseWatcher, KubeResources kubeResources)
+        /// <param name="sqlClient">
+        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        /// </param>
+        public TenantServerManager(KubeResources kubeResources, KubeApiClient kubeClient, IOptions<KubernetesOptions> kubeOptions, SqlApiClient sqlClient)
         {
-            if (databaseWatcher == null)
-                throw new ArgumentNullException(nameof(databaseWatcher));
-
             if (kubeResources == null)
                 throw new ArgumentNullException(nameof(kubeResources));
 
-            _serverId = serverId;
-            _dataAccess = databaseWatcher;
-            KubeResources = kubeResources;
+            if (kubeClient == null)
+                throw new ArgumentNullException(nameof(kubeClient));
 
-            _kubeClient = CreateKubeApiClient();
-            _sqlClient = CreateSqlApiClient();
+            if (kubeOptions == null)
+                throw new ArgumentNullException(nameof(kubeOptions));
+
+            if (sqlClient == null)
+                throw new ArgumentNullException(nameof(sqlClient));
+            
+            KubeResources = kubeResources;
+            KubeClient = kubeClient;
+            KubeOptions = kubeOptions.Value;
+            SqlClient = sqlClient;
         }
 
         /// <summary>
@@ -119,9 +106,34 @@ namespace DaaSDemo.Provisioning.Actors
         public IStash Stash { get; set; }
 
         /// <summary>
+        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        /// </summary>
+        SqlApiClient SqlClient { get; set; }
+
+        /// <summary>
         ///     The Kubernetes resource factory.
         /// </summary>
         KubeResources KubeResources { get; }
+
+        /// <summary>
+        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
+        /// </summary>
+        KubeApiClient KubeClient { get; set; }
+
+        /// <summary>
+        ///     Application-level Kubernetes options.
+        /// </summary>
+        KubernetesOptions KubeOptions { get; set; }
+
+        /// <summary>
+        ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+        /// </summary>
+        IActorRef DataAccess { get; set; }
+
+        /// <summary>
+        ///     The Id of the target server.
+        /// </summary>
+        int ServerId { get; set; }
 
         /// <summary>
         ///     Current state (if known) from the database.
@@ -136,22 +148,44 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Called when the actor is started.
         /// </summary>
-        protected override void PreStart()
-        {
-            _clusterPublicDomainName = Context.System.Settings.Config.GetString("daas.kube.cluster-public-fqdn");
-
-            Become(Ready);
-        }
+        protected override void PreStart() => Become(Initializing);
 
         /// <summary>
         ///     Called when the actor has stopped.
         /// </summary>
         protected override void PostStop()
         {
-            _kubeClient.Dispose();
-            _sqlClient.Dispose();
+            KubeClient.Dispose();
+            SqlClient.Dispose();
 
             base.PostStop();
+        }
+
+        /// <summary>
+        ///     Called when the actor is waiting for its <see cref="Initialize"/> message.
+        /// </summary>
+        void Initializing()
+        {
+            Receive<Initialize>(initialize =>
+            {
+                DataAccess = initialize.DataAccess;
+                ServerId = initialize.ServerId;
+                CurrentState = initialize.InitialState;
+
+                Self.Tell(CurrentState); // Kick off initial state-management actions.
+
+                Become(Ready);
+            });
+
+            SetReceiveTimeout(
+                TimeSpan.FromSeconds(5)
+            );
+            Receive<ReceiveTimeout>(_ =>
+            {
+                Log.Error("Failed to receive Initialize message within 5 seconds of being created.");
+
+                Context.Stop(Self);
+            });
         }
 
         /// <summary>
@@ -161,7 +195,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             StopPolling();
 
-            Log.Info("Ready to process requests for server {ServerId}.", _serverId);
+            Log.Info("Ready to process requests for server {ServerId}.", ServerId);
 
             ReceiveAsync<DatabaseServer>(async databaseServer =>
             {
@@ -185,7 +219,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void WaitForServerAvailable()
         {
-            Log.Info("Waiting for server {ServerId}'s ReplicationController to become Available...", _serverId);
+            Log.Info("Waiting for server {ServerId}'s ReplicationController to become Available...", ServerId);
 
             StartPolling(Signal.PollReplicationController);
 
@@ -232,7 +266,7 @@ namespace DaaSDemo.Provisioning.Actors
                         ReplicationControllerV1 replicationController = await FindReplicationController();
                         if (replicationController == null)
                         {
-                            Log.Warning("{Action} failed - cannot find ReplicationController for server {ServerId}.", actionDescription, _serverId);
+                            Log.Warning("{Action} failed - cannot find ReplicationController for server {ServerId}.", actionDescription, ServerId);
 
                             FailCurrentAction();
 
@@ -241,7 +275,7 @@ namespace DaaSDemo.Provisioning.Actors
                         else if (replicationController.Status.AvailableReplicas == replicationController.Status.Replicas)
                         {
                             Log.Info("Server {ServerID} is now available ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
-                                _serverId,
+                                ServerId,
                                 replicationController.Status.AvailableReplicas,
                                 replicationController.Status.Replicas
                             );
@@ -253,7 +287,7 @@ namespace DaaSDemo.Provisioning.Actors
                         else
                         {
                             Log.Debug("Server {ServerID} is not available yet ({AvailableReplicaCount} of {ReplicaCount} replicas are marked as Available).",
-                                _serverId,
+                                ServerId,
                                 replicationController.Status.AvailableReplicas,
                                 replicationController.Status.Replicas
                             );
@@ -263,7 +297,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     case Signal.Timeout:
                     {
-                        Log.Warning("{Action} failed - timed out waiting server {ServerId}'s ReplicationController to become ready.", actionDescription, _serverId);
+                        Log.Warning("{Action} failed - timed out waiting server {ServerId}'s ReplicationController to become ready.", actionDescription, ServerId);
 
                         FailCurrentAction();
 
@@ -420,15 +454,24 @@ namespace DaaSDemo.Provisioning.Actors
                     database.Id
                 );
 
+                // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
+                database.DatabaseServer = CurrentState;
+
                 IActorRef databaseManager;
                 if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
                 {
                     databaseManager = Context.ActorOf(
-                        Props.Create(() => new TenantDatabaseManager(Self, _dataAccess)),
+                        Context.DI().Props<TenantDatabaseManager>(),
                         name: TenantDatabaseManager.ActorName(database.Id)
                     );
                     Context.Watch(databaseManager);
                     _databaseManagers.Add(database.Id, databaseManager);
+
+                    databaseManager.Tell(new TenantDatabaseManager.Initialize(
+                        serverManager: Self,
+                        dataAccess: DataAccess,
+                        initialState: database
+                    ));
 
                     Log.Info("Created TenantDatabaseManager {ActorName} for database {DatabaseId} in server {ServerId} (Tenant:{TenantId}).",
                         databaseManager.Path.Name,
@@ -437,11 +480,11 @@ namespace DaaSDemo.Provisioning.Actors
                         CurrentState.TenantId
                     );
                 }
-
-                // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
-                database.DatabaseServer = CurrentState;
-
-                databaseManager.Tell(database);
+                else
+                {
+                    Log.Debug("Notifying TenantDatabaseManager {ActorName} of current configuration for database {DatabaseId}.", databaseManager.Path.Name, database.Id);
+                    databaseManager.Tell(database);
+                }
             }
         }
 
@@ -462,7 +505,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     Log.Info("DatabaseManager for database {DatabaseId} in server {ServerId} has terminated.",
                         databaseId,
-                        _serverId
+                        ServerId
                     );
 
                     _databaseManagers.Remove(databaseId); // Database manager terminated.
@@ -659,7 +702,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<ReplicationControllerV1> FindReplicationController()
         {
-            List<ReplicationControllerV1> matchingControllers = await _kubeClient.ReplicationControllersV1.List(
+            List<ReplicationControllerV1> matchingControllers = await KubeClient.ReplicationControllersV1.List(
                  labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}"
              );
 
@@ -677,7 +720,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<ServiceV1> FindInternalService()
         {
-            List<ServiceV1> matchingServices = await _kubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal"
             );
             if (matchingServices.Count == 0)
@@ -694,7 +737,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<PrometheusServiceMonitorV1> FindServiceMonitor()
         {
-            List<PrometheusServiceMonitorV1> matchingServices = await _kubeClient.PrometheusServiceMonitorsV1.List(
+            List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server"
             );
             if (matchingServices.Count == 0)
@@ -711,7 +754,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<ServiceV1> FindExternalService()
         {
-            List<ServiceV1> matchingServices = await _kubeClient.ServicesV1.List(
+            List<ServiceV1> matchingServices = await KubeClient.ServicesV1.List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external"
             );
             if (matchingServices.Count == 0)
@@ -743,11 +786,8 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.Id
             );
 
-            ReplicationControllerV1 createdController = await _kubeClient.ReplicationControllersV1.Create(
-                KubeResources.ReplicationController(CurrentState,
-                    imageName: Context.System.Settings.Config.GetString("daas.kube.sql-image-name"),
-                    dataVolumeClaimName: Context.System.Settings.Config.GetString("daas.kube.volume-claim-name")
-                )
+            ReplicationControllerV1 createdController = await KubeClient.ReplicationControllersV1.Create(
+                KubeResources.ReplicationController(CurrentState)
             );
 
             Log.Info("Successfully created replication controller {ReplicationControllerName} for server {ServerId}.",
@@ -777,7 +817,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             try
             {
-                await _kubeClient.ReplicationControllersV1.Delete(
+                await KubeClient.ReplicationControllersV1.Delete(
                     name: controller.Metadata.Name,
                     propagationPolicy: DeletePropagationPolicy.Background
                 );
@@ -817,7 +857,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await KubeClient.ServicesV1.Create(
                     KubeResources.InternalService(CurrentState)
                 );
 
@@ -848,7 +888,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await _kubeClient.ServicesV1.Delete(
+                StatusV1 result = await KubeClient.ServicesV1.Delete(
                     name: existingInternalService.Metadata.Name
                 );
 
@@ -884,7 +924,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                PrometheusServiceMonitorV1 createdService = await _kubeClient.PrometheusServiceMonitorsV1.Create(
+                PrometheusServiceMonitorV1 createdService = await KubeClient.PrometheusServiceMonitorsV1.Create(
                     KubeResources.ServiceMonitor(CurrentState)
                 );
 
@@ -915,7 +955,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await _kubeClient.PrometheusServiceMonitorsV1.Delete(
+                StatusV1 result = await KubeClient.PrometheusServiceMonitorsV1.Delete(
                     name: existingServiceMonitor.Metadata.Name
                 );
 
@@ -951,7 +991,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                ServiceV1 createdService = await _kubeClient.ServicesV1.Create(
+                ServiceV1 createdService = await KubeClient.ServicesV1.Create(
                     KubeResources.ExternalService(CurrentState)
                 );
 
@@ -982,7 +1022,7 @@ namespace DaaSDemo.Provisioning.Actors
                     CurrentState.Id
                 );
 
-                StatusV1 result = await _kubeClient.ServicesV1.Delete(
+                StatusV1 result = await KubeClient.ServicesV1.Delete(
                     name: existingExternalService.Metadata.Name
                 );
 
@@ -1011,23 +1051,23 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task UpdateServerIngressDetails()
         {
-            int? externalPort = await _kubeClient.GetServerPublicPort(CurrentState);
+            int? externalPort = await KubeClient.GetServerPublicPort(CurrentState);
             if (externalPort != null)
             {
-                if (_clusterPublicDomainName != CurrentState.PublicFQDN || externalPort != CurrentState.PublicPort)
+                if (KubeOptions.ClusterPublicFQDN != CurrentState.PublicFQDN || externalPort != CurrentState.PublicPort)
                 {
                     Log.Info("Server {ServerName} is accessible at {ClusterPublicFQDN}:{PublicPortPort}",
                         CurrentState.Name,
-                        _clusterPublicDomainName,
+                        KubeOptions.ClusterPublicFQDN,
                         externalPort.Value
                     );
 
-                    _dataAccess.Tell(
-                        new ServerIngressChanged(_serverId, _clusterPublicDomainName, externalPort)
+                    DataAccess.Tell(
+                        new ServerIngressChanged(ServerId, KubeOptions.ClusterPublicFQDN, externalPort)
                     );
 
                     // Capture current ingress details to enable subsequent provisioning actions (if any).
-                    CurrentState.PublicFQDN = _clusterPublicDomainName;
+                    CurrentState.PublicFQDN = KubeOptions.ClusterPublicFQDN;
                     CurrentState.PublicPort = externalPort;
                 }
 
@@ -1040,8 +1080,8 @@ namespace DaaSDemo.Provisioning.Actors
 
                 if (CurrentState.PublicFQDN != null)
                 {
-                    _dataAccess.Tell(
-                        new ServerIngressChanged(_serverId, publicFQDN: null, publicPort: null)
+                    DataAccess.Tell(
+                        new ServerIngressChanged(ServerId, publicFQDN: null, publicPort: null)
                     );
                 }
             }
@@ -1055,9 +1095,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task InitialiseServerConfiguration()
         {
-            Log.Info("Initialising configuration for server {ServerId}...", _serverId);
+            Log.Info("Initialising configuration for server {ServerId}...", ServerId);
             
-            CommandResult commandResult = await _sqlClient.ExecuteCommand(
+            CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.Id,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024),
@@ -1068,7 +1108,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
                     messageIndex,
-                    _serverId,
+                    ServerId,
                     commandResult.Messages[messageIndex]
                 );
             }
@@ -1078,13 +1118,13 @@ namespace DaaSDemo.Provisioning.Actors
                 foreach (SqlError error in commandResult.Errors)
                 {
                     Log.Warning("Error encountered while initialising configuration for server {ServerId} ({ErrorKind}: {ErrorMessage})",
-                        _serverId,
+                        ServerId,
                         error.Kind,
                         error.Message
                     );
                 }
 
-                throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {_serverId}).",
+                throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {ServerId}).",
                     serverId: CurrentState.Id,
                     databaseId: SqlApiClient.MasterDatabaseId,
                     sqlMessages: commandResult.Messages,
@@ -1092,7 +1132,7 @@ namespace DaaSDemo.Provisioning.Actors
                 );
             }
 
-            Log.Info("Configuration initialised for server {ServerId}.", _serverId);
+            Log.Info("Configuration initialised for server {ServerId}.", ServerId);
         }
 
         /// <summary>
@@ -1147,11 +1187,11 @@ namespace DaaSDemo.Provisioning.Actors
         void StartProvisioningPhase(ServerProvisioningPhase phase)
         {
             CurrentState.Phase = phase;
-            _dataAccess.Tell(
-                new ServerProvisioning(_serverId, phase)
+            DataAccess.Tell(
+                new ServerProvisioning(ServerId, phase)
             );
 
-            Log.Info("Starting provisioning phase {Phase} for server {ServerId}.", phase, _serverId);
+            Log.Info("Starting provisioning phase {Phase} for server {ServerId}.", phase, ServerId);
         }
 
         /// <summary>
@@ -1163,11 +1203,11 @@ namespace DaaSDemo.Provisioning.Actors
         void StartReconfigurationPhase(ServerProvisioningPhase phase)
         {
             CurrentState.Phase = phase;
-            _dataAccess.Tell(
-                new ServerReconfiguring(_serverId, phase)
+            DataAccess.Tell(
+                new ServerReconfiguring(ServerId, phase)
             );
 
-            Log.Info("Starting reconfiguration phase {Phase} for server {ServerId}.", phase, _serverId);
+            Log.Info("Starting reconfiguration phase {Phase} for server {ServerId}.", phase, ServerId);
         }
 
         /// <summary>
@@ -1179,11 +1219,11 @@ namespace DaaSDemo.Provisioning.Actors
         void StartDeprovisioningPhase(ServerProvisioningPhase phase)
         {
             CurrentState.Phase = phase;
-            _dataAccess.Tell(
-                new ServerDeprovisioning(_serverId, phase)
+            DataAccess.Tell(
+                new ServerDeprovisioning(ServerId, phase)
             );
 
-            Log.Info("Started de-provisioning phase {Phase} for server {ServerId}.", phase, _serverId);
+            Log.Info("Started de-provisioning phase {Phase} for server {ServerId}.", phase, ServerId);
         }
 
         /// <summary>
@@ -1196,24 +1236,24 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ProvisioningAction.Provision:
                 {
-                    _dataAccess.Tell(
-                        new ServerProvisioningFailed(_serverId)
+                    DataAccess.Tell(
+                        new ServerProvisioningFailed(ServerId)
                     );
 
                     break;
                 }
                 case ProvisioningAction.Reconfigure:
                 {
-                    _dataAccess.Tell(
-                        new ServerReconfigurationFailed(_serverId)
+                    DataAccess.Tell(
+                        new ServerReconfigurationFailed(ServerId)
                     );
 
                     break;
                 }
                 case ProvisioningAction.Deprovision:
                 {
-                    _dataAccess.Tell(
-                        new ServerDeprovisioningFailed(_serverId)
+                    DataAccess.Tell(
+                        new ServerDeprovisioningFailed(ServerId)
                     );
 
                     break;
@@ -1232,24 +1272,24 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 case ProvisioningAction.Provision:
                 {
-                    _dataAccess.Tell(
-                        new ServerProvisioned(_serverId)
+                    DataAccess.Tell(
+                        new ServerProvisioned(ServerId)
                     );
 
                     break;
                 }
                 case ProvisioningAction.Reconfigure:
                 {
-                    _dataAccess.Tell(
-                        new ServerReconfigured(_serverId)
+                    DataAccess.Tell(
+                        new ServerReconfigured(ServerId)
                     );
 
                     break;
                 }
                 case ProvisioningAction.Deprovision:
                 {
-                    _dataAccess.Tell(
-                        new ServerDeprovisioned(_serverId)
+                    DataAccess.Tell(
+                        new ServerDeprovisioned(ServerId)
                     );
 
                     break;
@@ -1263,39 +1303,45 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Create a new <see cref="KubeApiClient"/> for communicating with the Kubernetes API.
+        ///     Initialise the actor.
         /// </summary>
-        /// <returns>
-        ///     The configured <see cref="KubeApiClient"/>.
-        /// </returns>
-        KubeApiClient CreateKubeApiClient()
+        public class Initialize
         {
-            if (Environment.GetEnvironmentVariable("IN_KUBERNETES") != "1")
+            /// <summary>
+            ///     Create a new <see cref="Initialize"/> message.
+            /// </summary>
+            /// <param name="initialState">
+            ///     A <see cref="DatabaseServer"/> representing the actor's initial state.
+            /// </param>
+            /// <param name="dataAccess">
+            ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+            /// </param>
+            public Initialize(DatabaseServer initialState, IActorRef dataAccess)
             {
-                return KubeApiClient.Create(
-                    endPointUri: new Uri(
-                        Context.System.Settings.Config.GetString("daas.kube.api-endpoint")
-                    ),
-                    accessToken: Context.System.Settings.Config.GetString("daas.kube.api-token")
-                );
+                if (initialState == null)
+                    throw new ArgumentNullException(nameof(initialState));
+                
+                if (dataAccess == null)
+                    throw new ArgumentNullException(nameof(dataAccess));
+                
+                InitialState = initialState;
+                DataAccess = dataAccess;
             }
-            else
-                return KubeApiClient.CreateFromPodServiceAccount();
-        }
 
-        /// <summary>
-        ///     Create a new <see cref="SqlApiClient"/> for communicating with the SQL Executor API.
-        /// </summary>
-        /// <returns>
-        ///     The configured <see cref="SqlApiClient"/>.
-        /// </returns>
-        SqlApiClient CreateSqlApiClient()
-        {
-            return SqlApiClient.Create(
-                endPointUri: new Uri(
-                    Context.System.Settings.Config.GetString("daas.sql.api-endpoint")
-                )
-            );
+            /// <summary>
+            ///     The Id of the target server.
+            /// </summary>
+            public int ServerId => InitialState.Id;
+
+            /// <summary>
+            ///     A <see cref="DatabaseServer"/> representing the actor's initial state.
+            /// </summary>
+            public DatabaseServer InitialState { get; }
+
+            /// <summary>
+            ///     A reference to the <see cref="Actors.DataAccess"/> actor.
+            /// </summary>
+            public IActorRef DataAccess { get; }
         }
 
         /// <summary>
