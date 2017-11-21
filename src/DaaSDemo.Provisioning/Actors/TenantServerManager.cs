@@ -1,5 +1,6 @@
 using Akka;
 using Akka.Actor;
+using Akka.DI.Core;
 using HTTPlease;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -17,17 +18,13 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Actors
 {
+    using Common.Options;
     using Common.Utilities;
     using Data;
-    using KubeClient;
     using KubeClient.Models;
     using Messages;
     using Models.Data;
-    using Models.Sql;
-    using Exceptions;
-    using SqlExecutor.Client;
-    using DaaSDemo.Common.Options;
-    using Akka.DI.Core;
+    using Provisioners;
 
     /// <summary>
     ///     Actor that represents a tenant's database server and manages its life-cycle.
@@ -68,6 +65,9 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="TenantServerManager"/>.
         /// </summary>
+        /// <param name="provisioner">
+        ///     Provisioning facility for the target server.
+        /// </param>
         /// <param name="kubeResources">
         ///     The Kubernetes resource factory.
         /// </param>
@@ -75,29 +75,21 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
         /// </param>
         /// <param name="kubeOptions">
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </param>
         /// <param name="sqlClient">
         ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
         /// </param>
-        public TenantServerManager(KubeResources kubeResources, KubeApiClient kubeClient, IOptions<KubernetesOptions> kubeOptions, SqlApiClient sqlClient)
+        public TenantServerManager(DatabaseServerProvisioner provisioner, IOptions<KubernetesOptions> kubeOptions)
         {
-            if (kubeResources == null)
-                throw new ArgumentNullException(nameof(kubeResources));
-
-            if (kubeClient == null)
-                throw new ArgumentNullException(nameof(kubeClient));
+            if (provisioner == null)
+                throw new ArgumentNullException(nameof(provisioner));
 
             if (kubeOptions == null)
                 throw new ArgumentNullException(nameof(kubeOptions));
 
-            if (sqlClient == null)
-                throw new ArgumentNullException(nameof(sqlClient));
-            
-            KubeResources = kubeResources;
-            KubeClient = kubeClient;
+            Provisioner = provisioner;
             KubeOptions = kubeOptions.Value;
-            SqlClient = sqlClient;
         }
 
         /// <summary>
@@ -106,22 +98,12 @@ namespace DaaSDemo.Provisioning.Actors
         public IStash Stash { get; set; }
 
         /// <summary>
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        ///     Provisioning facility for the target server.
         /// </summary>
-        SqlApiClient SqlClient { get; set; }
+        DatabaseServerProvisioner Provisioner { get; }
 
         /// <summary>
-        ///     The Kubernetes resource factory.
-        /// </summary>
-        KubeResources KubeResources { get; }
-
-        /// <summary>
-        ///     The <see cref="KubeApiClient"/> used to communicate with the Kubernetes API.
-        /// </summary>
-        KubeApiClient KubeClient { get; set; }
-
-        /// <summary>
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </summary>
         KubernetesOptions KubeOptions { get; set; }
 
@@ -134,16 +116,6 @@ namespace DaaSDemo.Provisioning.Actors
         ///     The Id of the target server.
         /// </summary>
         int ServerId { get; set; }
-
-        /// <summary>
-        ///     Current state (if known) from the database.
-        /// </summary>
-        DatabaseServer CurrentState { get; set; }
-
-        /// <summary>
-        ///     Previous state (if known) from the database.
-        /// </summary>
-        DatabaseServer PreviousState { get; set; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -159,9 +131,9 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 DataAccess = initialize.DataAccess;
                 ServerId = initialize.ServerId;
-                CurrentState = initialize.InitialState;
+                Provisioner.State = initialize.InitialState;
 
-                Self.Tell(CurrentState); // Kick off initial state-management actions.
+                Self.Tell(Provisioner.State); // Kick off initial state-management actions.
 
                 Become(Ready);
             });
@@ -193,8 +165,7 @@ namespace DaaSDemo.Provisioning.Actors
                     databaseServer.Name
                 );
 
-                PreviousState = CurrentState;
-                CurrentState = databaseServer;
+                Provisioner.State = databaseServer;
 
                 await UpdateServerState();
             });
@@ -215,7 +186,7 @@ namespace DaaSDemo.Provisioning.Actors
             ReceiveAsync<Signal>(async signal =>
             {
                 string actionDescription;
-                switch (CurrentState.Action)
+                switch (Provisioner.State.Action)
                 {
                     case ProvisioningAction.Provision:
                     {
@@ -245,14 +216,14 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     case Signal.PollDeployment:
                     {
-                        if (CurrentState.Status == ProvisioningStatus.Ready)
+                        if (Provisioner.State.Status == ProvisioningStatus.Ready)
                         {
                             Become(Ready);
 
                             break;
                         }
 
-                        DeploymentV1Beta1 deployment = await FindDeployment();
+                        DeploymentV1Beta1 deployment = await Provisioner.FindDeployment();
                         if (deployment == null)
                         {
                             Log.Warning("{Action} failed - cannot find Deployment for server {ServerId}.", actionDescription, ServerId);
@@ -319,11 +290,11 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task UpdateServerState()
         {
-            switch (CurrentState.Action)
+            switch (Provisioner.State.Action)
             {
                 case ProvisioningAction.Provision:
                 {
-                    Log.Info("Provisioning server {ServerId} ({Phase})...", CurrentState.Id, CurrentState.Phase);
+                    Log.Info("Provisioning server {ServerId} ({Phase})...", Provisioner.State.Id, Provisioner.State.Phase);
 
                     try
                     {
@@ -332,7 +303,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (HttpRequestException<StatusV1> provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to provision server {ServerId} ({Reason}): {ErrorMessage}",
-                            CurrentState.Id,
+                            Provisioner.State.Id,
                             provisioningFailed.Response.Reason,
                             provisioningFailed.Response.Message
                         );
@@ -344,7 +315,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (Exception provisioningFailed)
                     {
                         Log.Error(provisioningFailed, "Failed to provision server {ServerId}.",
-                            CurrentState.Id
+                            Provisioner.State.Id
                         );
 
                         FailCurrentAction();
@@ -356,7 +327,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ProvisioningAction.Reconfigure:
                 {
-                    Log.Info("Reconfiguring server {ServerId} ({Phase})...", CurrentState.Id, CurrentState.Phase);
+                    Log.Info("Reconfiguring server {ServerId} ({Phase})...", Provisioner.State.Id, Provisioner.State.Phase);
 
                     try
                     {
@@ -365,7 +336,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (HttpRequestException<StatusV1> reconfigurationFailed)
                     {
                         Log.Error(reconfigurationFailed, "Failed to reconfigure server {ServerId} ({Reason}): {ErrorMessage}",
-                            CurrentState.Id,
+                            Provisioner.State.Id,
                             reconfigurationFailed.Response.Reason,
                             reconfigurationFailed.Response.Message
                         );
@@ -377,7 +348,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (Exception reconfigurationFailed)
                     {
                         Log.Error(reconfigurationFailed, "Failed to reconfigure server {ServerId}.",
-                            CurrentState.Id
+                            Provisioner.State.Id
                         );
 
                         FailCurrentAction();
@@ -389,7 +360,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ProvisioningAction.Deprovision:
                 {
-                    Log.Info("De-provisioning server {ServerId} ({Phase})...", CurrentState.Id, CurrentState.Phase);
+                    Log.Info("De-provisioning server {ServerId} ({Phase})...", Provisioner.State.Id, Provisioner.State.Phase);
 
                     try
                     {
@@ -398,7 +369,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (HttpRequestException<StatusV1> deprovisioningFailed)
                     {
                         Log.Error(deprovisioningFailed, "Failed to de-provision server {ServerId} ({Reason}): {ErrorMessage}",
-                            CurrentState.Id,
+                            Provisioner.State.Id,
                             deprovisioningFailed.Response.Reason,
                             deprovisioningFailed.Response.Message
                         );
@@ -410,7 +381,7 @@ namespace DaaSDemo.Provisioning.Actors
                     catch (Exception deprovisioningFailed)
                     {
                         Log.Error(deprovisioningFailed, "Failed to de-provision server {ServerId}.",
-                            CurrentState.Id
+                            Provisioner.State.Id
                         );
 
                         FailCurrentAction();
@@ -427,7 +398,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             await UpdateServerIngressDetails();
 
-            if (CurrentState.Status == ProvisioningStatus.Ready)
+            if (Provisioner.State.Status == ProvisioningStatus.Ready)
                 UpdateDatabaseState();
         }
 
@@ -436,7 +407,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void UpdateDatabaseState()
         {
-            foreach (DatabaseInstance database in CurrentState.Databases)
+            foreach (DatabaseInstance database in Provisioner.State.Databases)
             {
                 Log.Debug("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
                     database.Name,
@@ -444,7 +415,7 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
-                database.DatabaseServer = CurrentState;
+                database.DatabaseServer = Provisioner.State;
 
                 IActorRef databaseManager;
                 if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
@@ -465,8 +436,8 @@ namespace DaaSDemo.Provisioning.Actors
                     Log.Info("Created TenantDatabaseManager {ActorName} for database {DatabaseId} in server {ServerId} (Tenant:{TenantId}).",
                         databaseManager.Path.Name,
                         database.Id,
-                        CurrentState.Id,
-                        CurrentState.TenantId
+                        Provisioner.State.Id,
+                        Provisioner.State.TenantId
                     );
                 }
                 else
@@ -514,7 +485,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task ProvisionServer()
         {
-            switch (CurrentState.Phase)
+            switch (Provisioner.State.Phase)
             {
                 case ServerProvisioningPhase.None:
                 {
@@ -524,7 +495,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Storage);
 
-                    await EnsureDataVolumeClaimPresent();
+                    await Provisioner.EnsureDataVolumeClaimPresent();
                     
                     goto case ServerProvisioningPhase.Instance;
                 }
@@ -532,7 +503,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Instance);
 
-                    await EnsureDeploymentPresent();
+                    await Provisioner.EnsureDeploymentPresent();
                     
                     goto case ServerProvisioningPhase.Network;
                 }
@@ -540,7 +511,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Network);
 
-                    await EnsureInternalServicePresent();
+                    await Provisioner.EnsureInternalServicePresent();
 
                     goto case ServerProvisioningPhase.Monitoring;
                 }
@@ -548,7 +519,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Monitoring);
 
-                    await EnsureServiceMonitorPresent();
+                    await Provisioner.EnsureServiceMonitorPresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the deployment becomes available.
 
@@ -558,7 +529,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Configuration);
 
-                    await InitialiseServerConfiguration();
+                    await Provisioner.InitialiseServerConfiguration();
 
                     goto case ServerProvisioningPhase.Ingress;
                 }
@@ -566,7 +537,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Ingress);
 
-                    await EnsureExternalServicePresent();
+                    await Provisioner.EnsureExternalServicePresent();
 
                     break;
                 }
@@ -583,7 +554,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task ReconfigureServer()
         {
-            switch (CurrentState.Phase)
+            switch (Provisioner.State.Phase)
             {
                 case ServerProvisioningPhase.None:
                 {
@@ -593,7 +564,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Storage);
 
-                    await EnsureDataVolumeClaimPresent();
+                    await Provisioner.EnsureDataVolumeClaimPresent();
                     
                     goto case ServerProvisioningPhase.Instance;
                 }
@@ -601,7 +572,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Instance);
 
-                    await EnsureDeploymentPresent();
+                    await Provisioner.EnsureDeploymentPresent();
                     
                     goto case ServerProvisioningPhase.Network;
                 }
@@ -609,7 +580,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Network);
 
-                    await EnsureInternalServicePresent();
+                    await Provisioner.EnsureInternalServicePresent();
 
                     goto case ServerProvisioningPhase.Monitoring;
                 }
@@ -617,7 +588,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartProvisioningPhase(ServerProvisioningPhase.Monitoring);
 
-                    await EnsureServiceMonitorPresent();
+                    await Provisioner.EnsureServiceMonitorPresent();
 
                     Become(WaitForServerAvailable); // We can't proceed until the deployment becomes available.
 
@@ -627,7 +598,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Configuration);
                     
-                    await InitialiseServerConfiguration();
+                    await Provisioner.InitialiseServerConfiguration();
 
                     goto case ServerProvisioningPhase.Ingress;
                 }
@@ -635,7 +606,7 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartReconfigurationPhase(ServerProvisioningPhase.Ingress);
 
-                    await EnsureExternalServicePresent();
+                    await Provisioner.EnsureExternalServicePresent();
 
                     break;
                 }
@@ -652,33 +623,17 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task DeprovisionServer()
         {
-            switch (CurrentState.Phase)
+            switch (Provisioner.State.Phase)
             {
                 case ServerProvisioningPhase.None:
                 {
-                    goto case ServerProvisioningPhase.Storage;
+                    goto case ServerProvisioningPhase.Ingress;
                 }
-                case ServerProvisioningPhase.Storage:
+                case ServerProvisioningPhase.Ingress:
                 {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.Storage);
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Ingress);
 
-                    await EnsureDataVolumeClaimAbsent();
-                    
-                    goto case ServerProvisioningPhase.Instance;
-                }
-                case ServerProvisioningPhase.Instance:
-                {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.Instance);
-
-                    await EnsureDeploymentAbsent();
-                    
-                    goto case ServerProvisioningPhase.Network;
-                }
-                case ServerProvisioningPhase.Network:
-                {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.Network);
-                    
-                    await EnsureInternalServiceAbsent();
+                    await Provisioner.EnsureExternalServiceAbsent();
 
                     goto case ServerProvisioningPhase.Monitoring;
                 }
@@ -686,16 +641,32 @@ namespace DaaSDemo.Provisioning.Actors
                 {
                     StartDeprovisioningPhase(ServerProvisioningPhase.Monitoring);
                     
-                    await EnsureServiceMonitorAbsent();
+                    await Provisioner.EnsureServiceMonitorAbsent();
 
-                    goto case ServerProvisioningPhase.Ingress;
+                    goto case ServerProvisioningPhase.Network;
                 }
-                case ServerProvisioningPhase.Ingress:
+                case ServerProvisioningPhase.Network:
                 {
-                    StartDeprovisioningPhase(ServerProvisioningPhase.Ingress);
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Network);
+                    
+                    await Provisioner.EnsureInternalServiceAbsent();
 
-                    await EnsureExternalServiceAbsent();
+                    goto case ServerProvisioningPhase.Instance;
+                }
+                case ServerProvisioningPhase.Instance:
+                {
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Instance);
 
+                    await Provisioner.EnsureDeploymentAbsent();
+                    
+                    goto case ServerProvisioningPhase.Storage;
+                }
+                case ServerProvisioningPhase.Storage:
+                {
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Storage);
+
+                    await Provisioner.EnsureDataVolumeClaimAbsent();
+                    
                     goto case ServerProvisioningPhase.Done;
                 }
                 case ServerProvisioningPhase.Done:
@@ -708,487 +679,6 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     Find the server's associated PersistentVolumeClaim for data (if it exists).
-        /// </summary>
-        /// <returns>
-        ///     The PersistentVolumeClaim, or <c>null</c> if it was not found.
-        /// </returns>
-        async Task<PersistentVolumeClaimV1> FindDataVolumeClaim()
-        {
-            List<PersistentVolumeClaimV1> matchingPersistentVolumeClaims = await KubeClient.PersistentVolumeClaimsV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}, cloud.dimensiondata.daas.volume-type = data",
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
-
-            if (matchingPersistentVolumeClaims.Count == 0)
-                return null;
-
-            return matchingPersistentVolumeClaims[matchingPersistentVolumeClaims.Count - 1];
-        }
-
-        /// <summary>
-        ///     Find the server's associated Deployment (if it exists).
-        /// </summary>
-        /// <returns>
-        ///     The Deployment, or <c>null</c> if it was not found.
-        /// </returns>
-        async Task<DeploymentV1Beta1> FindDeployment()
-        {
-            List<DeploymentV1Beta1> matchingDeployments = await KubeClient.DeploymentsV1Beta1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id}",
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
-
-            if (matchingDeployments.Count == 0)
-                return null;
-
-            return matchingDeployments[matchingDeployments.Count - 1];
-        }
-
-        /// <summary>
-        ///     Find the server's associated internally-facing Service (if it exists).
-        /// </summary>
-        /// <returns>
-        ///     The Service, or <c>null</c> if it was not found.
-        /// </returns>
-        async Task<ServiceV1> FindInternalService()
-        {
-            List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = internal",
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
-            if (matchingServices.Count == 0)
-                return null;
-
-            return matchingServices[matchingServices.Count - 1];
-        }
-
-        /// <summary>
-        ///     Find the server's associated ServiceMonitor (if it exists).
-        /// </summary>
-        /// <returns>
-        ///     The ServiceMonitor, or <c>null</c> if it was not found.
-        /// </returns>
-        async Task<PrometheusServiceMonitorV1> FindServiceMonitor()
-        {
-            List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.monitor-type = sql-server",
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
-            if (matchingServices.Count == 0)
-                return null;
-
-            return matchingServices[matchingServices.Count - 1];
-        }
-
-        /// <summary>
-        ///     Find the server's associated externally-facing Service (if it exists).
-        /// </summary>
-        /// <returns>
-        ///     The Service, or <c>null</c> if it was not found.
-        /// </returns>
-        async Task<ServiceV1> FindExternalService()
-        {
-            List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {CurrentState.Id},cloud.dimensiondata.daas.service-type = external",
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
-            if (matchingServices.Count == 0)
-                return null;
-
-            return matchingServices[matchingServices.Count - 1];
-        }
-
-        /// <summary>
-        ///     Ensure that a PersistentVolumeClaim for data exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     The PersistentVolumeClaim resource, as a <see cref="PersistentVolumeClaimV1"/>.
-        /// </returns>
-        async Task<PersistentVolumeClaimV1> EnsureDataVolumeClaimPresent()
-        {
-            PersistentVolumeClaimV1 existingPersistentVolumeClaim = await FindDataVolumeClaim();
-            if (existingPersistentVolumeClaim != null)
-            {
-                Log.Info("Found existing data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
-                    existingPersistentVolumeClaim.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                return existingPersistentVolumeClaim;
-            }
-
-            Log.Info("Creating data-volume claim for server {ServerId}...",
-                CurrentState.Id
-            );
-
-            PersistentVolumeClaimV1 createdPersistentVolumeClaim = await KubeClient.PersistentVolumeClaimsV1().Create(
-                KubeResources.DataVolumeClaim(CurrentState,
-                    requestedSizeMB: 200,
-                    kubeNamespace: KubeOptions.KubeNamespace
-                )
-            );
-
-            Log.Info("Successfully created data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
-                createdPersistentVolumeClaim.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return createdPersistentVolumeClaim;
-        }
-
-        /// <summary>
-        ///     Ensure that a PersistentVolumeClaim for data does not exist for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
-        /// </returns>
-        async Task<bool> EnsureDataVolumeClaimAbsent()
-        {
-            PersistentVolumeClaimV1 dataVolumeClaim = await FindDataVolumeClaim();
-            if (dataVolumeClaim == null)
-                return true;
-
-            Log.Info("Deleting data-volume claim {PersistentVolumeClaimName} for server {ServerId}...",
-                dataVolumeClaim.Metadata.Name,
-                CurrentState.Id
-            );
-
-            try
-            {
-                await KubeClient.PersistentVolumeClaimsV1().Delete(
-                    name: dataVolumeClaim.Metadata.Name,
-                    kubeNamespace: KubeOptions.KubeNamespace,
-                    propagationPolicy: DeletePropagationPolicy.Background
-                );
-
-                string dataVolumeName = dataVolumeClaim.Spec.VolumeName;
-                if (!String.IsNullOrWhiteSpace(dataVolumeClaim.Spec.VolumeName))
-                {
-                    Log.Info("Deleting data volume {PersistentVolumeName} for server {ServerId}...",
-                        dataVolumeName,
-                        CurrentState.Id
-                    );
-
-                    await KubeClient.PersistentVolumesV1().Delete(
-                        name: dataVolumeName,
-                        kubeNamespace: KubeOptions.KubeNamespace
-                    );
-                }
-            }
-            catch (HttpRequestException<StatusV1> deleteFailed)
-            {
-                Log.Error("Failed to delete data-volume claim {PersistentVolumeClaimName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    dataVolumeClaim.Metadata.Name,
-                    CurrentState.Id,
-                    deleteFailed.Response.Message,
-                    deleteFailed.Response.Reason
-                );
-
-                return false;
-            }
-
-            Log.Info("Deleted data-volume claim {PersistentVolumeClaimName} for server {ServerId}.",
-                dataVolumeClaim.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return true;
-        }
-
-        /// <summary>
-        ///     Ensure that a Deployment resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     The Deployment resource, as a <see cref="DeploymentV1Beta1"/>.
-        /// </returns>
-        async Task<DeploymentV1Beta1> EnsureDeploymentPresent()
-        {
-            DeploymentV1Beta1 existingDeployment = await FindDeployment();
-            if (existingDeployment != null)
-            {
-                Log.Info("Found existing deployment {DeploymentName} for server {ServerId}.",
-                    existingDeployment.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                return existingDeployment;
-            }
-
-            Log.Info("Creating deployment for server {ServerId}...",
-                CurrentState.Id
-            );
-
-            DeploymentV1Beta1 createdDeployment = await KubeClient.DeploymentsV1Beta1().Create(
-                KubeResources.Deployment(CurrentState,
-                    kubeNamespace: KubeOptions.KubeNamespace
-                )
-            );
-
-            Log.Info("Successfully created deployment {DeploymentName} for server {ServerId}.",
-                createdDeployment.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return createdDeployment;
-        }
-
-        /// <summary>
-        ///     Ensure that a Deployment resource does not exist for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if the controller is now absent; otherwise, <c>false</c>.
-        /// </returns>
-        async Task<bool> EnsureDeploymentAbsent()
-        {
-            DeploymentV1Beta1 controller = await FindDeployment();
-            if (controller == null)
-                return true;
-
-            Log.Info("Deleting deployment {DeploymentName} for server {ServerId}...",
-                controller.Metadata.Name,
-                CurrentState.Id
-            );
-
-            try
-            {
-                await KubeClient.DeploymentsV1Beta1().Delete(
-                    name: controller.Metadata.Name,
-                    kubeNamespace: KubeOptions.KubeNamespace,
-                    propagationPolicy: DeletePropagationPolicy.Background
-                );
-            }
-            catch (HttpRequestException<StatusV1> deleteFailed)
-            {
-                Log.Error("Failed to delete deployment {DeploymentName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                    controller.Metadata.Name,
-                    CurrentState.Id,
-                    deleteFailed.Response.Message,
-                    deleteFailed.Response.Reason
-                );
-
-                return false;
-            }
-
-            Log.Info("Deleted deployment {DeploymentName} for server {ServerId}.",
-                controller.Metadata.Name,
-                CurrentState.Id
-            );
-
-            return true;
-        }
-
-        /// <summary>
-        ///     Ensure that an internally-facing Service resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     The Service resource, as a <see cref="ServiceV1"/>.
-        /// </returns>
-        async Task EnsureInternalServicePresent()
-        {
-            ServiceV1 existingInternalService = await FindInternalService();
-            if (existingInternalService == null)
-            {
-                Log.Info("Creating internal service for server {ServerId}...",
-                    CurrentState.Id
-                );
-
-                ServiceV1 createdService = await KubeClient.ServicesV1().Create(
-                    KubeResources.InternalService(CurrentState,
-                        kubeNamespace: KubeOptions.KubeNamespace
-                    )
-                );
-
-                Log.Info("Successfully created internal service {ServiceName} for server {ServerId}.",
-                    createdService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-            else
-            {
-                Log.Info("Found existing internal service {ServiceName} for server {ServerId}.",
-                    existingInternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
-        ///     Ensure that an internally-facing Service resource does not exist for the specified database server.
-        /// </summary>
-        async Task EnsureInternalServiceAbsent()
-        {
-            ServiceV1 existingInternalService = await FindInternalService();
-            if (existingInternalService != null)
-            {
-                Log.Info("Deleting internal service {ServiceName} for server {ServerId}...",
-                    existingInternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                StatusV1 result = await KubeClient.ServicesV1().Delete(
-                    name: existingInternalService.Metadata.Name,
-                    kubeNamespace: KubeOptions.KubeNamespace
-                );
-
-                if (result.Status != "Success" && result.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete internal service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        existingInternalService.Metadata.Name,
-                        CurrentState.Id,
-                        result.Message,
-                        result.Reason
-                    );
-                }
-
-                Log.Info("Deleted internal service {ServiceName} for server {ServerId}.",
-                    existingInternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
-        ///     Ensure that a ServiceMonitor resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     The Service resource, as a <see cref="ServiceV1"/>.
-        /// </returns>
-        async Task EnsureServiceMonitorPresent()
-        {
-            PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
-            if (existingServiceMonitor == null)
-            {
-                Log.Info("Creating service monitor for server {ServerId}...",
-                    CurrentState.Id
-                );
-
-                PrometheusServiceMonitorV1 createdService = await KubeClient.PrometheusServiceMonitorsV1().Create(
-                    KubeResources.ServiceMonitor(CurrentState,
-                        kubeNamespace: KubeOptions.KubeNamespace
-                    )
-                );
-
-                Log.Info("Successfully created service monitor {ServiceName} for server {ServerId}.",
-                    createdService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-            else
-            {
-                Log.Info("Found existing service monitor {ServiceName} for server {ServerId}.",
-                    existingServiceMonitor.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
-        ///     Ensure that a ServiceMonitor resource does not exist for the specified database server.
-        /// </summary>
-        async Task EnsureServiceMonitorAbsent()
-        {
-            PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
-            if (existingServiceMonitor != null)
-            {
-                Log.Info("Deleting service monitor {ServiceName} for server {ServerId}...",
-                    existingServiceMonitor.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                StatusV1 result = await KubeClient.PrometheusServiceMonitorsV1().Delete(
-                    name: existingServiceMonitor.Metadata.Name,
-                    kubeNamespace: KubeOptions.KubeNamespace
-                );
-
-                if (result.Status != "Success" && result.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete service monitor {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        existingServiceMonitor.Metadata.Name,
-                        CurrentState.Id,
-                        result.Message,
-                        result.Reason
-                    );
-                }
-
-                Log.Info("Deleted service monitor {ServiceName} for server {ServerId}.",
-                    existingServiceMonitor.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
-        ///     Ensure that an externally-facing Service resource exists for the specified database server.
-        /// </summary>
-        /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
-        /// </returns>
-        async Task EnsureExternalServicePresent()
-        {
-            ServiceV1 existingExternalService = await FindExternalService();
-            if (existingExternalService == null)
-            {
-                Log.Info("Creating external service for server {ServerId}...",
-                    CurrentState.Id
-                );
-
-                ServiceV1 createdService = await KubeClient.ServicesV1().Create(
-                    KubeResources.ExternalService(CurrentState,
-                        kubeNamespace: KubeOptions.KubeNamespace
-                    )
-                );
-
-                Log.Info("Successfully created external service {ServiceName} for server {ServerId}.",
-                    createdService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-            else
-            {
-                Log.Info("Found existing external service {ServiceName} for server {ServerId}.",
-                    existingExternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
-        ///     Ensure that an externally-facing Service resource does not exist for the specified database server.
-        /// </summary>
-        async Task EnsureExternalServiceAbsent()
-        {
-            ServiceV1 existingExternalService = await FindExternalService();
-            if (existingExternalService != null)
-            {
-                Log.Info("Deleting external service {ServiceName} for server {ServerId}...",
-                    existingExternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-
-                StatusV1 result = await KubeClient.ServicesV1().Delete(
-                    name: existingExternalService.Metadata.Name,
-                    kubeNamespace: KubeOptions.KubeNamespace
-                );
-
-                if (result.Status != "Success" && result.Reason != "NotFound")
-                {
-                    Log.Error("Failed to delete external service {ServiceName} for server {ServerId} (Message:{FailureMessage}, Reason:{FailureReason}).",
-                        existingExternalService.Metadata.Name,
-                        CurrentState.Id,
-                        result.Message,
-                        result.Reason
-                    );
-                }
-
-                Log.Info("Deleted external service {ServiceName} for server {ServerId}.",
-                    existingExternalService.Metadata.Name,
-                    CurrentState.Id
-                );
-            }
-        }
-
-        /// <summary>
         ///     Update ingress details for the database server.
         /// </summary>
         /// <returns>
@@ -1196,15 +686,13 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task UpdateServerIngressDetails()
         {
-            int? externalPort = await KubeClient.GetServerPublicPort(CurrentState,
-                kubeNamespace: KubeOptions.KubeNamespace
-            );
+            int? externalPort = await Provisioner.GetPublicPort();
             if (externalPort != null)
             {
-                if (KubeOptions.ClusterPublicFQDN != CurrentState.PublicFQDN || externalPort != CurrentState.PublicPort)
+                if (KubeOptions.ClusterPublicFQDN != Provisioner.State.PublicFQDN || externalPort != Provisioner.State.PublicPort)
                 {
                     Log.Info("Server {ServerName} is accessible at {ClusterPublicFQDN}:{PublicPortPort}",
-                        CurrentState.Name,
+                        Provisioner.State.Name,
                         KubeOptions.ClusterPublicFQDN,
                         externalPort.Value
                     );
@@ -1214,72 +702,24 @@ namespace DaaSDemo.Provisioning.Actors
                     );
 
                     // Capture current ingress details to enable subsequent provisioning actions (if any).
-                    CurrentState.PublicFQDN = KubeOptions.ClusterPublicFQDN;
-                    CurrentState.PublicPort = externalPort;
+                    Provisioner.State.PublicFQDN = KubeOptions.ClusterPublicFQDN;
+                    Provisioner.State.PublicPort = externalPort;
                 }
 
-                if (CurrentState.Phase == ServerProvisioningPhase.Ingress)
+                if (Provisioner.State.Phase == ServerProvisioningPhase.Ingress)
                     CompleteCurrentAction();
             }
             else
             {
-                Log.Debug("Cannot determine public port for server {ServerName}.", CurrentState.Name);
+                Log.Debug("Cannot determine public port for server {ServerName}.", Provisioner.State.Name);
 
-                if (CurrentState.PublicFQDN != null)
+                if (Provisioner.State.PublicFQDN != null)
                 {
                     DataAccess.Tell(
                         new ServerIngressChanged(ServerId, publicFQDN: null, publicPort: null)
                     );
                 }
             }
-        }
-
-        /// <summary>
-        ///     Execute T-SQL to initialise the server configuration.
-        /// </summary>
-        /// <returns>
-        ///     A <see cref="Task"/> representing the operation.
-        /// </returns>
-        async Task InitialiseServerConfiguration()
-        {
-            Log.Info("Initialising configuration for server {ServerId}...", ServerId);
-            
-            CommandResult commandResult = await SqlClient.ExecuteCommand(
-                serverId: CurrentState.Id,
-                databaseId: SqlApiClient.MasterDatabaseId,
-                sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024),
-                executeAsAdminUser: true
-            );
-
-            for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
-            {
-                Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
-                    messageIndex,
-                    ServerId,
-                    commandResult.Messages[messageIndex]
-                );
-            }
-
-            if (!commandResult.Success)
-            {
-                foreach (SqlError error in commandResult.Errors)
-                {
-                    Log.Warning("Error encountered while initialising configuration for server {ServerId} ({ErrorKind}: {ErrorMessage})",
-                        ServerId,
-                        error.Kind,
-                        error.Message
-                    );
-                }
-
-                throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {ServerId}).",
-                    serverId: CurrentState.Id,
-                    databaseId: SqlApiClient.MasterDatabaseId,
-                    sqlMessages: commandResult.Messages,
-                    sqlErrors: commandResult.Errors
-                );
-            }
-
-            Log.Info("Configuration initialised for server {ServerId}.", ServerId);
         }
 
         /// <summary>
@@ -1333,7 +773,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </param>
         void StartProvisioningPhase(ServerProvisioningPhase phase)
         {
-            CurrentState.Phase = phase;
+            Provisioner.State.Phase = phase;
             DataAccess.Tell(
                 new ServerProvisioning(ServerId, phase)
             );
@@ -1349,7 +789,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </param>
         void StartReconfigurationPhase(ServerProvisioningPhase phase)
         {
-            CurrentState.Phase = phase;
+            Provisioner.State.Phase = phase;
             DataAccess.Tell(
                 new ServerReconfiguring(ServerId, phase)
             );
@@ -1365,7 +805,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </param>
         void StartDeprovisioningPhase(ServerProvisioningPhase phase)
         {
-            CurrentState.Phase = phase;
+            Provisioner.State.Phase = phase;
             DataAccess.Tell(
                 new ServerDeprovisioning(ServerId, phase)
             );
@@ -1378,8 +818,8 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void FailCurrentAction()
         {
-            CurrentState.Status = ProvisioningStatus.Error;
-            switch (CurrentState.Action)
+            Provisioner.State.Status = ProvisioningStatus.Error;
+            switch (Provisioner.State.Action)
             {
                 case ProvisioningAction.Provision:
                 {
@@ -1407,7 +847,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
             }
 
-            CurrentState.Phase = ServerProvisioningPhase.None;
+            Provisioner.State.Phase = ServerProvisioningPhase.None;
         }
 
         /// <summary>
@@ -1415,7 +855,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         void CompleteCurrentAction()
         {
-            switch (CurrentState.Action)
+            switch (Provisioner.State.Action)
             {
                 case ProvisioningAction.Provision:
                 {
@@ -1444,8 +884,8 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             Log.Info("Completed action {Action} for server {ServerId}.",
-                CurrentState.Action,
-                CurrentState.Id
+                Provisioner.State.Action,
+                Provisioner.State.Id
             );
         }
 

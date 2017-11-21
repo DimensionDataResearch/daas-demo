@@ -20,7 +20,7 @@ namespace DaaSDemo.Provisioning
         ///     The Kubernetes resource-naming strategy.
         /// </param>
         /// <param name="kubeOptions">
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </param>
         /// <param name="provisioningOptions">
         ///     Application-level provisioning options.
@@ -42,12 +42,12 @@ namespace DaaSDemo.Provisioning
         }
 
         /// <summary>
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </summary>
         public KubeNames Names { get; }
 
         /// <summary>
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </summary>
         public KubernetesOptions KubeOptions { get; }
 

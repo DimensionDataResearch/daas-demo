@@ -24,7 +24,7 @@ namespace DaaSDemo.Provisioning
         ///     The factory for Kubernetes specifications.
         /// </param>
         /// <param name="kubeOptions">
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </param>
         public KubeResources(KubeNames names, KubeSpecs specs, IOptions<KubernetesOptions> kubeOptions)
         {
@@ -53,7 +53,7 @@ namespace DaaSDemo.Provisioning
         public KubeSpecs Specs { get; }
 
         /// <summary>
-        ///     Application-level Kubernetes options.
+        ///     Application-level Kubernetes settings.
         /// </summary>
         public KubernetesOptions KubeOptions { get; }
 

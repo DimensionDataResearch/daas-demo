@@ -35,7 +35,7 @@ namespace DaaSDemo.Provisioning.Actors
         readonly Dictionary<int, IActorRef> _serverManagers = new Dictionary<int, IActorRef>();
 
         /// <summary>
-        ///     Application-level database options.
+        ///     Application-level database settings.
         /// </summary>
         readonly DatabaseOptions _databaseOptions;
 

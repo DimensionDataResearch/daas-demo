@@ -5,6 +5,7 @@ using System;
 namespace DaaSDemo.Provisioning
 {
     using Common.Options;
+    using Provisioners;
 
     /// <summary>
     ///     Extension methods for registering provisioning components.
@@ -25,6 +26,8 @@ namespace DaaSDemo.Provisioning
             services.AddTransient<KubeNames>();
             services.AddTransient<KubeSpecs>();
             services.AddTransient<KubeResources>();
+
+            services.AddTransient<DatabaseServerProvisioner>();
 
             services.AddTransient<Actors.DataAccess>();
             services.AddTransient<Actors.TenantServerManager>();
