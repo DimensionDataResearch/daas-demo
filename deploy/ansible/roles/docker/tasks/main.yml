@@ -24,6 +24,16 @@
     - linux-image-extra-virtual
     - "docker-engine={{docker_version}}~{{docker_version_distro}}"
 
+  # We don't want to upgrade the Docker engine past a version supported by Kubernetes
+- name: check if upgrades allowed for docker-engine package 
+  command: apt-mark showhold
+  register: held_packages
+  changed_when: false
+  
+- name: prevent upgrade of docker-engine package
+  command: apt-mark hold docker-engine
+  when: '"docker-engine" not in held_packages.stdout'
+
 - name: enable docker
   service:
     name: docker
