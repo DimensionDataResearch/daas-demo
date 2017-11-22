@@ -147,7 +147,7 @@ export class TenantDetail {
 
         this.server = null;
 
-        await this.api.deployTenantSqlServer(
+        await this.api.deploySqlServer(
             this.tenantId,
             this.newServer.name,
             this.newServer.adminPassword
@@ -156,6 +156,53 @@ export class TenantDetail {
         await this.load(true);
 
         this.hideCreateServerForm();
+    }
+
+    /**
+     * Destroy the tenant's server.
+     */
+    public async destroyServer(): Promise<void> {
+        this.clearError();
+        
+        try {
+            if (!this.tenant || !this.server || !this.confirmDialog)
+                return;
+
+            const confirm = await this.confirmDialog.show('Destroy Server',
+                `Delete server "${this.server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.destroyServer(
+                this.server.id
+            );
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        await this.load(true);
+    }
+
+    /**
+     * Clear the current error message (if any).
+     */
+    public clearError(): void {
+        this.errorMessage = null;
+    }
+
+    /**
+     * Show an error message.
+     * 
+     * @param error The error to show.
+     */
+    public showError(error: Error): void {
+        console.log(error);
+        
+        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 
     /**
@@ -216,53 +263,6 @@ export class TenantDetail {
             if (!isReload)
                 this.loading = false;
         }
-    }
-
-    /**
-     * Destroy the tenant's server.
-     */
-    private async destroyServer(): Promise<void> {
-        this.clearError();
-        
-        try {
-            if (!this.tenant || !this.server || !this.confirmDialog)
-                return;
-
-            const confirm = await this.confirmDialog.show('Destroy Server',
-                `Delete server "${this.server.name}"?`
-            );
-            if (!confirm)
-                return;
-
-            await this.api.destroyTenantServer(
-                this.tenant.id
-            );
-        }
-        catch (error) {
-            this.showError(error as Error);
-
-            return;
-        }
-
-        await this.load(true);
-    }
-
-    /**
-     * Clear the current error message (if any).
-     */
-    private clearError(): void {
-        this.errorMessage = null;
-    }
-
-    /**
-     * Show an error message.
-     * 
-     * @param error The error to show.
-     */
-    private showError(error: Error): void {
-        console.log(error);
-        
-        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 }
 

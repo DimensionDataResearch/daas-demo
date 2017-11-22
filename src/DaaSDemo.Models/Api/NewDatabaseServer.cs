@@ -10,6 +10,12 @@ namespace DaaSDemo.Models.Api
     public class NewDatabaseServer
     {
         /// <summary>
+        ///     The Id of the tenant that will own the server.
+        /// </summary>
+        [Required]
+        public string TenantId { get; set; }
+
+        /// <summary>
         ///     The server (container / deployment) name.
         /// </summary>
         [MaxLength(200)]

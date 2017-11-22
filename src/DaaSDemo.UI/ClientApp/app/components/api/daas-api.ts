@@ -210,20 +210,21 @@ export class DaaSAPI
     }
 
     /**
-     * Deploy a SQL Server instance for a tenant.
+     * Deploy a new SQL Server instance.
      * 
-     * @param tenantId The tenant Id.
+     * @param tenantId The Id of the tenant that will own the server.
      * @param name The server name.
      * @param adminPasword The server administrative password.
      * 
      * @returns The Id of the new server.
      */
-    public async deployTenantSqlServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
+    public async deploySqlServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/server`, {
+        const response = await this.http.fetch(`servers`, {
             method: 'POST',
             body: json({
+                tenantId: tenantId,
                 name: name,
                 kind: DatabaseServerKind.SqlServer,
                 adminPassword: adminPassword
@@ -245,14 +246,14 @@ export class DaaSAPI
     }
 
     /**
-     * Destroy a tenant's database server.
+     * Destroy a database server.
      * 
-     * @param tenantId The tenant Id.
+     * @param serverId The server Id.
      */
-    public async destroyTenantServer(tenantId: number): Promise<void> {
+    public async destroyServer(serverId: number): Promise<void> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/server`, {
+        const response = await this.http.fetch(`servers/${serverId}`, {
             method: 'DELETE'
         });
         
@@ -264,19 +265,19 @@ export class DaaSAPI
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to delete server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to delete server for tenant with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
     /**
-     * Reconfigure a tenant's database server.
+     * Reconfigure a database server.
      * 
-     * @param tenantId The tenant Id.
+     * @param serverId The server Id.
      */
-    public async reconfigureTenantServer(tenantId: number): Promise<void> {
+    public async reconfigureServer(serverId: number): Promise<void> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/server/reconfigure`, {
+        const response = await this.http.fetch(`servers/${serverId}/reconfigure`, {
             method: 'POST'
         });
         
@@ -288,7 +289,7 @@ export class DaaSAPI
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to reconfigure server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to reconfigure server for tenant with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 

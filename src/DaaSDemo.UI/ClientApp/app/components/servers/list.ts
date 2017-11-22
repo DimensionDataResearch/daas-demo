@@ -99,7 +99,7 @@ export class ServerList {
      * @param server The server to repair.
      */
     public async repairServer(server: Server): Promise<void> {
-        await this.api.reconfigureTenantServer(server.tenantId);
+        await this.api.reconfigureServer(server.id);
         await this.load(true);
     }
 
@@ -109,7 +109,7 @@ export class ServerList {
      * @param server The server to destroy.
      */
     public async destroyServer(server: Server): Promise<void> {
-        await this.api.destroyTenantServer(server.tenantId);
+        await this.api.destroyServer(server.id);
         await this.load(true);
     }
 
