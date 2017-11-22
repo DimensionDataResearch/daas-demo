@@ -273,7 +273,13 @@ namespace DaaSDemo.Provisioning.Actors
             CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.ServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
-                sql: ManagementSql.CreateDatabase(CurrentState.Name, CurrentState.DatabaseUser, CurrentState.DatabasePassword),
+                sql: ManagementSql.CreateDatabase(
+                    CurrentState.Name,
+                    CurrentState.DatabaseUser,
+                    CurrentState.DatabasePassword,
+                    maxPrimaryFileSizeMB: CurrentState.Storage.SizeMB,
+                    maxLogFileSizeMB: (int)(0.2 * CurrentState.Storage.SizeMB) // Reserve an additional 20% of storage for transaction logs.
+                ),
                 executeAsAdminUser: true
             );
 

@@ -227,7 +227,10 @@ export class DaaSAPI
                 tenantId: tenantId,
                 name: name,
                 kind: DatabaseServerKind.SqlServer,
-                adminPassword: adminPassword
+                adminPassword: adminPassword,
+                storage: {
+                    sizeMB: 600 // TODO: Expose this via the UI.
+                }
             })
         });
         
@@ -309,6 +312,9 @@ export class DaaSAPI
             body: json({
                 serverId: serverId,
                 name: name,
+                storage: {
+                    sizeMB: 200 // TODO: Expose this via the UI.
+                },
                 databaseUser: user,
                 databasePassword: password
             })

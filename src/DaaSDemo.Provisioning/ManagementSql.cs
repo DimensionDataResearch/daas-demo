@@ -67,10 +67,16 @@ namespace DaaSDemo.Provisioning
         /// <param name="password">
         ///     The database password.
         /// </param>
+        /// <param name="maxPrimaryFileSizeMB">
+        ///     The size (in MB) of the database's primary file.
+        /// </param>
+        /// <param name="maxLogFileSizeMB">
+        ///     The size (in MB) of the database's primary log file.
+        /// </param>
         /// <returns>
         ///     The T-SQL.
         /// </returns>
-        public static IEnumerable<string> CreateDatabase(string databaseName, string userName, string password)
+        public static IEnumerable<string> CreateDatabase(string databaseName, string userName, string password, int maxPrimaryFileSizeMB, int maxLogFileSizeMB)
         {
             if (String.IsNullOrWhiteSpace(databaseName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
@@ -92,14 +98,16 @@ namespace DaaSDemo.Provisioning
                     Name = N'{databaseName}',
                     FileName = N'/var/opt/mssql/data/{databaseName}.mdf',
                     Size = 8192KB,
-                    FileGrowth = 65536KB
+                    FileGrowth = 65536KB,
+                    MaxSize = {maxPrimaryFileSizeMB}MB
                 )
                 Log On
                 (
                     Name = N'{databaseName}_log',
                     FileName = N'/var/opt/mssql/data/{databaseName}_log.ldf',
                     Size = 8192KB,
-                    FileGrowth = 65536KB
+                    FileGrowth = 65536KB,
+                    MaxSize = {maxLogFileSizeMB}MB
                 )
             ";
 

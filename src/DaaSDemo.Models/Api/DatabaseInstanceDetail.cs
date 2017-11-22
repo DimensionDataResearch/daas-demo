@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -43,6 +44,9 @@ namespace DaaSDemo.Models.Api
             
             Id = database.Id;
             Name = database.Name;
+
+            StorageMB = database.Storage.SizeMB;
+
             Action = database.Action;
             Status = database.Status;
 
@@ -95,6 +99,12 @@ namespace DaaSDemo.Models.Api
         ///     The database's provisioning status.
         /// </summary>
         public ProvisioningStatus Status { get; set; }
+
+        /// <summary>
+        ///     The amount of storage (in MB) allocated to the database.
+        /// </summary>
+        [Required]
+        public int StorageMB { get; set; }
 
         /// <summary>
         ///     The database connection string.

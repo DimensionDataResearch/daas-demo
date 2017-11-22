@@ -38,5 +38,12 @@ namespace DaaSDemo.Models.Api
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
         public string DatabasePassword { get; set; }
+
+        /// <summary>
+        ///     The amount of storage (in MB) to allocate to the database.
+        /// </summary>
+        [Required]
+        [Range(minimum: 10, maximum: 4000)]
+        public int StorageMB { get; set; }
     }
 }

@@ -63,16 +63,13 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
-        /// <param name="requestedSizeMB">
-        ///     The requested volume size (in MB).
-        /// </param>
         /// <param name="kubeNamespace">
         ///     An optional target Kubernetes namespace.
         /// </param>
         /// <returns>
         ///     The configured <see cref="PersistentVolumeClaimV1"/>.
         /// </returns>
-        public PersistentVolumeClaimV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB, string kubeNamespace = null)
+        public PersistentVolumeClaimV1 DataVolumeClaim(DatabaseServer server, string kubeNamespace = null)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -80,7 +77,7 @@ namespace DaaSDemo.Provisioning
             return DataVolumeClaim(
                 name: Names.DataVolumeClaim(server),
                 kubeNamespace: kubeNamespace,
-                spec: Specs.DataVolumeClaim(server, requestedSizeMB),
+                spec: Specs.DataVolumeClaim(server),
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = Names.BaseName(server),

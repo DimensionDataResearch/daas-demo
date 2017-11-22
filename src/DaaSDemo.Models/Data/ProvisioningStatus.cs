@@ -38,6 +38,11 @@ namespace DaaSDemo.Models.Data
         /// <summary>
         ///     Resource has been de-provisioned.
         /// </summary>
-        Deprovisioned = 6
+        Deprovisioned = 6,
+
+        /// <summary>
+        ///     Resource is undergoing maintenance.
+        /// </summary>
+        Maintenance = 7
     }
 }

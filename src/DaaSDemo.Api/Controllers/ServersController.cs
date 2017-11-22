@@ -185,6 +185,10 @@ namespace DaaSDemo.Api.Controllers
                 Name = newDatabaseServer.Name,
                 Kind = newDatabaseServer.Kind,
                 AdminPassword = newDatabaseServer.AdminPassword,
+                Storage =
+                {
+                    SizeMB = newDatabaseServer.StorageMB
+                },
                 TenantId = tenant.Id,
                 Action = ProvisioningAction.Provision,
                 Status = ProvisioningStatus.Pending

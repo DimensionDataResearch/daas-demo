@@ -35,5 +35,12 @@ namespace DaaSDemo.Models.Api
         /// </summary>
         [Required]
         public DatabaseServerKind Kind { get; set; }
+
+        /// <summary>
+        ///     The total amount of storage (in MB) to allocate to the server.
+        /// </summary>
+        [Required]
+        [Range(minimum: 10, maximum: 4000)]
+        public int StorageMB { get; set; }
     }
 }

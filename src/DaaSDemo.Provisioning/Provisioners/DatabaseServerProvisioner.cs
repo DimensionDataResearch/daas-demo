@@ -222,7 +222,6 @@ namespace DaaSDemo.Provisioning.Provisioners
 
             PersistentVolumeClaimV1 createdPersistentVolumeClaim = await KubeClient.PersistentVolumeClaimsV1().Create(
                 KubeResources.DataVolumeClaim(State,
-                    requestedSizeMB: 200,
                     kubeNamespace: KubeOptions.KubeNamespace
                 )
             );

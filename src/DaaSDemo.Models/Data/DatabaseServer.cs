@@ -69,6 +69,12 @@ namespace DaaSDemo.Models.Data
         public ServerProvisioningPhase Phase { get; set; } = ServerProvisioningPhase.None;
 
         /// <summary>
+        ///     The server's storage configuration.
+        /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public DatabaseServerStorage Storage { get; } = new DatabaseServerStorage();
+
+        /// <summary>
         ///     The Ids of databases hosted on the server.
         /// </summary>
         public HashSet<string> DatabaseIds { get; private set; } = new HashSet<string>();
@@ -105,6 +111,10 @@ namespace DaaSDemo.Models.Data
                 Phase = Phase,
                 Status = Status,
 
+                Storage =
+                {
+                    SizeMB = Storage.SizeMB
+                },
                 
                 DatabaseIds = new HashSet<string>(DatabaseIds),
             };

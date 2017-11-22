@@ -50,6 +50,12 @@ namespace DaaSDemo.Models.Data
         public ProvisioningStatus Status { get; set; } = ProvisioningStatus.Pending;
 
         /// <summary>
+        ///     The database's storage configuration.
+        /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public DatabaseInstanceStorage Storage { get; } = new DatabaseInstanceStorage();
+
+        /// <summary>
         ///     The Id of the tenant that owns the database.
         /// </summary>
         [Required]
@@ -79,6 +85,11 @@ namespace DaaSDemo.Models.Data
                 
                 DatabaseUser = DatabaseUser,
                 DatabasePassword = DatabasePassword,
+
+                Storage =
+                {
+                    SizeMB = Storage.SizeMB
+                },
                 
                 Action = Action,
                 Status = Status,

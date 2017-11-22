@@ -25,6 +25,8 @@ namespace DaaSDemo.Data.Indexes
                 {
                     Id = database.Id,
                     Name = database.Name,
+
+                    StorageMB = database.Storage.SizeMB,
                     
                     Action = database.Action,
                     Status = database.Status,

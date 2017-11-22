@@ -62,13 +62,10 @@ namespace DaaSDemo.Provisioning
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server.
         /// </param>
-        /// <param name="requestedSizeMB">
-        ///     The requested volume size (in MB).
-        /// </param>
         /// <returns>
         ///     The configured <see cref="PersistentVolumeClaimSpecV1"/>.
         /// </returns>
-        public PersistentVolumeClaimSpecV1 DataVolumeClaim(DatabaseServer server, int requestedSizeMB)
+        public PersistentVolumeClaimSpecV1 DataVolumeClaim(DatabaseServer server)
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
@@ -84,7 +81,7 @@ namespace DaaSDemo.Provisioning
                 {
                     Requests = new Dictionary<string, string>
                     {
-                        ["storage"] = $"{requestedSizeMB}Mi"
+                        ["storage"] = $"{server.Storage.SizeMB}Mi"
                     }
                 }
             };

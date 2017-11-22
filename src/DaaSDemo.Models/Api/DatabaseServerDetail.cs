@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -38,11 +39,16 @@ namespace DaaSDemo.Models.Api
             Id = server.Id;
             Name = server.Name;
             Kind = server.Kind;
+
             PublicFQDN = server.PublicFQDN;
             PublicPort = server.PublicPort;
+            
+            StorageMB = server.Storage.SizeMB;
+            
             Action = server.Action;
             Phase = server.Phase;
             Status = server.Status;
+            
             TenantId = tenant.Id;
             TenantName = tenant.Name;
         }
@@ -83,12 +89,17 @@ namespace DaaSDemo.Models.Api
         public string TenantName { get; set; }
 
         /// <summary>
+        ///     The total amount of storage (in MB) allocated to the server.
+        /// </summary>
+        public int StorageMB { get; set; }
+
+        /// <summary>
         ///     The server's currently-requested provisioning action (if any).
         /// </summary>
         public ProvisioningAction Action { get; set; }
 
         /// <summary>
-        ///     The server's currentl provisioning phase (if any).
+        ///     The server's current provisioning phase (if any).
         /// </summary>
         public ServerProvisioningPhase Phase { get; set; }
 
