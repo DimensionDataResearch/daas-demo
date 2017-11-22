@@ -32,7 +32,7 @@ namespace DaaSDemo.Models.Api
         /// <param name="serverPort"></param>
         /// <param name="tenantId"></param>
         /// <param name="tenantName"></param>
-        public DatabaseInstanceDetail(int databaseId, string databaseName, string databaseUser, ProvisioningAction databaseAction, ProvisioningStatus databaseStatus, int serverId, string serverName, string serverFQDN, int? serverPort, int tenantId, string tenantName)
+        public DatabaseInstanceDetail(string databaseId, string databaseName, string databaseUser, ProvisioningAction databaseAction, ProvisioningStatus databaseStatus, string serverId, string serverName, string serverFQDN, int? serverPort, string tenantId, string tenantName)
         {
             Id = databaseId;
             Name = databaseName;
@@ -50,7 +50,7 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The tenant Id.
         /// </summary>
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         ///     The database name.
@@ -60,7 +60,7 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The Id of the server that hosts the database.
         /// </summary>
-        public int ServerId { get; set; }
+        public string ServerId { get; set; }
 
         /// <summary>
         ///     The name of the server that hosts the database.
@@ -70,7 +70,7 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The Id of the tenant that owns the database.
         /// </summary>
-        public int TenantId { get; set; }
+        public string TenantId { get; set; }
 
         /// <summary>
         ///     The name of the tenant that owns the database.

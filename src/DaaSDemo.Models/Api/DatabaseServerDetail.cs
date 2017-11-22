@@ -30,7 +30,7 @@ namespace DaaSDemo.Models.Api
         /// <param name="serverStatus"></param>
         /// <param name="tenantId"></param>
         /// <param name="tenantName"></param>
-        public DatabaseServerDetail(int serverId, string serverName, string publicFQDN, int? publicPort, ProvisioningAction serverAction, ServerProvisioningPhase phase, ProvisioningStatus serverStatus, int tenantId, string tenantName)
+        public DatabaseServerDetail(string serverId, string serverName, string publicFQDN, int? publicPort, ProvisioningAction serverAction, ServerProvisioningPhase phase, ProvisioningStatus serverStatus, string tenantId, string tenantName)
         {
             Id = serverId;
             Name = serverName;
@@ -44,9 +44,9 @@ namespace DaaSDemo.Models.Api
         }
 
         /// <summary>
-        ///     The tenant Id.
+        ///     The server Id.
         /// </summary>
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         ///     The server name.
@@ -66,7 +66,7 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The Id of the tenant that owns the server.
         /// </summary>
-        public int TenantId { get; set; }
+        public string TenantId { get; set; }
 
         /// <summary>
         ///     The name of the tenant that owns the server.

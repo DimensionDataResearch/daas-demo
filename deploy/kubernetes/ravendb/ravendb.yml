@@ -1,0 +1,46 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: ravendb
+  labels:
+    k8s-app: ravendb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: ravendb
+
+  strategy:
+        type: Recreate
+
+  template:
+    metadata:
+      labels:
+        k8s-app: ravendb
+    spec:
+      serviceAccountName: ravendb
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: ravendb
+        image: ravendb/ravendb:ubuntu-latest
+        imagePullPolicy: IfNotPresent
+        
+        env:
+          - name: UNSECURED_ACCESS_ALLOWED
+            value: 'PublicNetwork'
+
+        volumeMounts:
+          - name: data
+            mountPath: /databases
+
+        ports:
+          - name: https
+            containerPort: 8080
+          - name: tcp
+            containerPort: 38888
+
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: ravendb-data

@@ -2,22 +2,19 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DaaSDemo.Models.Data
 {
     /// <summary>
     ///     Represents a database server allocated to a tenant.
     /// </summary>
-    [Table("DatabaseServer")]
+    [EntitySet("database-server")]
     public class DatabaseServer
     {
         /// <summary>
         ///     The server Id.
         /// </summary>
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         ///     The server (container / deployment) name.
@@ -47,43 +44,32 @@ namespace DaaSDemo.Models.Data
         ///     The Id of the tenant that owns the database server.
         /// </summary>
         [Required]
-        public int TenantId { get; set; }
+        public string TenantId { get; set; }
 
         /// <summary>
-        ///     The tenant that owns the database server.
+        ///     The name of the tenant that owns the database server.
         /// </summary>
-        [ForeignKey("TenantId")]
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public Tenant Tenant { get; set; }
+        public string TenantName { get; set; }
 
         /// <summary>
         ///     The desired action for the server.
         /// </summary>
-        [Required]
-        [DefaultValue(ProvisioningAction.None)]
-        public ProvisioningAction Action { get; set; }
+        public ProvisioningAction Action { get; set; } = ProvisioningAction.None;
 
         /// <summary>
         ///     The current status of the server.
         /// </summary>
-        [Required]
-        [DefaultValue(ProvisioningStatus.Pending)]
-        public ProvisioningStatus Status { get; set; }
+        public ProvisioningStatus Status { get; set; } = ProvisioningStatus.Pending;
 
         /// <summary>
         ///     The server's current provisioning phase.
         /// </summary>
-        [Required]
-        [JsonIgnore]
-        [DefaultValue(ServerProvisioningPhase.None)]
-        public ServerProvisioningPhase Phase { get; set; }
+        public ServerProvisioningPhase Phase { get; set; } = ServerProvisioningPhase.None;
 
         /// <summary>
-        ///     Databases present on the server.
+        ///     The Ids of databases hosted on the server.
         /// </summary>
-        [JsonIgnore]
-        [InverseProperty("DatabaseServer")]
-        public ICollection<DatabaseInstance> Databases { get; set; } = new HashSet<DatabaseInstance>();
+        public HashSet<string> DatabaseIds { get; } = new HashSet<string>();
 
         /// <summary>
         ///     Get the connection string for the DaaS master database.

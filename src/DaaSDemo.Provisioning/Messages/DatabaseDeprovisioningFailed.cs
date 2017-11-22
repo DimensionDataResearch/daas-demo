@@ -14,7 +14,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="databaseId">
         ///     The Id of the database for which de-provisioning was unsuccessful.
         /// </param>
-        public DatabaseDeprovisioningFailed(int databaseId)
+        public DatabaseDeprovisioningFailed(string databaseId)
             : base(databaseId, ProvisioningStatus.Error)
         {
         }

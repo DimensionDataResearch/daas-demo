@@ -16,7 +16,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server that was reconfigured.
         /// </param>
-        public ServerReconfigured(int serverId)
+        public ServerReconfigured(string serverId)
             : base(serverId, ProvisioningStatus.Ready)
         {
         }

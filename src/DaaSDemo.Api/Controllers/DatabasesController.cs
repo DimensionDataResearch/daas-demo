@@ -2,7 +2,6 @@ using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -14,9 +13,11 @@ using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace DaaSDemo.Api.Controllers
 {
+    using System.Collections.Generic;
     using Data;
     using Models.Api;
     using Models.Data;
+    using Raven.Client.Documents.Session;
 
     /// <summary>
     ///     Controller for the databases API.
@@ -28,28 +29,28 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Create a new databases API controller.
         /// </summary>
-        /// <param name="entities">
-        ///     The DaaS entity context.
+        /// <param name="documentSession">
+        ///     The RavenDB document session for the current request.
         /// </param>
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public DatabasesController(Entities entities, ILogger<DatabasesController> logger)
+        public DatabasesController(IDocumentSession documentSession, ILogger<DatabasesController> logger)
         {
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities));
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
 
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
             
-            Entities = entities;
+            DocumentSession = documentSession;
             Log = logger;
         }
 
         /// <summary>
-        ///     The DaaS entity context.
+        ///     The RavenDB document session for the current request.
         /// </summary>
-        Entities Entities { get; }
+        IDocumentSession DocumentSession { get; }
 
         /// <summary>
         ///     The controller's log facility.
@@ -62,35 +63,44 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="databaseId">
         ///     The database Id.
         /// </param>
-        [HttpGet("{databaseId:int}")]
-        public IActionResult GetById(int databaseId)
+        [HttpGet("{databaseId}")]
+        public IActionResult GetById(string databaseId)
         {
-            DatabaseInstanceDetail databaseDetail = Entities.DatabaseInstances
-                .Where(database => database.Id == databaseId)
-                .Select(database => new DatabaseInstanceDetail(
-                    database.Id,
-                    database.Name,
-                    database.DatabaseUser,
-                    database.Action,
-                    database.Status,
-                    database.DatabaseServer.Id,
-                    database.DatabaseServer.Name,
-                    database.DatabaseServer.PublicFQDN,
-                    database.DatabaseServer.PublicPort,
-                    database.DatabaseServer.Tenant.Id,
-                    database.DatabaseServer.Tenant.Name
-                ))
-                .FirstOrDefault();
-
-            if (databaseDetail != null)
-                return Json(databaseDetail);
-
-            return NotFound(new
+            DatabaseInstance database = DocumentSession.Include<DatabaseInstance>(db => db.ServerId).Load(databaseId);
+            if (database == null)
             {
-                Id = databaseId,
-                EntityType = "Database",
-                Message = $"No database found with Id {databaseId}"
-            });
+                return NotFound(new
+                {
+                    Id = databaseId,
+                    EntityType = "Database",
+                    Message = $"Database not found with Id '{databaseId}'."
+                });
+            }
+
+            DatabaseServer server = DocumentSession.Load<DatabaseServer>(database.ServerId);
+            if (server == null)
+            {
+                return NotFound(new
+                {
+                    Id = database.ServerId,
+                    EntityType = "Server",
+                    Message = $"Database's server not found with Id '{database.ServerId}'."
+                });
+            }
+
+            return Json(new DatabaseInstanceDetail(
+                database.Id,
+                database.Name,
+                database.DatabaseUser,
+                database.Action,
+                database.Status,
+                server.Id,
+                server.Name,
+                server.PublicFQDN,
+                server.PublicPort,
+                server.TenantId,
+                server.TenantName
+            ));
         }
 
         /// <summary>
@@ -99,22 +109,48 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet]
         public IActionResult List()
         {
-            return Json(
-                Entities.DatabaseInstances
-                    .Select(database => new DatabaseInstanceDetail(
-                        database.Id,
-                        database.Name,
-                        database.DatabaseUser,
-                        database.Action,
-                        database.Status,
-                        database.DatabaseServer.Id,
-                        database.DatabaseServer.Name,
-                        database.DatabaseServer.PublicFQDN,
-                        database.DatabaseServer.PublicPort,
-                        database.DatabaseServer.Tenant.Id,
-                        database.DatabaseServer.Tenant.Name
-                    ))
-            );
+            // TODO: This method is now seriously inefficient - consider restructuring the data model or simplifying the output of operation to avoid joins.
+
+            Dictionary<string, Tenant> tenants = DocumentSession.Query<Tenant>()
+                .ToDictionary(
+                    tenant => tenant.Id
+                );
+
+            Dictionary<string, DatabaseServer> servers = DocumentSession.Query<DatabaseServer>()
+                .ToDictionary(
+                    server => server.Id
+                );
+
+            DatabaseInstance[] databases = DocumentSession.Query<DatabaseInstance>()
+                .ToArray();
+
+            List<DatabaseInstanceDetail> databaseDetails = new List<DatabaseInstanceDetail>();
+            foreach (DatabaseInstance database in databases)
+            {
+                Tenant tenant;
+                if (!tenants.TryGetValue(database.TenantId, out tenant))
+                    continue;
+
+                DatabaseServer server;
+                if (!servers.TryGetValue(database.ServerId, out server))
+                    continue;
+
+                databaseDetails.Add(new DatabaseInstanceDetail(
+                    database.Id,
+                    database.Name,
+                    database.DatabaseUser,
+                    database.Action,
+                    database.Status,
+                    server.Id,
+                    server.Name,
+                    server.PublicFQDN,
+                    server.PublicPort,
+                    tenant.Id,
+                    tenant.Name
+                ));
+            }
+
+            return Json(databaseDetails);
         }
     }
 }

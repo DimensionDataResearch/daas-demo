@@ -17,7 +17,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The current provisioning phase.
         /// </param>
-        public ServerProvisioning(int serverId, ServerProvisioningPhase phase)
+        public ServerProvisioning(string serverId, ServerProvisioningPhase phase)
             : base(serverId, ProvisioningStatus.Provisioning, phase)
         {
         }

@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Session;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -30,13 +30,13 @@ namespace DaaSDemo.SqlExecutor.Controllers
         /// <summary>
         ///     The database Id representing the master database in any server.
         /// </summary>
-        const int MasterDatabaseId = 0;
+        const string MasterDatabaseId = "master";
 
         /// <summary>
         ///     Create a new T-SQL execution API controller.
         /// </summary>
-        /// <param name="entities">
-        ///     The DaaS entity context.
+        /// <param name="documentSession">
+        ///     The RavenDB document session for the current request.
         /// </param>
         /// <param name="kubeClient">
         ///     The Kubernetes API client.
@@ -47,10 +47,10 @@ namespace DaaSDemo.SqlExecutor.Controllers
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public SqlController(Entities entities, KubeApiClient kubeClient, IOptions<KubernetesOptions> kubeOptions, ILogger<SqlController> logger)
+        public SqlController(IAsyncDocumentSession documentSession, KubeApiClient kubeClient, IOptions<KubernetesOptions> kubeOptions, ILogger<SqlController> logger)
         {
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities));
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
 
             if (kubeClient == null)
                 throw new ArgumentNullException(nameof(kubeClient));
@@ -61,16 +61,16 @@ namespace DaaSDemo.SqlExecutor.Controllers
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
             
-            Entities = entities;
+            DocumentSession = documentSession;
             KubeClient = kubeClient;
             KubeOptions = kubeOptions.Value;
             Log = logger;
         }
 
         /// <summary>
-        ///     The DaaS entity context.
+        ///     The RavenDB document session for the current request.
         /// </summary>
-        Entities Entities { get; }
+        IAsyncDocumentSession DocumentSession { get; }
 
         /// <summary>
         ///     The controller's log facility.
@@ -322,9 +322,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
                 request.ServerId
             );
 
-            DatabaseServer targetServer = await Entities.DatabaseServers.FirstOrDefaultAsync(
-                server => server.Id == request.ServerId
-            );
+            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(request.ServerId);
             if (targetServer == null)
             {
                 Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (server not found).",
@@ -358,9 +356,7 @@ namespace DaaSDemo.SqlExecutor.Controllers
 
             if (request.DatabaseId != MasterDatabaseId)
             {
-                DatabaseInstance targetDatabase = await Entities.DatabaseInstances.FirstOrDefaultAsync(
-                    database => database.Id == request.DatabaseId
-                );
+                DatabaseInstance targetDatabase = await DocumentSession.LoadAsync<DatabaseInstance>(request.DatabaseId);
                 if (targetDatabase == null)
                 {
                     Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (database not found).",

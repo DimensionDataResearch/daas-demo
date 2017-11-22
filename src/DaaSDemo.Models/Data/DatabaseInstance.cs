@@ -8,15 +8,13 @@ namespace DaaSDemo.Models.Data
     /// <summary>
     ///     A database instance owned by a tenant.
     /// </summary>
-    [Table("DatabaseInstance")]
+    [Table("database-instance")]
     public class DatabaseInstance
     {
         /// <summary>
         ///     The tenant Id.
         /// </summary>
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         ///     The database name.
@@ -38,50 +36,28 @@ namespace DaaSDemo.Models.Data
         [JsonIgnore]
         [MaxLength(50)]
         [Required(AllowEmptyStrings = false)]
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string DatabasePassword { get; set; }
 
         /// <summary>
         ///     The desired action for the server.
         /// </summary>
-        [Required]
-        [DefaultValue(ProvisioningAction.None)]
-        public ProvisioningAction Action { get; set; }
+        public ProvisioningAction Action { get; set; } = ProvisioningAction.None;
 
         /// <summary>
         ///     The current status of the server.
         /// </summary>
+        public ProvisioningStatus Status { get; set; } = ProvisioningStatus.Pending;
+
+        /// <summary>
+        ///     The Id of the tenant that owns the database.
+        /// </summary>
         [Required]
-        [DefaultValue(ProvisioningStatus.Pending)]
-        public ProvisioningStatus Status { get; set; }
+        public string TenantId { get; set; }
 
         /// <summary>
         ///     The Id of the tenant's database server (if any).
         /// </summary>
         [Required]
-        [ForeignKey("DatabaseServer")]
-        public int DatabaseServerId { get; set; }
-
-        /// <summary>
-        ///     The tenant's database server (if any).
-        /// </summary>
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public DatabaseServer DatabaseServer { get; set; }
-
-        /// <summary>
-        ///     Does the database's server have ingress details available?
-        /// </summary>
-        /// <returns>
-        ///     <c>true</c>, if <see cref="DatabaseServer"/> is not <c>null</c>, and has both <see cref="DatabaseServer.PublicFQDN"/> and <see cref="DatabaseServer.PublicPort"/>; otherwise, <c>false</c>.
-        /// </returns>
-        public bool DoesServerHaveIngress() => DatabaseServer?.PublicFQDN != null && DatabaseServer?.PublicPort != null;
-
-        /// <summary>
-        ///     Get the connection string for the database.
-        /// </summary>
-        /// <returns>
-        ///     The connection string.
-        /// </returns>
-        public string GetConnectionString() => $"Data Source={DatabaseServer?.PublicFQDN},{DatabaseServer?.PublicPort};Initial Catalog={Name};User=sa;Password={DatabaseServer?.AdminPassword}";
+        public string ServerId { get; set; }
     }
 }

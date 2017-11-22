@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ravendb
+  labels:
+    k8s-app: ravendb
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 8080
+    nodePort: 31880
+    targetPort: 8080
+    protocol: TCP
+  - name: tcp
+    port: 38888
+    nodePort: 31888
+    targetPort: 38888
+    protocol: TCP
+  selector:
+    k8s-app: ravendb

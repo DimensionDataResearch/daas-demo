@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -53,6 +52,8 @@ namespace DaaSDemo.Provisioning.Host
                     services.AddOptions();
                     services.AddDaaSOptions(hostContext.Configuration);
 
+                    services.AddDaaSDataAccess();
+
                     services.AddKubeClient();
                     services.AddSqlApiClient();
                     services.AddProvisioning();
@@ -60,13 +61,6 @@ namespace DaaSDemo.Provisioning.Host
                     DatabaseOptions databaseOptions = DatabaseOptions.From(hostContext.Configuration);
                     if (String.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
                         throw new InvalidOperationException("Application configuration is missing database connection string.");
-
-                    services.AddEntityFrameworkSqlServer()
-                        .AddDbContext<Entities>(entities =>
-                        {
-                            entities.UseSqlServer(databaseOptions.ConnectionString);
-                        });
-
                     
                     services.AddScoped<IHostedService, ProvisioningService>();
                 })

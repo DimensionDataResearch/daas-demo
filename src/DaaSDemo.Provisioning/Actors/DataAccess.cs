@@ -1,8 +1,9 @@
 using Akka;
 using Akka.Actor;
 using Akka.DI.Core;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -32,25 +33,17 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     References to management actors for tenant servers, keyed by tenant Id.
         /// </summary>
-        readonly Dictionary<int, IActorRef> _serverManagers = new Dictionary<int, IActorRef>();
-
-        /// <summary>
-        ///     Application-level database settings.
-        /// </summary>
-        readonly DatabaseOptions _databaseOptions;
+        readonly Dictionary<string, IActorRef> _serverManagers = new Dictionary<string, IActorRef>();
 
         /// <summary>
         ///     Create a new <see cref="DataAccess"/>.
         /// </summary>
-        /// <param name="kubeResources">
-        ///     The Kubernetes resource factory.
+        /// <param name="documentStore">
+        ///     The RavenDB document store.
         /// </param>
-        public DataAccess(IOptions<DatabaseOptions> databaseOptions)
+        public DataAccess(IDocumentStore documentStore)
         {
-            if (databaseOptions == null)
-                throw new ArgumentNullException(nameof(databaseOptions));
-            
-            _databaseOptions = databaseOptions.Value;
+            DocumentStore = documentStore;
 
             ReceiveAsync<Command>(async command =>
             {
@@ -75,21 +68,26 @@ namespace DaaSDemo.Provisioning.Actors
             ReceiveAsync<ServerIngressChanged>(UpdateServerIngress);
             Receive<Terminated>(terminated =>
             {
-                int? serverId =
+                string serverId =
                     _serverManagers.Where(
                         entry => Equals(entry.Value, terminated.ActorRef)
                     )
                     .Select(
-                        entry => (int?)entry.Key
+                        entry => entry.Key
                     )
                     .FirstOrDefault();
 
-                if (serverId.HasValue)
-                    _serverManagers.Remove(serverId.Value); // Server manager terminated.
+                if (!String.IsNullOrWhiteSpace(serverId))
+                    _serverManagers.Remove(serverId); // Server manager terminated.
                 else
                     Unhandled(terminated);
             });
         }
+
+        /// <summary>
+        ///     The RavenDB document store.
+        /// </summary>
+        public IDocumentStore DocumentStore { get; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -115,46 +113,56 @@ namespace DaaSDemo.Provisioning.Actors
         {
             Log.Debug("Scanning tenants...");
 
-            DatabaseServer[] servers;
-            using (Entities entities = CreateEntityContext())
+            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
-                servers = await entities.DatabaseServers.Include(server => server.Databases).ToArrayAsync();
-            }
+                List<DatabaseServer> servers = await session.Query<DatabaseServer>().ToListAsync();
 
-            foreach (DatabaseServer server in servers)
-            {
-                Log.Debug("Discovered database server {ServerId} (Name:{ServerName}) owned by tenant {TenantId}.",
-                    server.Id,
-                    server.Name,
-                    server.TenantId
-                );
-
-                IActorRef serverManager;
-                if (!_serverManagers.TryGetValue(server.TenantId, out serverManager))
+                foreach (DatabaseServer server in servers)
                 {
-                    serverManager = Context.ActorOf(
-                        Context.DI().Props<TenantServerManager>(),
-                        name: TenantServerManager.ActorName(server.TenantId)
-                    );
-                    Context.Watch(serverManager);
-                    
-                    _serverManagers.Add(server.TenantId, serverManager);
-
-                    serverManager.Tell(new TenantServerManager.Initialize(
-                        initialState: server,
-                        dataAccess: Self
-                    ));
-
-                    Log.Info("Created TenantServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
-                        serverManager.Path.Name,
+                    Log.Debug("Discovered database server {ServerId} (Name:{ServerName}) owned by tenant {TenantId}.",
                         server.Id,
+                        server.Name,
                         server.TenantId
                     );
-                }
-                else
-                {
-                    Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
-                    serverManager.Tell(server);
+
+                    IActorRef serverManager;
+                    if (!_serverManagers.TryGetValue(server.TenantId, out serverManager))
+                    {
+                        serverManager = Context.ActorOf(
+                            Context.DI().Props<TenantServerManager>(),
+                            name: TenantServerManager.ActorName(server.TenantId)
+                        );
+                        Context.Watch(serverManager);
+                        
+                        _serverManagers.Add(server.TenantId, serverManager);
+
+                        serverManager.Tell(new TenantServerManager.Initialize(
+                            initialState: server,
+                            dataAccess: Self
+                        ));
+
+                        Log.Info("Created TenantServerManager {ActorName} for server {ServerId} (Tenant:{TenantId}).",
+                            serverManager.Path.Name,
+                            server.Id,
+                            server.TenantId
+                        );
+                    }
+                    else
+                    {
+                        Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
+                        serverManager.Tell(server);
+                    }
+
+                    Dictionary<string, DatabaseInstance> databases = await session.LoadAsync<DatabaseInstance>(server.DatabaseIds);
+                    foreach (DatabaseInstance database in databases.Values)
+                    {
+                        Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for database {DatabaseId} in server {ServerId}.",
+                            serverManager.Path.Name,
+                            database.Id,
+                            server.Id
+                        );
+                        serverManager.Tell(server);
+                    }
                 }
             }
 
@@ -180,9 +188,9 @@ namespace DaaSDemo.Provisioning.Actors
                 serverProvisioningNotification.GetType().Name
             );
 
-            using (Entities entities = CreateEntityContext())
+            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
-                DatabaseServer server = await entities.DatabaseServers.FindAsync(serverProvisioningNotification.ServerId);
+                DatabaseServer server = await session.LoadAsync<DatabaseServer>(serverProvisioningNotification.ServerId);
                 if (server == null)
                 {
                     Log.Warning("Received ServerStatusChanged notification for non-existent server (Id:{ServerId}).",
@@ -215,7 +223,7 @@ namespace DaaSDemo.Provisioning.Actors
                         }
                         case ProvisioningStatus.Deprovisioned:
                         {
-                            entities.DatabaseServers.Remove(server);
+                            session.Delete(server);
 
                             break;
                         }
@@ -232,7 +240,7 @@ namespace DaaSDemo.Provisioning.Actors
                     server.Phase
                 );
 
-                await entities.SaveChangesAsync();
+                await session.SaveChangesAsync();
             }
 
             Log.Debug("Updated provisioning status for server {ServerId}.", serverProvisioningNotification.ServerId);
@@ -252,9 +260,9 @@ namespace DaaSDemo.Provisioning.Actors
             if (databaseProvisioningNotification == null)
                 throw new ArgumentNullException(nameof(databaseProvisioningNotification));
             
-            using (Entities entities = CreateEntityContext())
+            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
-                DatabaseInstance database = await entities.DatabaseInstances.FindAsync(databaseProvisioningNotification.DatabaseId);
+                DatabaseInstance database = await session.LoadAsync<DatabaseInstance>(databaseProvisioningNotification.DatabaseId);
                 if (database == null)
                 {
                     Log.Warning("Received DatabaseStatusChanged notification for non-existent database (Id:{DatabaseId}).",
@@ -276,13 +284,13 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     case ProvisioningStatus.Deprovisioned:
                     {
-                        entities.DatabaseInstances.Remove(database);
+                        session.Delete(database);
 
                         break;
                     }
                 }
 
-                await entities.SaveChangesAsync();
+                await session.SaveChangesAsync();
             }
         }
 
@@ -300,11 +308,9 @@ namespace DaaSDemo.Provisioning.Actors
             if (serverIngressChanged == null)
                 throw new ArgumentNullException(nameof(serverIngressChanged));
             
-            using (Entities entities = CreateEntityContext())
+            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
-                DatabaseServer server = await entities.DatabaseServers.FirstOrDefaultAsync(
-                    matchServer => matchServer.Id == serverIngressChanged.ServerId
-                );
+                DatabaseServer server = await session.LoadAsync<DatabaseServer>(serverIngressChanged.ServerId);
                 if (server == null)
                 {
                     Log.Warning("Received ServerIngressChanged notification for non-existent server (Id:{ServerId}).",
@@ -317,22 +323,8 @@ namespace DaaSDemo.Provisioning.Actors
                 server.PublicFQDN = serverIngressChanged.PublicFQDN;
                 server.PublicPort = serverIngressChanged.PublicPort;
 
-                await entities.SaveChangesAsync();
+                await session.SaveChangesAsync();
             }
-        }
-
-        /// <summary>
-        ///     Create an entity data context.
-        /// </summary>
-        /// <returns>
-        ///     The configured context.
-        /// </returns>
-        Entities CreateEntityContext()
-        {
-            DbContextOptionsBuilder optionsBuilder = new DbContextOptionsBuilder()
-                .UseSqlServer(_databaseOptions.ConnectionString);
-
-            return new Entities(optionsBuilder.Options);
         }
 
         /// <summary>

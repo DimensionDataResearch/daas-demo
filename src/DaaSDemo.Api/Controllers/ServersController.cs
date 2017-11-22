@@ -2,8 +2,8 @@ using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents.Session;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -28,28 +28,28 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Create a new servers API controller.
         /// </summary>
-        /// <param name="entities">
-        ///     The DaaS entity context.
+        /// <param name="documentSession">
+        ///     The RavenDB document session for the current request.
         /// </param>
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public ServersController(Entities entities, ILogger<ServersController> logger)
+        public ServersController(IDocumentSession documentSession, ILogger<ServersController> logger)
         {
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities));
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
 
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
             
-            Entities = entities;
+            DocumentSession = documentSession;
             Log = logger;
         }
 
         /// <summary>
-        ///     The DaaS entity context.
+        ///     The RavenDB document session for the current request.
         /// </summary>
-        Entities Entities { get; }
+        IDocumentSession DocumentSession { get; }
 
         /// <summary>
         ///     The controller's log facility.
@@ -63,7 +63,7 @@ namespace DaaSDemo.Api.Controllers
         public IActionResult List()
         {
             return Json(
-                Entities.DatabaseServers
+                DocumentSession.Query<DatabaseServer>()
                     .Select(server => new DatabaseServerDetail(
                         server.Id,
                         server.Name,
@@ -72,8 +72,8 @@ namespace DaaSDemo.Api.Controllers
                         server.Action,
                         server.Phase,
                         server.Status,
-                        server.Tenant.Id,
-                        server.Tenant.Name
+                        server.TenantId,
+                        server.TenantName
                     ))
             );
         }
@@ -84,27 +84,24 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="serverId">
         ///     The server Id.
         /// </param>
-        [HttpGet("{serverId:int}")]
-        public IActionResult GetById(int serverId)
+        [HttpGet("{serverId}")]
+        public IActionResult GetById(string serverId)
         {
-            DatabaseServerDetail serverDetail =
-                Entities.DatabaseServers
-                    .Where(server => server.Id == serverId)
-                    .Select(server => new DatabaseServerDetail(
-                        server.Id,
-                        server.Name,
-                        server.PublicFQDN,
-                        server.PublicPort,
-                        server.Action,
-                        server.Phase,
-                        server.Status,
-                        server.Tenant.Id,
-                        server.Tenant.Name
-                    ))
-                    .FirstOrDefault();
-
-            if (serverDetail != null)
-                return Json(serverDetail);
+            DatabaseServer server = DocumentSession.Load<DatabaseServer>(serverId);
+            if (server != null)
+            {
+                return Json(new DatabaseServerDetail(
+                    server.Id,
+                    server.Name,
+                    server.PublicFQDN,
+                    server.PublicPort,
+                    server.Action,
+                    server.Phase,
+                    server.Status,
+                    server.TenantId,
+                    server.TenantName
+                ));
+            }
 
             return NotFound(new
             {
@@ -120,24 +117,35 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="serverId">
         ///     The server Id.
         /// </param>
-        [HttpGet("{serverId:int}/database")]
-        public IActionResult GetDatabasesByServer(int serverId)
+        [HttpGet("{serverId}/database")]
+        public IActionResult GetDatabasesByServer(string serverId)
         {
+            DatabaseServer server = DocumentSession.Load<DatabaseServer>(serverId);
+            if (server == null)
+            {
+                return NotFound(new
+                {
+                    Id = serverId,
+                    EntityType = "Server",
+                    Message = $"No server found with Id {serverId}"
+                });
+            }
+
             return Json(
-                Entities.DatabaseInstances
-                    .Where(database => database.DatabaseServerId == serverId)
+                DocumentSession.Query<DatabaseInstance>()
+                    .Where(database => database.ServerId == serverId)
                     .Select(database => new DatabaseInstanceDetail(
                         database.Id,
                         database.Name,
                         database.DatabaseUser,
                         database.Action,
                         database.Status,
-                        database.DatabaseServer.Id,
-                        database.DatabaseServer.Name,
-                        database.DatabaseServer.PublicFQDN,
-                        database.DatabaseServer.PublicPort,
-                        database.DatabaseServer.Tenant.Id,
-                        database.DatabaseServer.Tenant.Name
+                        database.ServerId,
+                        server.Name,
+                        server.PublicFQDN,
+                        server.PublicPort,
+                        server.TenantId,
+                        server.TenantName
                     ))
             );
         }

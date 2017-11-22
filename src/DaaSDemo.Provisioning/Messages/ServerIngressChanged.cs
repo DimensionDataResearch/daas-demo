@@ -19,7 +19,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="publicPort">
         ///     The server's public TCP port.
         /// </param>
-        public ServerIngressChanged(int serverId, string publicFQDN, int? publicPort)
+        public ServerIngressChanged(string serverId, string publicFQDN, int? publicPort)
         {
             ServerId = serverId;
             PublicFQDN = publicFQDN;
@@ -29,7 +29,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <summary>
         ///     The Id of the server whose ingress details have changed.
         /// </summary>
-        public int ServerId { get; }
+        public string ServerId { get; }
 
         /// <summary>
         ///     The server's ingress (external) IP address.

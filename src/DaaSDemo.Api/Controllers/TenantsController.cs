@@ -2,9 +2,10 @@ using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents.Session;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -28,28 +29,28 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Create a new tenants API controller.
         /// </summary>
-        /// <param name="entities">
-        ///     The DaaS entity context.
+        /// <param name="documentSession">
+        ///     The RavenDB document session for the current request.
         /// </param>
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public TenantsController(Entities entities, ILogger<TenantsController> logger)
+        public TenantsController(IDocumentSession documentSession, ILogger<TenantsController> logger)
         {
-            if (entities == null)
-                throw new ArgumentNullException(nameof(entities));
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
 
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
             
-            Entities = entities;
+            DocumentSession = documentSession;
             Log = logger;
         }
 
         /// <summary>
-        ///     The DaaS entity context.
+        ///     The RavenDB document session for the current request.
         /// </summary>
-        Entities Entities { get; }
+        IDocumentSession DocumentSession { get; }
 
         /// <summary>
         ///     The controller's log facility.
@@ -62,10 +63,10 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpGet("{tenantId:int}")]
-        public IActionResult GetById(int tenantId)
+        [HttpGet("{tenantId}")]
+        public IActionResult GetById(string tenantId)
         {
-            Tenant tenant = Entities.GetTenantById(tenantId);
+            Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant != null)
                 return Json(tenant);
 
@@ -84,7 +85,7 @@ namespace DaaSDemo.Api.Controllers
         public IActionResult List()
         {
             return Json(
-                Entities.GetAllTenants()
+                DocumentSession.Query<Tenant>()
             );
         }
 
@@ -100,10 +101,13 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var tenant = Entities.AddTenant(
-                name: newTenant.Name
-            );
-            Entities.SaveChanges();
+            var tenant = new Tenant
+            {
+                Name = newTenant.Name
+            };
+
+            DocumentSession.Store(tenant);
+            DocumentSession.SaveChanges();
 
             return Json(tenant);
         }
@@ -114,17 +118,26 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpGet("{tenantId:int}/server")]
-        public IActionResult GetServer(int tenantId)
+        [HttpGet("{tenantId}/server")]
+        public IActionResult GetServer(string tenantId)
         {
-            DatabaseServer tenantServer = Entities.DatabaseServers.Include(server => server.Tenant).FirstOrDefault(
-                server => server.TenantId == tenantId
-            );
-            if (tenantServer == null)
+            Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
+            if (tenant == null)
             {
                 return NotFound(new
                 {
                     Id = tenantId,
+                    EntityType = "Tenant",
+                    Message = $"No tenant found with Id {tenantId}"
+                });
+            }
+
+            DatabaseServer tenantServer = DocumentSession.Query<DatabaseServer>().FirstOrDefault(server => server.TenantId == tenantId);
+            if (tenantServer == null)
+            {
+                return NotFound(new
+                {
+                    TenantId = tenantId,
                     EntityType = "DatabaseServer",
                     Message = $"No database server found for tenant with Id {tenantId}"
                 });
@@ -138,8 +151,8 @@ namespace DaaSDemo.Api.Controllers
                 tenantServer.Action,
                 tenantServer.Phase,
                 tenantServer.Status,
-                tenantServer.Tenant.Id,
-                tenantServer.Tenant.Name
+                tenant.Id,
+                tenant.Name
             ));
         }
 
@@ -152,10 +165,21 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="newDatabaseServer">
         ///     The request body as a <see cref="NewDatabaseServer"/>.
         /// </param>
-        [HttpPost("{tenantId:int}/server")]
-        public IActionResult CreateServer(int tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
+        [HttpPost("{tenantId}/server")]
+        public IActionResult CreateServer(string tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
         {
-            DatabaseServer existingServer = Entities.GetDatabaseServerByTenantId(tenantId);
+            Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
+            if (tenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = tenantId,
+                    EntityType = "Tenant",
+                    Message = $"No tenant found with Id {tenantId}."
+                });
+            }
+
+            DatabaseServer existingServer = DocumentSession.Query<DatabaseServer>().FirstOrDefault(server => server.TenantId == tenantId);
             if (existingServer != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new
@@ -167,27 +191,20 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            Tenant ownerTenant = Entities.GetTenantById(tenantId);
-            if (ownerTenant == null)
-            {
-                return NotFound(new
-                {
-                    Id = tenantId,
-                    EntityType = "Tenant",
-                    Message = $"No tenant found with Id {tenantId}."
-                });
-            }
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var databaseServer = Entities.AddDatabaseServer(
-                tenantId: tenantId,
-                name: newDatabaseServer.Name,
-                adminPassword: newDatabaseServer.AdminPassword,
-                action: ProvisioningAction.Provision
-            );
-            Entities.SaveChanges();
+            var databaseServer = new DatabaseServer
+            {
+                Name = newDatabaseServer.Name,
+                AdminPassword = newDatabaseServer.AdminPassword,
+                TenantId = tenant.Id,
+                TenantName = tenant.Name,
+                Action = ProvisioningAction.Provision,
+                Status = ProvisioningStatus.Pending
+            };
+            DocumentSession.Store(databaseServer);
+            DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -203,10 +220,10 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpPost("{tenantId:int}/server/reconfigure")]
-        public IActionResult ReconfigureServer(int tenantId)
+        [HttpPost("{tenantId}/server/reconfigure")]
+        public IActionResult ReconfigureServer(string tenantId)
         {
-            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -234,7 +251,7 @@ namespace DaaSDemo.Api.Controllers
 
             targetServer.Action = ProvisioningAction.Reconfigure;
             targetServer.Status = ProvisioningStatus.Pending;
-            Entities.SaveChanges();
+            DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -250,10 +267,10 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpDelete("{tenantId:int}/server")]
-        public IActionResult DestroyServer(int tenantId)
+        [HttpDelete("{tenantId}/server")]
+        public IActionResult DestroyServer(string tenantId)
         {
-            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -265,7 +282,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            if (Entities.DoesServerHaveDatabases(targetServer.Id))
+            if (DocumentSession.DoesServerHaveDatabases(targetServer.Id))
             {
                 return StatusCode(StatusCodes.Status400BadRequest, new
                 {
@@ -295,7 +312,7 @@ namespace DaaSDemo.Api.Controllers
 
             targetServer.Action = ProvisioningAction.Deprovision;
             targetServer.Status = ProvisioningStatus.Pending;
-            Entities.SaveChanges();
+            DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -311,29 +328,56 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpGet("{tenantId:int}/databases")]
-        public IActionResult GetDatabases(int tenantId)
+        [HttpGet("{tenantId}/databases")]
+        public IActionResult GetDatabases(string tenantId)
         {
-            DatabaseInstanceDetail[] databases = Entities.DatabaseInstances
+            Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
+            if (tenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = tenantId,
+                    EntityType = "Tenant",
+                    Message = $"Tenant not found with Id '{tenantId}."
+                });
+            }
+
+            // TODO: This method is now seriously inefficient - consider restructuring the data model or simplifying the output of operation to avoid joins.
+            Dictionary<string, DatabaseServer> servers = DocumentSession.Query<DatabaseServer>()
                 .Where(
-                    database => database.DatabaseServer.TenantId == tenantId
+                    server => server.TenantId == tenantId
                 )
-                .Select(database => new DatabaseInstanceDetail(
+                .ToDictionary(
+                    server => server.Id
+                );
+
+            DatabaseInstance[] databases = DocumentSession.Query<DatabaseInstance>()
+                .Where(database => database.TenantId == tenantId)
+                .ToArray();
+
+            List<DatabaseInstanceDetail> databaseDetails = new List<DatabaseInstanceDetail>();
+            foreach (DatabaseInstance database in databases)
+            {
+                DatabaseServer server;
+                if (!servers.TryGetValue(database.ServerId, out server))
+                    continue;
+
+                databaseDetails.Add(new DatabaseInstanceDetail(
                     database.Id,
                     database.Name,
                     database.DatabaseUser,
                     database.Action,
                     database.Status,
-                    database.DatabaseServer.Id,
-                    database.DatabaseServer.Name,
-                    database.DatabaseServer.PublicFQDN,
-                    database.DatabaseServer.PublicPort,
-                    database.DatabaseServer.Tenant.Id,
-                    database.DatabaseServer.Tenant.Name
-                ))
-                .ToArray();
-            
-            return Json(databases);
+                    server.Id,
+                    server.Name,
+                    server.PublicFQDN,
+                    server.PublicPort,
+                    tenant.Id,
+                    tenant.Name
+                ));
+            }
+
+            return Json(databaseDetails);
         }
 
         /// <summary>
@@ -345,10 +389,10 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="newDatabase">
         ///     The request body as a <see cref="Database"/>.
         /// </param>
-        [HttpPost("{tenantId:int}/databases")]
-        public IActionResult CreateDatabase(int tenantId, [FromBody] NewDatabaseInstance newDatabase)
+        [HttpPost("{tenantId}/databases")]
+        public IActionResult CreateDatabase(string tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
-            Tenant ownerTenant = Entities.GetTenantById(tenantId);
+            Tenant ownerTenant = DocumentSession.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -359,7 +403,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -386,7 +430,7 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            DatabaseInstance existingDatabase = Entities.GetDatabaseInstanceByName(newDatabase.Name, targetServer.Id);
+            DatabaseInstance existingDatabase = DocumentSession.GetDatabaseInstanceByName(newDatabase.Name, targetServer.Id);
             if (existingDatabase != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new
@@ -398,15 +442,21 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseInstance database = Entities.AddDatabaseInstance(
-                name: newDatabase.Name,
-                serverId: targetServer.Id,
-                databaseUser: newDatabase.DatabaseUser,
-                databasePassword: newDatabase.DatabasePassword,
-                action: ProvisioningAction.Provision
-            );
+            var database = new DatabaseInstance
+            {
+                Name = newDatabase.Name,
+                DatabaseUser = newDatabase.DatabaseUser,
+                DatabasePassword = newDatabase.DatabasePassword,
+                ServerId = targetServer.Id,
+                TenantId = ownerTenant.Id,
+                Action = ProvisioningAction.Provision,
+                Status = ProvisioningStatus.Pending
+            };
+            
+            DocumentSession.Store(database);
+            targetServer.DatabaseIds.Add(database.Id);
 
-            Entities.SaveChanges();
+            DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -425,10 +475,10 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="databaseId">
         ///     The database Id.
         /// </param>
-        [HttpDelete("{tenantId:int}/databases/{databaseId}")]
-        public IActionResult DeleteDatabase(int tenantId, int databaseId)
+        [HttpDelete("{tenantId}/databases/{databaseId}")]
+        public IActionResult DeleteDatabase(string tenantId, string databaseId)
         {
-            Tenant ownerTenant = Entities.GetTenantById(tenantId);
+            Tenant ownerTenant = DocumentSession.GetTenantById(tenantId);
             if (ownerTenant == null)
             {
                 return NotFound(new
@@ -439,7 +489,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer targetServer = Entities.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
             if (targetServer == null)
             {
                 return NotFound(new
@@ -450,7 +500,7 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseInstance targetDatabase = Entities.GetDatabaseInstanceById(databaseId);
+            DatabaseInstance targetDatabase = DocumentSession.GetDatabaseById(databaseId);
             if (targetDatabase == null)
             {
                 return NotFound(new
@@ -489,7 +539,7 @@ namespace DaaSDemo.Api.Controllers
 
             targetDatabase.Action = ProvisioningAction.Deprovision;
             targetDatabase.Status = ProvisioningStatus.Pending;
-            Entities.SaveChanges();
+            DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {

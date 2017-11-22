@@ -14,7 +14,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server that was de-provisioned.
         /// </param>
-        public ServerDeprovisioned(int serverId)
+        public ServerDeprovisioned(string serverId)
             : base(serverId, ProvisioningStatus.Deprovisioned)
         {
         }

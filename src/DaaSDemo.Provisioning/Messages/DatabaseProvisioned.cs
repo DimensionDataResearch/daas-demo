@@ -14,7 +14,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="databaseId">
         ///     The Id of the database that was provisioned.
         /// </param>
-        public DatabaseProvisioned(int databaseId)
+        public DatabaseProvisioned(string databaseId)
             : base(databaseId, ProvisioningStatus.Ready)
         {
         }

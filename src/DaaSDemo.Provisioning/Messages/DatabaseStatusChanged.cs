@@ -16,7 +16,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="status">
         ///     The database's current provisioning status.
         /// </param>
-        protected DatabaseStatusChanged(int databaseId, ProvisioningStatus status)
+        protected DatabaseStatusChanged(string databaseId, ProvisioningStatus status)
         {
             DatabaseId = databaseId;
             Status = status;
@@ -25,7 +25,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <summary>
         ///     The Id of the database whose provisioning status has changed.
         /// </summary>
-        public int DatabaseId { get; }
+        public string DatabaseId { get; }
 
         /// <summary>
         ///     The database's current provisioning status.

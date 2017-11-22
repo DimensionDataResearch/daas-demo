@@ -16,7 +16,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server that was provisioned.
         /// </param>
-        public ServerProvisioned(int serverId)
+        public ServerProvisioned(string serverId)
             : base(serverId, ProvisioningStatus.Ready)
         {
         }

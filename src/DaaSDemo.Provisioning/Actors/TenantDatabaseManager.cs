@@ -1,7 +1,6 @@
 using Akka;
 using Akka.Actor;
 using HTTPlease;
-using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -154,7 +153,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             Log.Info("Provisioning database {DatabaseId} in server {ServerId}...",
                 CurrentState.Id,
-                CurrentState.DatabaseServerId
+                CurrentState.ServerId
             );
 
             DataAccess.Tell(
@@ -200,7 +199,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             Log.Info("De-provisioning database {DatabaseId} in server {ServerId}...",
                 CurrentState.Id,
-                CurrentState.DatabaseServerId
+                CurrentState.ServerId
             );
 
             DataAccess.Tell(
@@ -245,7 +244,7 @@ namespace DaaSDemo.Provisioning.Actors
         async Task<bool> DoesDatabaseExist()
         {
             QueryResult result = await SqlClient.ExecuteQuery(
-                serverId: CurrentState.DatabaseServerId,
+                serverId: CurrentState.ServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.CheckDatabaseExists(),
                 parameters: ManagementSql.Parameters.CheckDatabaseExists(
@@ -265,15 +264,14 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task CreateDatabase()
         {
-            Log.Info("Creating database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
+            Log.Info("Creating database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}...",
                 CurrentState.Name,
                 CurrentState.Id,
-                CurrentState.DatabaseServer.Name,
-                CurrentState.DatabaseServer.Id
+                CurrentState.ServerId
             );
 
             CommandResult commandResult = await SqlClient.ExecuteCommand(
-                serverId: CurrentState.DatabaseServerId,
+                serverId: CurrentState.ServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.CreateDatabase(CurrentState.Name, CurrentState.DatabaseUser, CurrentState.DatabasePassword),
                 executeAsAdminUser: true
@@ -283,7 +281,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
                     messageIndex,
-                    CurrentState.DatabaseServerId,
+                    CurrentState.ServerId,
                     commandResult.Messages[messageIndex]
                 );
             }
@@ -295,25 +293,24 @@ namespace DaaSDemo.Provisioning.Actors
                     Log.Warning("Error encountered while creating database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
                         CurrentState.Id,
                         CurrentState.Name,
-                        CurrentState.DatabaseServerId,
+                        CurrentState.ServerId,
                         error.Kind,
                         error.Message
                     );
                 }
 
-                throw new SqlExecutionException($"Failed to create database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server '{CurrentState.DatabaseServer.Name}' (Id:{CurrentState.DatabaseServer.Id}).",
-                    serverId: CurrentState.DatabaseServerId,
+                throw new SqlExecutionException($"Failed to create database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server {CurrentState.ServerId}.",
+                    serverId: CurrentState.ServerId,
                     databaseId: CurrentState.Id,
                     sqlMessages: commandResult.Messages,
                     sqlErrors: commandResult.Errors
                 );
             }
 
-            Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+            Log.Info("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}.",
                 CurrentState.Name,
                 CurrentState.Id,
-                CurrentState.DatabaseServer.Name,
-                CurrentState.DatabaseServer.Id
+                CurrentState.ServerId
             );
         }
 
@@ -322,15 +319,14 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         async Task DropDatabase()
         {
-            Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId})...",
+            Log.Info("Dropping database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}...",
                 CurrentState.Name,
                 CurrentState.Id,
-                CurrentState.DatabaseServer.Name,
-                CurrentState.DatabaseServer.Id
+                CurrentState.ServerId
             );
 
             CommandResult commandResult = await SqlClient.ExecuteCommand(
-                serverId: CurrentState.DatabaseServerId,
+                serverId: CurrentState.ServerId,
                 databaseId: SqlApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),
                 executeAsAdminUser: true
@@ -340,7 +336,7 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 Log.Info("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
                     messageIndex,
-                    CurrentState.DatabaseServerId,
+                    CurrentState.ServerId,
                     commandResult.Messages[messageIndex]
                 );
             }
@@ -352,25 +348,24 @@ namespace DaaSDemo.Provisioning.Actors
                     Log.Warning("Error encountered while dropping database {DatabaseId} ({DatabaseName}) on server {ServerId} ({ErrorKind}: {ErrorMessage})",
                         CurrentState.Id,
                         CurrentState.Name,
-                        CurrentState.DatabaseServerId,
+                        CurrentState.ServerId,
                         error.Kind,
                         error.Message
                     );
                 }
 
-                throw new SqlExecutionException($"Failed to drop database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server '{CurrentState.DatabaseServer.Name}' (Id:{CurrentState.DatabaseServer.Id}).",
-                    serverId: CurrentState.DatabaseServerId,
+                throw new SqlExecutionException($"Failed to drop database '{CurrentState.Name}' (Id:{CurrentState.Id}) on server {CurrentState.ServerId}.",
+                    serverId: CurrentState.ServerId,
                     databaseId: CurrentState.Id,
                     sqlMessages: commandResult.Messages,
                     sqlErrors: commandResult.Errors
                 );
             }
 
-            Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerName} (Id:{ServerId}).",
+            Log.Info("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}.",
                 CurrentState.Name,
                 CurrentState.Id,
-                CurrentState.DatabaseServer.Name,
-                CurrentState.DatabaseServer.Id
+                CurrentState.ServerId
             );
         }
 
@@ -410,7 +405,7 @@ namespace DaaSDemo.Provisioning.Actors
             /// <summary>
             ///     The Id of the target database.
             /// </summary>
-            public int DatabaseId => InitialState.Id;
+            public string DatabaseId => InitialState.Id;
 
             /// <summary>
             ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
@@ -438,6 +433,6 @@ namespace DaaSDemo.Provisioning.Actors
         ///     
         /// The actor name.
         /// </returns>
-        public static string ActorName(int databaseId) => $"database-manager.{databaseId}";
+        public static string ActorName(string databaseId) => $"database-manager.{databaseId}";
     }
 }

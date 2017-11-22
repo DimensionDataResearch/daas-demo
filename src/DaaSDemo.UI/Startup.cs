@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.Webpack;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Converters;
@@ -53,16 +52,7 @@ namespace DaaSDemo.UI
             services.AddOptions();
             services.AddDaaSOptions(Configuration);
 
-            services.AddEntityFrameworkSqlServer()
-                .AddDbContext<Entities>(entities =>
-                {
-                    string connectionString = Configuration.GetValue<string>("Database:ConnectionString");
-
-                    entities.UseSqlServer(connectionString, sqlServer =>
-                    {
-                        sqlServer.MigrationsAssembly("DaaSDemo.Api");
-                    });
-                });
+            services.AddDaaSDataAccess();
 
             services.AddMvc()
                 .AddJsonOptions(json =>

@@ -19,7 +19,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(int serverId, ProvisioningStatus status)
+        protected ServerStatusChanged(string serverId, ProvisioningStatus status)
         {
             ServerId = serverId;
             Status = status;
@@ -37,7 +37,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(int serverId, ServerProvisioningPhase phase)
+        protected ServerStatusChanged(string serverId, ServerProvisioningPhase phase)
         {
             ServerId = serverId;
             Phase = phase;
@@ -55,7 +55,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(int serverId, ProvisioningStatus status, ServerProvisioningPhase phase)
+        protected ServerStatusChanged(string serverId, ProvisioningStatus status, ServerProvisioningPhase phase)
         {
             ServerId = serverId;
             Status = status;
@@ -65,7 +65,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <summary>
         ///     The Id of the server whose provisioning status has changed.
         /// </summary>
-        public int ServerId { get; }
+        public string ServerId { get; }
 
         /// <summary>
         ///     The server's current provisioning status.

@@ -23,7 +23,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <summary>
         ///     The database Id representing the "master" database in any server.
         /// </summary>
-        public static readonly int MasterDatabaseId = 0;
+        public static readonly string MasterDatabaseId = "master";
 
         /// <summary>
         ///     Create a new <see cref="SqlApiClient"/>.
@@ -73,7 +73,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The command result.
         /// </returns>
-        public async Task<CommandResult> ExecuteCommand(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
+        public async Task<CommandResult> ExecuteCommand(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));
@@ -120,7 +120,7 @@ namespace DaaSDemo.SqlExecutor.Client
         /// <returns>
         ///     The query result.
         /// </returns>
-        public async Task<QueryResult> ExecuteQuery(int serverId, int databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
+        public async Task<QueryResult> ExecuteQuery(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));

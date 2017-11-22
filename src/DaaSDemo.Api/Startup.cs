@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -67,18 +66,7 @@ namespace DaaSDemo.Api
             services.AddOptions();
             services.AddDaaSOptions(Configuration);
 
-            services.AddEntityFrameworkSqlServer()
-                .AddDbContext<Entities>(entities =>
-                {
-                    string connectionString = DatabaseOptions.ConnectionString;
-                    if (String.IsNullOrWhiteSpace(connectionString))
-                        throw new InvalidOperationException("Application configuration is missing database connection string.");
-
-                    entities.UseSqlServer(connectionString, sqlServer =>
-                    {
-                        sqlServer.MigrationsAssembly("DaaSDemo.Api");
-                    });
-                });
+            services.AddDaaSDataAccess();
 
             services.AddCors(cors =>
             {

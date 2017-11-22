@@ -14,7 +14,7 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="serverId">
         ///     The Id of the server for which reconfiguration was unsuccessful.
         /// </param>
-        public ServerReconfigurationFailed(int serverId)
+        public ServerReconfigurationFailed(string serverId)
             : base(serverId, ProvisioningStatus.Error)
         {
         }

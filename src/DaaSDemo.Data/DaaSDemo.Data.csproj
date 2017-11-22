@@ -7,16 +7,15 @@
   <Import Project="..\Common.props" />
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="2.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="2.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="RavenDB.Client" Version="4.0.0-rc-40023" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <DotNetCliToolReference Include="Microsoft.EntityFrameworkCore.Tools.DotNet" Version="2.0.0" />
   </ItemGroup>
 
 </Project>

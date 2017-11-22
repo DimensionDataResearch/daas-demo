@@ -2,7 +2,6 @@ using Akka;
 using Akka.Actor;
 using Akka.DI.Core;
 using HTTPlease;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -50,7 +49,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     References to <see cref="TenantDatabaseManager"/> actors, keyed by database Id.
         /// </summary>
-        readonly Dictionary<int, IActorRef> _databaseManagers = new Dictionary<int, IActorRef>();
+        readonly Dictionary<string, IActorRef> _databaseManagers = new Dictionary<string, IActorRef>();
 
         /// <summary>
         ///     Cancellation for the current poll timer (if any).
@@ -115,7 +114,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     The Id of the target server.
         /// </summary>
-        int ServerId { get; set; }
+        string ServerId { get; set; }
 
         /// <summary>
         ///     Called when the actor is started.
@@ -168,6 +167,27 @@ namespace DaaSDemo.Provisioning.Actors
                 Provisioner.State = databaseServer;
 
                 await UpdateServerState();
+            });
+            Receive<DatabaseInstance>(database =>
+            {
+                if (Provisioner.State.Status == ProvisioningStatus.Ready)
+                {
+                    Log.Debug("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
+                        database.Id,
+                        database.Name
+                    );
+
+                    UpdateDatabaseState(database);
+                }
+                else
+                {
+                    Log.Debug("Ignoring database configuration (Id:{DatabaseId}, Name:{DatabaseName}) because server {ServerId} is not ready.",
+                        database.Id,
+                        database.Name,
+                        ServerId
+                    );
+                }
+                
             });
             Receive<Terminated>(
                 terminated => HandleTermination(terminated)
@@ -241,7 +261,7 @@ namespace DaaSDemo.Provisioning.Actors
                             );
 
                             // We're done with the Deployment now that it's marked as Available, so we're ready to initialise the server configuration.
-                            StartProvisioningPhase(ServerProvisioningPhase.Ingress);
+                            StartProvisioningPhase(ServerProvisioningPhase.Configuration);
                             Become(Ready);
                         }
                         else
@@ -397,54 +417,43 @@ namespace DaaSDemo.Provisioning.Actors
             }
 
             await UpdateServerIngressDetails();
-
-            if (Provisioner.State.Status == ProvisioningStatus.Ready)
-                UpdateDatabaseState();
         }
 
         /// <summary>
-        ///     Update the server's databases to converge with desired state.
+        ///     Update the database to converge with desired state.
         /// </summary>
-        void UpdateDatabaseState()
+        /// <param name="database">
+        ///     A <see cref="DatabaseInstance"/> representing the desired state.
+        /// </param>
+        void UpdateDatabaseState(DatabaseInstance database)
         {
-            foreach (DatabaseInstance database in Provisioner.State.Databases)
+            IActorRef databaseManager;
+            if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
             {
-                Log.Debug("Server configuration includes database {DatabaseName} (Id:{ServerId}).",
-                    database.Name,
-                    database.Id
+                databaseManager = Context.ActorOf(
+                    Context.DI().Props<TenantDatabaseManager>(),
+                    name: TenantDatabaseManager.ActorName(database.Id)
                 );
+                Context.Watch(databaseManager);
+                _databaseManagers.Add(database.Id, databaseManager);
 
-                // Hook up reverse-navigation property because TenantDatabaseManager will need server connection info.
-                database.DatabaseServer = Provisioner.State;
+                databaseManager.Tell(new TenantDatabaseManager.Initialize(
+                    serverManager: Self,
+                    dataAccess: DataAccess,
+                    initialState: database
+                ));
 
-                IActorRef databaseManager;
-                if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
-                {
-                    databaseManager = Context.ActorOf(
-                        Context.DI().Props<TenantDatabaseManager>(),
-                        name: TenantDatabaseManager.ActorName(database.Id)
-                    );
-                    Context.Watch(databaseManager);
-                    _databaseManagers.Add(database.Id, databaseManager);
-
-                    databaseManager.Tell(new TenantDatabaseManager.Initialize(
-                        serverManager: Self,
-                        dataAccess: DataAccess,
-                        initialState: database
-                    ));
-
-                    Log.Info("Created TenantDatabaseManager {ActorName} for database {DatabaseId} in server {ServerId} (Tenant:{TenantId}).",
-                        databaseManager.Path.Name,
-                        database.Id,
-                        Provisioner.State.Id,
-                        Provisioner.State.TenantId
-                    );
-                }
-                else
-                {
-                    Log.Debug("Notifying TenantDatabaseManager {ActorName} of current configuration for database {DatabaseId}.", databaseManager.Path.Name, database.Id);
-                    databaseManager.Tell(database);
-                }
+                Log.Info("Created TenantDatabaseManager {ActorName} for database {DatabaseId} in server {ServerId} (Tenant:{TenantId}).",
+                    databaseManager.Path.Name,
+                    database.Id,
+                    Provisioner.State.Id,
+                    Provisioner.State.TenantId
+                );
+            }
+            else
+            {
+                Log.Debug("Notifying TenantDatabaseManager {ActorName} of current configuration for database {DatabaseId}.", databaseManager.Path.Name, database.Id);
+                databaseManager.Tell(database);
             }
         }
 
@@ -459,7 +468,7 @@ namespace DaaSDemo.Provisioning.Actors
             if (terminated == null)
                 throw new ArgumentNullException(nameof(terminated));
             
-            foreach ((int databaseId, IActorRef databaseManager) in _databaseManagers)
+            foreach ((string databaseId, IActorRef databaseManager) in _databaseManagers)
             {
                 if (Equals(terminated.ActorRef, databaseManager))
                 {
@@ -918,7 +927,7 @@ namespace DaaSDemo.Provisioning.Actors
             /// <summary>
             ///     The Id of the target server.
             /// </summary>
-            public int ServerId => InitialState.Id;
+            public string ServerId => InitialState.Id;
 
             /// <summary>
             ///     A <see cref="DatabaseServer"/> representing the actor's initial state.
@@ -956,6 +965,6 @@ namespace DaaSDemo.Provisioning.Actors
         /// <returns>
         ///     The actor name.
         /// </returns>
-        public static string ActorName(int tenantId) => $"server-manager.{tenantId}";
+        public static string ActorName(string tenantId) => $"server-manager.{tenantId}";
     }
 }
