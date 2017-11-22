@@ -17,6 +17,12 @@ namespace DaaSDemo.Models.Api
         public string Name { get; set; }
 
         /// <summary>
+        ///     The Id of the database server that will host the database.
+        /// </summary>
+        [Required(AllowEmptyStrings = false)]
+        public string ServerId { get; set; }
+
+        /// <summary>
         ///     The name of the database-level user.
         /// </summary>
         [MinLength(3)]

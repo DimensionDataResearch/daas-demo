@@ -10,6 +10,7 @@ namespace DaaSDemo.Models.Data
     /// </summary>
     [EntitySet("DatabaseServer")]
     public class DatabaseServer
+        : IDeepCloneable<DatabaseServer>
     {
         /// <summary>
         ///     The server Id.
@@ -70,7 +71,7 @@ namespace DaaSDemo.Models.Data
         /// <summary>
         ///     The Ids of databases hosted on the server.
         /// </summary>
-        public HashSet<string> DatabaseIds { get; } = new HashSet<string>();
+        public HashSet<string> DatabaseIds { get; private set; } = new HashSet<string>();
 
         /// <summary>
         ///     Get the connection string for the DaaS master database.
@@ -79,5 +80,34 @@ namespace DaaSDemo.Models.Data
         ///     The connection string.
         /// </returns>
         public string GetMasterConnectionString() => $"Data Source={PublicFQDN},{PublicPort};Initial Catalog=master;User=sa;Password={AdminPassword}";
+
+        /// <summary>
+        ///     Create a deep clone of the <see cref="DatabaseServer"/>.
+        /// </summary>
+        /// <returns>
+        ///     The cloned <see cref="DatabaseServer"/>.
+        /// </returns>
+        public DatabaseServer Clone()
+        {
+            return new DatabaseServer
+            {
+                Id = Id,
+                TenantId = TenantId,
+
+                Name = Name,
+                Kind = Kind,
+
+                AdminPassword = AdminPassword,
+                PublicFQDN = PublicFQDN,
+                PublicPort = PublicPort,
+
+                Action = Action,
+                Phase = Phase,
+                Status = Status,
+
+                
+                DatabaseIds = new HashSet<string>(DatabaseIds),
+            };
+        }
     }
 }

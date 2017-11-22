@@ -14,7 +14,7 @@ import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDetail {
     private routeConfig: RouteConfig;
-    private tenantId: number;
+    private tenantId: string;
     private pollHandle: number = 0;
     
     @bindable public loading: boolean = false;
@@ -291,5 +291,5 @@ interface RouteParams
     /**
      * The tenant Id.
      */
-    id: number;
+    id: string;
 }

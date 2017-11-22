@@ -164,7 +164,7 @@ namespace DaaSDemo.Provisioning.Actors
                     databaseServer.Name
                 );
 
-                Provisioner.State = databaseServer;
+                Provisioner.State = databaseServer.Clone();
 
                 await UpdateServerState();
             });

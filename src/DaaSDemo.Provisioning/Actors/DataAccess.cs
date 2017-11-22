@@ -150,7 +150,9 @@ namespace DaaSDemo.Provisioning.Actors
                     else
                     {
                         Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for server {ServerId}.", serverManager.Path.Name, server.Id);
-                        serverManager.Tell(server);
+                        serverManager.Tell(
+                            server.Clone()
+                        );
                     }
 
                     Dictionary<string, DatabaseInstance> databases = await session.LoadAsync<DatabaseInstance>(server.DatabaseIds);
@@ -161,7 +163,9 @@ namespace DaaSDemo.Provisioning.Actors
                             database.Id,
                             server.Id
                         );
-                        serverManager.Tell(server);
+                        serverManager.Tell(
+                            database.Clone()
+                        );
                     }
                 }
             }

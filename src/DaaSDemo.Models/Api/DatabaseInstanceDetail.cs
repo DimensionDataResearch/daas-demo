@@ -99,6 +99,6 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The database connection string.
         /// </summary>
-        public string ConnectionString { get; }
+        public string ConnectionString { get; set; }
     }
 }

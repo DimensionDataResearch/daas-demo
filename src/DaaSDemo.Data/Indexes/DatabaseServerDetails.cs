@@ -6,9 +6,15 @@ namespace DaaSDemo.Data.Indexes
     using Models.Api;
     using Models.Data;
 
+    /// <summary>
+    ///     Index used to aggregate database server details for use in the DaaS API.
+    /// </summary>
     public class DatabaseServerDetails
         : AbstractIndexCreationTask<DatabaseServer, DatabaseServerDetail>
     {
+        /// <summary>
+        ///     Create a new <see cref="DatabaseServerDetails"/> index definition.
+        /// </summary>
         public DatabaseServerDetails()
         {
             Map = servers =>
@@ -30,6 +36,8 @@ namespace DaaSDemo.Data.Indexes
                     TenantId = server.TenantId,
                     TenantName = tenant.Name
                 };
+
+            StoreAllFields(FieldStorage.Yes);
         }
     }
 }

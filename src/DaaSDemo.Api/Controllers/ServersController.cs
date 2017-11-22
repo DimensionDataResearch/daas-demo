@@ -3,6 +3,7 @@ using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using System;
 using System.Linq;
@@ -64,7 +65,8 @@ namespace DaaSDemo.Api.Controllers
         public IActionResult List()
         {
             return Json(
-                DocumentSession.Query<DatabaseServerDetail, DatabaseServerDetails>()
+                DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
+                    .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }
 
@@ -109,9 +111,6 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Provision a database server for a tenant.
         /// </summary>
-        /// <param name="tenantId">
-        ///     The tenant Id.
-        /// </param>
         /// <param name="newDatabaseServer">
         ///     The request body as a <see cref="NewDatabaseServer"/>.
         /// </param>
@@ -202,23 +201,23 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
-        ///     Reconfigure / repair a tenant's database server.
+        ///     Reconfigure / repair a database server.
         /// </summary>
-        /// <param name="tenantId">
+        /// <param name="serverId">
         ///     The tenant Id.
         /// </param>
-        [HttpPost("{tenantId}/server/reconfigure")]
-        public IActionResult ReconfigureServer(string tenantId)
+        [HttpPost("{serverId}/reconfigure")]
+        public IActionResult ReconfigureServer(string serverId)
         {
-            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(serverId);
             if (targetServer == null)
             {
                 return NotFound(new
                 {
                     Id = (string)null,
-                    TenantId = tenantId,
+                    TenantId = serverId,
                     EntityType = "DatabaseServer",
-                    Message = $"No database server found for tenant {tenantId}."
+                    Message = $"No database server found for tenant {serverId}."
                 });
             }
 
@@ -227,7 +226,7 @@ namespace DaaSDemo.Api.Controllers
                 return StatusCode(StatusCodes.Status409Conflict, new
                 {
                     Id = targetServer.Id,
-                    TenantId = tenantId,
+                    TenantId = serverId,
                     EntityType = "DatabaseServer",
                     RequestedAction = ProvisioningAction.Reconfigure,
                     Action = targetServer.Action,
@@ -242,7 +241,7 @@ namespace DaaSDemo.Api.Controllers
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
-                Id = tenantId,
+                Id = serverId,
                 Message = $"Database server {targetServer.Id} queued for reconfiguration.",
                 EntityType = "DatabaseServer"
             });
@@ -251,21 +250,20 @@ namespace DaaSDemo.Api.Controllers
         /// <summary>
         ///     Deprovision a tenant's database server.
         /// </summary>
-        /// <param name="tenantId">
-        ///     The tenant Id.
+        /// <param name="serverId">
+        ///     The server Id.
         /// </param>
-        [HttpDelete("{tenantId}/server")]
-        public IActionResult DestroyServer(string tenantId)
+        [HttpDelete("{serverId}")]
+        public IActionResult DestroyServer(string serverId)
         {
-            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(tenantId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerById(serverId);
             if (targetServer == null)
             {
                 return NotFound(new
                 {
-                    Id = (string)null,
-                    TenantId = tenantId,
+                    Id = serverId,
                     EntityType = "DatabaseServer",
-                    Message = $"No database server found for tenant {tenantId}."
+                    Message = $"No database server found with Id '{serverId}'."
                 });
             }
 
@@ -274,7 +272,7 @@ namespace DaaSDemo.Api.Controllers
                 return StatusCode(StatusCodes.Status400BadRequest, new
                 {
                     Id = targetServer.Id,
-                    TenantId = tenantId,
+                    TenantId = serverId,
                     EntityType = "DatabaseServer",
                     RequestedAction = ProvisioningAction.Deprovision,
                     Action = targetServer.Action,
@@ -288,12 +286,12 @@ namespace DaaSDemo.Api.Controllers
                 return StatusCode(StatusCodes.Status409Conflict, new
                 {
                     Id = targetServer.Id,
-                    TenantId = tenantId,
+                    TenantId = serverId,
                     EntityType = "DatabaseServer",
                     RequestedAction = ProvisioningAction.Deprovision,
                     Action = targetServer.Action,
                     Status = targetServer.Status,
-                    Message = $"Cannot de-provision database server {targetServer.Id} because an action is already in progress for this server."
+                    Message = $"Cannot de-provision database server {targetServer.Id} because an action ({targetServer.Action}) is already in progress for this server."
                 });
             }
 
@@ -303,7 +301,7 @@ namespace DaaSDemo.Api.Controllers
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
-                Id = tenantId,
+                Id = serverId,
                 Message = $"Database server {targetServer.Id} queued for deletion.",
                 EntityType = "DatabaseServer"
             });
@@ -319,8 +317,9 @@ namespace DaaSDemo.Api.Controllers
         public IActionResult GetDatabasesByServer(string serverId)
         {
             return Json(
-                DocumentSession.Query<DatabaseInstanceDetail, DatabaseInstanceDetails>()
+                DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>()
                     .Where(database => database.ServerId == serverId)
+                    .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
             );
         }
     }

@@ -98,8 +98,8 @@ export class ServerList {
      * 
      * @param server The server to repair.
      */
-    public async repairServer(server: Server): Promise<void> {
-        await this.api.reconfigureServer(server.id);
+    public async repairServer(serverId: string): Promise<void> {
+        await this.api.reconfigureServer(serverId);
         await this.load(true);
     }
 

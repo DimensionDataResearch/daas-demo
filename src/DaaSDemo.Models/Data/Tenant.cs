@@ -21,5 +21,21 @@ namespace DaaSDemo.Models.Data
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
         public string Name { get; set; }
+
+        /// <summary>
+        ///     Create a deep clone of the <see cref="Tenant"/>.
+        /// </summary>
+        /// <returns>
+        ///     The cloned <see cref="Tenant"/>.
+        /// </returns>
+        public Tenant Clone()
+        {
+            return new Tenant
+            {
+                Id = Id,
+                
+                Name = Name
+            };
+        }
     }
 }

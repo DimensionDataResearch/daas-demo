@@ -10,6 +10,7 @@ namespace DaaSDemo.Models.Data
     /// </summary>
     [Table("DatabaseInstance")]
     public class DatabaseInstance
+        : IDeepCloneable<DatabaseInstance>
     {
         /// <summary>
         ///     The tenant Id.
@@ -59,5 +60,29 @@ namespace DaaSDemo.Models.Data
         /// </summary>
         [Required]
         public string ServerId { get; set; }
+
+        /// <summary>
+        ///     Create a deep clone of the <see cref="DatabaseInstance"/>.
+        /// </summary>
+        /// <returns>
+        ///     The cloned <see cref="DatabaseInstance"/>.
+        /// </returns>
+        public DatabaseInstance Clone()
+        {
+            return new DatabaseInstance
+            {
+                Id = Id,
+                ServerId = ServerId,
+                TenantId = TenantId,
+
+                Name = Name,
+                
+                DatabaseUser = DatabaseUser,
+                DatabasePassword = DatabasePassword,
+                
+                Action = Action,
+                Status = Status,
+            };
+        }
     }
 }

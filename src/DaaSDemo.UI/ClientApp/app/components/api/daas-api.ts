@@ -68,7 +68,7 @@ export class DaaSAPI
      * @param databaseId The database Id.
      * @returns The database, or null if no database exists with the specified Id.
      */
-    public async getDatabase(databaseId: number): Promise<Database | null> {
+    public async getDatabase(databaseId: string): Promise<Database | null> {
         await this.configured;
 
         const response = await this.http.fetch(`databases/${databaseId}`);
@@ -97,7 +97,7 @@ export class DaaSAPI
      * @param tenantId The tenant Id.
      * @returns The tenant, or null if no tenant exists with the specified Id.
      */
-    public async getTenant(tenantId: number): Promise<Tenant | null> {
+    public async getTenant(tenantId: string): Promise<Tenant | null> {
         await this.configured;
 
         const response = await this.http.fetch(`tenants/${tenantId}`);
@@ -126,7 +126,7 @@ export class DaaSAPI
      * @param serverId The server Id.
      * @returns The server, or null if no server exists with the specified Id.
      */
-    public async getServer(serverId: number): Promise<Server | null> {
+    public async getServer(serverId: string): Promise<Server | null> {
         await this.configured;
 
         const response = await this.http.fetch(`servers/${serverId}`);
@@ -155,7 +155,7 @@ export class DaaSAPI
      * @param tenantId The Id of the tenant that owns the server.
      * @returns The server, or null if the tenant does not have a server.
      */
-    public async getTenantServer(tenantId: number): Promise<Server | null> {
+    public async getTenantServer(tenantId: string): Promise<Server | null> {
         await this.configured;
 
         const response = await this.http.fetch(`tenants/${tenantId}/server`);
@@ -185,7 +185,7 @@ export class DaaSAPI
      * @param tenantId The Id of the tenant that owns the server.
      * @returns The databases, or null if the tenant does not have a server.
      */
-    public async getTenantDatabases(tenantId: number): Promise<Database[] | null> {
+    public async getTenantDatabases(tenantId: string): Promise<Database[] | null> {
         await this.configured;
 
         const response = await this.http.fetch(`tenants/${tenantId}/databases`);
@@ -218,7 +218,7 @@ export class DaaSAPI
      * 
      * @returns The Id of the new server.
      */
-    public async deploySqlServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
+    public async deploySqlServer(tenantId: string, name: string, adminPassword: string): Promise<string> {
         await this.configured;
 
         const response = await this.http.fetch(`servers`, {
@@ -250,7 +250,7 @@ export class DaaSAPI
      * 
      * @param serverId The server Id.
      */
-    public async destroyServer(serverId: number): Promise<void> {
+    public async destroyServer(serverId: string): Promise<void> {
         await this.configured;
 
         const response = await this.http.fetch(`servers/${serverId}`, {
@@ -274,7 +274,7 @@ export class DaaSAPI
      * 
      * @param serverId The server Id.
      */
-    public async reconfigureServer(serverId: number): Promise<void> {
+    public async reconfigureServer(serverId: string): Promise<void> {
         await this.configured;
 
         const response = await this.http.fetch(`servers/${serverId}/reconfigure`, {
@@ -296,18 +296,18 @@ export class DaaSAPI
     /**
      * Create a database for a tenant.
      * 
-     * @param tenantId The tenant Id.
+     * @param serverId The Id of the server that will host the database.
      * @param name The database name.
      * @param user The database user name.
      * @param password The database user password.
      */
-    public async createTenantDatabase(tenantId: number, name: string, user: string, password: string): Promise<number> {
+    public async createDatabase(serverId: string, name: string, user: string, password: string): Promise<string> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/databases`, {
+        const response = await this.http.fetch(`databases`, {
             method: 'POST',
             body: json({
-                tenantId: tenantId,
+                serverId: serverId,
                 name: name,
                 databaseUser: user,
                 databasePassword: password
@@ -340,20 +340,19 @@ export class DaaSAPI
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to create database for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to create database '${name}' on server '${serverId}': ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
     /**
-     * Delete a tenant's database.
+     * Delete a database.
      * 
-     * @param tenantId The tenant Id.
      * @param databaseId The database Id.
      */
-    public async deleteTenantDatabase(tenantId: number, databaseId: number): Promise<void> {
+    public async deleteDatabase(databaseId: string): Promise<void> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/databases/${databaseId}`, {
+        const response = await this.http.fetch(`databases/${databaseId}`, {
             method: 'DELETE'
         });
         
@@ -365,7 +364,7 @@ export class DaaSAPI
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to delete database with Id ${databaseId} owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to delete database with Id '${databaseId}': ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -406,7 +405,7 @@ export interface Tenant
     /**
      * The tenant Id.
      */
-    id: number;
+    id: string;
     
     /**
      * The tenant name.
@@ -422,7 +421,7 @@ export interface Server
     /**
      * The server Id.
      */
-    id: number;
+    id: string;
     
     /**
      * The server name.
@@ -447,7 +446,7 @@ export interface Server
     /**
      * The Id of the tenant that owns the server.
      */
-    tenantId: number;
+    tenantId: string;
 
     /**
      * The name of the tenant that owns the server.
@@ -477,7 +476,7 @@ export interface Database {
     /**
      * The database Id.
      */
-    id: number;
+    id: string;
     
     /**
      * The database name.
@@ -487,7 +486,7 @@ export interface Database {
     /**
      * The Id of the server that hosts the database.
      */
-    serverId: number;
+    serverId: string;
 
     /**
      * The name of the server that hosts the database.
@@ -497,7 +496,7 @@ export interface Database {
     /**
      * The Id of the tenant that owns the database.
      */
-    tenantId: number;
+    tenantId: string;
 
     /**
      * The name of the tenant that owns the database.
@@ -663,12 +662,12 @@ interface ApiResponse {
 }
 
 interface ServerCreated extends ApiResponse {
-    id: number;
+    id: string;
     name: string;
 }
 
 interface DatabaseCreated extends ApiResponse {
-    id: number;
+    id: string;
     name: string;
 }
 
@@ -679,7 +678,7 @@ interface NotFoundResponse extends ApiResponse {
     /**
      * The Id of the entity that was not found.
      */
-    id: number;
+    id: string;
 
     /**
      * The type of entity that was not found.

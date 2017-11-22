@@ -40,7 +40,7 @@
                     <tbody>
                         <tr repeat.for="database of databases">
                             <td class="collapsing center aligned">
-                                <database-actions-menu database.bind="database" destroy-clicked.call="destroyDatabase(database)"></database-actions-menu>
+                                <database-actions-menu database.bind="database" destroy-clicked.call="deleteDatabase(database)"></database-actions-menu>
                             </td>
                             <td class="center aligned">
                                 <a route-href="route: database; params.bind: { id: database.id }">${ database.name }</a>

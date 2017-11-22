@@ -117,7 +117,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             ReceiveAsync<DatabaseInstance>(async database =>
             {
-                CurrentState = database;
+                CurrentState = database.Clone();
 
                 Log.Debug("Received database configuration (Id:{DatabaseId}, Name:{DatabaseName}).",
                     CurrentState.Id,

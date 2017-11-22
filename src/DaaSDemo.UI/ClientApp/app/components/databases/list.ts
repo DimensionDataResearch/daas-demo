@@ -63,10 +63,7 @@ export class DatabaseList {
             if (!confirm)
                 return;
 
-            await this.api.deleteTenantDatabase(
-                database.tenantId,
-                database.id
-            );
+            await this.api.deleteDatabase(database.id);
         }
         catch (error) {
             this.showError(error as Error);

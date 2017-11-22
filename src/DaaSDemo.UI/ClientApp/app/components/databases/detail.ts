@@ -12,7 +12,7 @@ import { DaaSAPI, Database, ProvisioningAction, ProvisioningStatus  } from '../a
 @inject(DaaSAPI)
 export class DatabaseDetail {
     private routeConfig: RouteConfig;
-    private databaseId: number;
+    private databaseId: string;
     private pollHandle: number = 0;
 
     @bindable public loading: boolean = false;
@@ -133,5 +133,5 @@ interface RouteParams
     /**
      * The database Id.
      */
-    id: number;
+    id: string;
 }

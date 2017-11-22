@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../../dialogs/confirm';
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
     private routeConfig: RouteConfig;
-    private tenantId: number;
+    private tenantId: string;
 
     private pollHandle: number = 0;
 
@@ -105,8 +105,12 @@ export class TenantDatabaseList {
         this.clearError();
 
         try {
-            await this.api.createTenantDatabase(
-                this.tenantId,
+            const server = await this.api.getTenantServer(this.tenantId);
+            if (!server)
+                throw new Error(`Tenant ${this.tenantId} does not have any database servers.`);
+
+            await this.api.createDatabase(
+                server.id,
                 this.newDatabase.name,
                 this.newDatabase.user,
                 this.newDatabase.password
@@ -141,10 +145,7 @@ export class TenantDatabaseList {
             if (!confirm)
                 return;
 
-            await this.api.deleteTenantDatabase(
-                database.tenantId,
-                database.id
-            );
+            await this.api.deleteDatabase(database.id);
         }
         catch (error) {
             this.showError(error as Error);
@@ -219,10 +220,10 @@ export class TenantDatabaseList {
     /**
      * Delete a database.
      * 
-     * @param databaseId The database Id.
+     * @param databaseId The database.
      */
-    private async deleteDatabase(databaseId: number): Promise<void> {
-        await this.api.deleteTenantDatabase(this.tenantId, databaseId);
+    private async deleteDatabase(database: Database): Promise<void> {
+        await this.api.deleteDatabase(database.id);
         await this.load(true);
     }
 
@@ -285,5 +286,5 @@ interface RouteParams
     /**
      * The tenant Id.
      */
-    id: number;
+    id: string;
 }

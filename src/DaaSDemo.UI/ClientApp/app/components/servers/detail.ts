@@ -17,7 +17,7 @@ import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class ServerDetail {
     private routeConfig: RouteConfig;
-    private serverId: number = 0;
+    private serverId: string;
     private pollHandle: number = 0;
     
     public loading: boolean = false;
@@ -181,5 +181,5 @@ interface RouteParams
     /**
      * The server Id.
      */
-    id: number;
+    id: string;
 }
