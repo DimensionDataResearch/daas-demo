@@ -2,6 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DaaSDemo.Models.Api
 {
+    using Models.Data;
+
     /// <summary>
     ///     Model for creation of a new <see cref="Data.Models.DatabaseServer"/>.
     /// </summary>
@@ -21,5 +23,11 @@ namespace DaaSDemo.Models.Api
         [MinLength(5)]
         [Required(AllowEmptyStrings = false)]
         public string AdminPassword { get; set; }
+
+        /// <summary>
+        ///     The kind of database server to create.
+        /// </summary>
+        [Required]
+        public DatabaseServerKind Kind { get; set; }
     }
 }

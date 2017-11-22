@@ -146,6 +146,7 @@ namespace DaaSDemo.Api.Controllers
             return Json(new DatabaseServerDetail(
                 tenantServer.Id,
                 tenantServer.Name,
+                tenantServer.Kind,
                 tenantServer.PublicFQDN,
                 tenantServer.PublicPort,
                 tenantServer.Action,
@@ -168,6 +169,42 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId}/server")]
         public IActionResult CreateServer(string tenantId, [FromBody] NewDatabaseServer newDatabaseServer)
         {
+            if (newDatabaseServer == null)
+            {
+                return BadRequest(new
+                {
+                    EntityType = "Server",
+                    Reason = "InvalidRequest",
+                    Message = "Must supply database details in the request body."
+                });
+            }
+
+            switch (newDatabaseServer.Kind)
+            {
+                case DatabaseServerKind.SqlServer:
+                {
+                    break;
+                }
+                case DatabaseServerKind.RavenDB:
+                {
+                    return BadRequest(new
+                    {
+                        EntityType = "Server",
+                        Reason = "NotImplemented",
+                        Message = "RavenDB servers are not supported yet."
+                    });
+                }
+                default:
+                {
+                    return BadRequest(new
+                    {
+                        EntityType = "Server",
+                        Reason = "InvalidServerType",
+                        Message = $"Unsupported server type '{newDatabaseServer.Kind}'."
+                    });
+                }
+            }
+
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
             {
@@ -197,6 +234,7 @@ namespace DaaSDemo.Api.Controllers
             var databaseServer = new DatabaseServer
             {
                 Name = newDatabaseServer.Name,
+                Kind = newDatabaseServer.Kind,
                 AdminPassword = newDatabaseServer.AdminPassword,
                 TenantId = tenant.Id,
                 TenantName = tenant.Name,
@@ -392,6 +430,15 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId}/databases")]
         public IActionResult CreateDatabase(string tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
+            if (newDatabase == null)
+            {
+                return BadRequest(new
+                {
+                    EntityType = "Database",
+                    Message = $"Must supply database details in the request body."
+                });
+            }
+
             Tenant ownerTenant = DocumentSession.GetTenantById(tenantId);
             if (ownerTenant == null)
             {

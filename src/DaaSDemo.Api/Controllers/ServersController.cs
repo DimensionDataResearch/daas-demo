@@ -67,6 +67,7 @@ namespace DaaSDemo.Api.Controllers
                     .Select(server => new DatabaseServerDetail(
                         server.Id,
                         server.Name,
+                        server.Kind,
                         server.PublicFQDN,
                         server.PublicPort,
                         server.Action,
@@ -93,6 +94,7 @@ namespace DaaSDemo.Api.Controllers
                 return Json(new DatabaseServerDetail(
                     server.Id,
                     server.Name,
+                    server.Kind,
                     server.PublicFQDN,
                     server.PublicPort,
                     server.Action,

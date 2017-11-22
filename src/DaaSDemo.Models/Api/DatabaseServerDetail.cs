@@ -23,17 +23,19 @@ namespace DaaSDemo.Models.Api
         /// </summary>
         /// <param name="serverId"></param>
         /// <param name="serverName"></param>
-        /// <param name="PublicFQDN"></param>
-        /// <param name="PublicPort"></param>
+        /// <param name="kind"></param>
+        /// <param name="publicFQDN"></param>
+        /// <param name="publicPort"></param>
         /// <param name="serverAction"></param>
         /// <param name="phase"></param>
         /// <param name="serverStatus"></param>
         /// <param name="tenantId"></param>
         /// <param name="tenantName"></param>
-        public DatabaseServerDetail(string serverId, string serverName, string publicFQDN, int? publicPort, ProvisioningAction serverAction, ServerProvisioningPhase phase, ProvisioningStatus serverStatus, string tenantId, string tenantName)
+        public DatabaseServerDetail(string serverId, string serverName, DatabaseServerKind kind, string publicFQDN, int? publicPort, ProvisioningAction serverAction, ServerProvisioningPhase phase, ProvisioningStatus serverStatus, string tenantId, string tenantName)
         {
             Id = serverId;
             Name = serverName;
+            Kind = kind;
             PublicFQDN = publicFQDN;
             PublicPort = publicPort;
             Action = serverAction;
@@ -52,6 +54,11 @@ namespace DaaSDemo.Models.Api
         ///     The server name.
         /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        ///     The type of server (e.g. SQL Server or RavenDB).
+        /// </summary>
+        public DatabaseServerKind Kind { get; set; }
 
         /// <summary>
         ///     The server's public TCP port.

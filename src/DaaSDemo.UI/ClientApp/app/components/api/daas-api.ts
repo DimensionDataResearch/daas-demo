@@ -210,20 +210,22 @@ export class DaaSAPI
     }
 
     /**
-     * Deploy a tenant's database server.
+     * Deploy a SQL Server instance for a tenant.
      * 
      * @param tenantId The tenant Id.
-     * @param databaseId The database Id.
+     * @param name The server name.
+     * @param adminPasword The server administrative password.
      * 
      * @returns The Id of the new server.
      */
-    public async deployTenantServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
+    public async deployTenantSqlServer(tenantId: number, name: string, adminPassword: string): Promise<number> {
         await this.configured;
 
         const response = await this.http.fetch(`tenants/${tenantId}/server`, {
             method: 'POST',
             body: json({
                 name: name,
+                kind: DatabaseServerKind.SqlServer,
                 adminPassword: adminPassword
             })
         });
@@ -427,6 +429,11 @@ export interface Server
     name: string;
 
     /**
+     * The type of server.
+     */
+    kind: DatabaseServerKind;
+
+    /**
      * The fully-qualified domain name (if any) on which the server is externally accessible.
      */
     publicFQDN?: string | null;
@@ -621,6 +628,27 @@ export enum ServerProvisioningPhase
      * The server's current action has been completed.
      */
     Done = 'Done'
+}
+
+/**
+ * Well-known kinds of database server.
+ */
+export enum DatabaseServerKind
+{
+    /**
+     * An unknown server kind.
+     */
+    Unknown = 'Unknown',
+
+    /**
+     * Microsoft SQL Server.
+     */
+    SqlServer = 'SqlServer',
+
+    /**
+     * RavenDB.
+     */
+    RavenDB = 'SqlServer'
 }
 
 /**

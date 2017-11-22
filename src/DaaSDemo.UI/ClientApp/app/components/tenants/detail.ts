@@ -147,7 +147,7 @@ export class TenantDetail {
 
         this.server = null;
 
-        await this.api.deployTenantServer(
+        await this.api.deployTenantSqlServer(
             this.tenantId,
             this.newServer.name,
             this.newServer.adminPassword

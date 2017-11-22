@@ -24,6 +24,12 @@ namespace DaaSDemo.Models.Data
         public string Name { get; set; }
 
         /// <summary>
+        ///     The type of server (e.g. SQL Server or RavenDB).
+        /// </summary>
+        [Required]
+        public DatabaseServerKind Kind { get; set; }
+
+        /// <summary>
         ///     The server's administrative ("sa" user) password.
         /// </summary>
         [Required(AllowEmptyStrings = false)]
