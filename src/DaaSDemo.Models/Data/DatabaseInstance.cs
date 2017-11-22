@@ -8,7 +8,7 @@ namespace DaaSDemo.Models.Data
     /// <summary>
     ///     A database instance owned by a tenant.
     /// </summary>
-    [Table("database-instance")]
+    [Table("DatabaseInstance")]
     public class DatabaseInstance
     {
         /// <summary>

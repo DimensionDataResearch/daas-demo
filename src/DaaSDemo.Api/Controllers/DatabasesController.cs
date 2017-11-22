@@ -4,6 +4,7 @@ using HTTPlease.Formatters.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -13,8 +14,8 @@ using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace DaaSDemo.Api.Controllers
 {
-    using System.Collections.Generic;
     using Data;
+    using Data.Indexes;
     using Models.Api;
     using Models.Data;
     using Raven.Client.Documents.Session;
@@ -66,7 +67,10 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{databaseId}")]
         public IActionResult GetById(string databaseId)
         {
-            DatabaseInstance database = DocumentSession.Include<DatabaseInstance>(db => db.ServerId).Load(databaseId);
+            DatabaseInstance database = DocumentSession
+                .Include<DatabaseInstance>(db => db.TenantId)
+                .Include<DatabaseInstance>(db => db.ServerId)
+                .Load<DatabaseInstance>(databaseId);
             if (database == null)
             {
                 return NotFound(new
@@ -77,30 +81,31 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
+            Tenant tenant = DocumentSession.Load<Tenant>(database.TenantId);
+            if (tenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = database.ServerId,
+                    EntityType = "Tenant",
+                    Message = $"Database {databaseId}'s tenant not found with Id '{database.TenantId}'."
+                });
+            }
+
             DatabaseServer server = DocumentSession.Load<DatabaseServer>(database.ServerId);
             if (server == null)
             {
                 return NotFound(new
                 {
                     Id = database.ServerId,
-                    EntityType = "Server",
-                    Message = $"Database's server not found with Id '{database.ServerId}'."
+                    EntityType = "DatabaseServer",
+                    Message = $"Database {databaseId}'s server not found with Id '{database.ServerId}'."
                 });
             }
 
-            return Json(new DatabaseInstanceDetail(
-                database.Id,
-                database.Name,
-                database.DatabaseUser,
-                database.Action,
-                database.Status,
-                server.Id,
-                server.Name,
-                server.PublicFQDN,
-                server.PublicPort,
-                server.TenantId,
-                server.TenantName
-            ));
+            return Json(
+                new DatabaseInstanceDetail(database, server, tenant)
+            );
         }
 
         /// <summary>
@@ -109,48 +114,9 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet]
         public IActionResult List()
         {
-            // TODO: This method is now seriously inefficient - consider restructuring the data model or simplifying the output of operation to avoid joins.
-
-            Dictionary<string, Tenant> tenants = DocumentSession.Query<Tenant>()
-                .ToDictionary(
-                    tenant => tenant.Id
-                );
-
-            Dictionary<string, DatabaseServer> servers = DocumentSession.Query<DatabaseServer>()
-                .ToDictionary(
-                    server => server.Id
-                );
-
-            DatabaseInstance[] databases = DocumentSession.Query<DatabaseInstance>()
-                .ToArray();
-
-            List<DatabaseInstanceDetail> databaseDetails = new List<DatabaseInstanceDetail>();
-            foreach (DatabaseInstance database in databases)
-            {
-                Tenant tenant;
-                if (!tenants.TryGetValue(database.TenantId, out tenant))
-                    continue;
-
-                DatabaseServer server;
-                if (!servers.TryGetValue(database.ServerId, out server))
-                    continue;
-
-                databaseDetails.Add(new DatabaseInstanceDetail(
-                    database.Id,
-                    database.Name,
-                    database.DatabaseUser,
-                    database.Action,
-                    database.Status,
-                    server.Id,
-                    server.Name,
-                    server.PublicFQDN,
-                    server.PublicPort,
-                    tenant.Id,
-                    tenant.Name
-                ));
-            }
-
-            return Json(databaseDetails);
+            return Json(
+                DocumentSession.Query<DatabaseInstanceDetail, DatabaseInstanceDetails>()
+            );
         }
     }
 }

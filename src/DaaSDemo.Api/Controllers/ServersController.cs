@@ -15,6 +15,7 @@ using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 namespace DaaSDemo.Api.Controllers
 {
     using Data;
+    using Data.Indexes;
     using Models.Api;
     using Models.Data;
 
@@ -63,19 +64,7 @@ namespace DaaSDemo.Api.Controllers
         public IActionResult List()
         {
             return Json(
-                DocumentSession.Query<DatabaseServer>()
-                    .Select(server => new DatabaseServerDetail(
-                        server.Id,
-                        server.Name,
-                        server.Kind,
-                        server.PublicFQDN,
-                        server.PublicPort,
-                        server.Action,
-                        server.Phase,
-                        server.Status,
-                        server.TenantId,
-                        server.TenantName
-                    ))
+                DocumentSession.Query<DatabaseServerDetail, DatabaseServerDetails>()
             );
         }
 
@@ -88,29 +77,33 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{serverId}")]
         public IActionResult GetById(string serverId)
         {
-            DatabaseServer server = DocumentSession.Load<DatabaseServer>(serverId);
-            if (server != null)
+            DatabaseServer server = DocumentSession
+                .Include<DatabaseServer>(databaseServer => databaseServer.TenantId)
+                .Load<DatabaseServer>(serverId);
+            if (server == null)
             {
-                return Json(new DatabaseServerDetail(
-                    server.Id,
-                    server.Name,
-                    server.Kind,
-                    server.PublicFQDN,
-                    server.PublicPort,
-                    server.Action,
-                    server.Phase,
-                    server.Status,
-                    server.TenantId,
-                    server.TenantName
-                ));
+                return NotFound(new
+                {
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    Message = $"No server found with Id {serverId}."
+                });
             }
 
-            return NotFound(new
+            Tenant tenant = DocumentSession.Load<Tenant>(server.TenantId);
+            if (tenant == null)
             {
-                Id = serverId,
-                EntityType = "Server",
-                Message = $"No server found with Id {serverId}"
-            });
+                return NotFound(new
+                {
+                    Id = server.TenantId,
+                    EntityType = "Tenant",
+                    Message = $"No tenant found with Id {server.TenantId} (referenced by server {serverId})."
+                });
+            }
+
+            return Json(
+                new DatabaseServerDetail(server, tenant)
+            );
         }
 
         /// <summary>
@@ -122,33 +115,9 @@ namespace DaaSDemo.Api.Controllers
         [HttpGet("{serverId}/database")]
         public IActionResult GetDatabasesByServer(string serverId)
         {
-            DatabaseServer server = DocumentSession.Load<DatabaseServer>(serverId);
-            if (server == null)
-            {
-                return NotFound(new
-                {
-                    Id = serverId,
-                    EntityType = "Server",
-                    Message = $"No server found with Id {serverId}"
-                });
-            }
-
             return Json(
-                DocumentSession.Query<DatabaseInstance>()
+                DocumentSession.Query<DatabaseInstanceDetail, DatabaseInstanceDetails>()
                     .Where(database => database.ServerId == serverId)
-                    .Select(database => new DatabaseInstanceDetail(
-                        database.Id,
-                        database.Name,
-                        database.DatabaseUser,
-                        database.Action,
-                        database.Status,
-                        database.ServerId,
-                        server.Name,
-                        server.PublicFQDN,
-                        server.PublicPort,
-                        server.TenantId,
-                        server.TenantName
-                    ))
             );
         }
     }

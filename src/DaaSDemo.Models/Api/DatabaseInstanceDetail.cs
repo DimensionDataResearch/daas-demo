@@ -21,30 +21,39 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     Create new <see cref="DatabaseInstanceDetail"/>.
         /// </summary>
-        /// <param name="databaseId"></param>
-        /// <param name="databaseName"></param>
-        /// <param name="databaseUser"></param>
-        /// <param name="databaseAction"></param>
-        /// <param name="databaseStatus"></param>
-        /// <param name="serverId"></param>
-        /// <param name="serverName"></param>
-        /// <param name="serverFQDN"></param>
-        /// <param name="serverPort"></param>
-        /// <param name="tenantId"></param>
-        /// <param name="tenantName"></param>
-        public DatabaseInstanceDetail(string databaseId, string databaseName, string databaseUser, ProvisioningAction databaseAction, ProvisioningStatus databaseStatus, string serverId, string serverName, string serverFQDN, int? serverPort, string tenantId, string tenantName)
+        /// <param name="database">
+        ///     The underlying <see cref="DatabaseInstance"/>.
+        /// </param>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the server that hosts the database.
+        /// </param>
+        /// <param name="tenant">
+        ///     A <see cref="Tenant"/> representing the database's owning tenant.
+        /// </param>
+        public DatabaseInstanceDetail(DatabaseInstance database, DatabaseServer server, Tenant tenant)
         {
-            Id = databaseId;
-            Name = databaseName;
-            ServerId = serverId;
-            ServerName = serverName;
-            Action = databaseAction;
-            Status = databaseStatus;
-            TenantId = tenantId;
-            TenantName = tenantName;
+            if (database == null)
+                throw new ArgumentNullException(nameof(database));
+            
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            if (tenant == null)
+                throw new ArgumentNullException(nameof(tenant));
+            
+            Id = database.Id;
+            Name = database.Name;
+            Action = database.Action;
+            Status = database.Status;
 
-            if (!String.IsNullOrWhiteSpace(serverFQDN) && serverPort != null)
-                ConnectionString = $"Data Source=tcp:{serverFQDN}:{serverPort};Initial Catalog={Name};User={databaseUser};Password=<password>";
+            ServerId = server.Id;
+            ServerName = server.Name;
+
+            TenantId = tenant.Id;
+            TenantName = tenant.Name;
+
+            if (!String.IsNullOrWhiteSpace(server.PublicFQDN) && server.PublicPort != null)
+                ConnectionString = $"Data Source=tcp:{server.PublicFQDN}:{server.PublicPort};Initial Catalog={Name};User={database.DatabaseUser};Password=<password>";
         }
 
         /// <summary>

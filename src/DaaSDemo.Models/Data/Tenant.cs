@@ -7,7 +7,7 @@ namespace DaaSDemo.Models.Data
     /// <summary>
     ///     Represents a database tenant.
     /// </summary>
-    [EntitySet("tenant")]
+    [EntitySet("Tenant")]
     public class Tenant
     {
         /// <summary>

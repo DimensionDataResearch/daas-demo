@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 
 namespace DaaSDemo.Provisioning
 {
@@ -9,6 +10,11 @@ namespace DaaSDemo.Provisioning
     /// </summary>
     public class KubeNames
     {
+        /// <summary>
+        ///     Regular expression for splitting PascalCase words.
+        /// </summary>
+        static Regex PascalCaseSplitter = new Regex(@"([a-z][A-Z])");
+
         /// <summary>
         ///     Create a new <see cref="KubeNames"/>.
         /// </summary>
@@ -52,12 +58,20 @@ namespace DaaSDemo.Provisioning
             if (String.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'id'.", nameof(id));
             
-            id = id.ToLower();
-            
-            // Is the Id in "EntitySetName-1234-XXX" format ?
-            string[] idComponents = id.Split('-');
-            if (idComponents.Length == 3)
-                return idComponents[1];
+            // e.g. "DatabaseServer-1-A" -> "database-server-1-A"
+            id = PascalCaseSplitter.Replace(id, match =>
+            {
+                return String.Concat(
+                    match.Groups[0].Value[0],
+                    '-',
+                    Char.ToLowerInvariant(
+                        match.Groups[0].Value[1]
+                    )
+                );
+            });
+
+            // e.g. "database-server-1-A" -> "database-server-1-a"
+            id = id.ToLowerInvariant();
 
             return id;
         }

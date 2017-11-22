@@ -348,10 +348,14 @@ namespace DaaSDemo.SqlExecutor.Controllers
             }
 
             ServiceV1 serverService = matchingServices[matchingServices.Count - 1];
+            string serverFQDN = $"{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local";
+            int serverPort = serverService.Spec.Ports[0].Port;
+
+            Log.LogInformation("SQL executor will connect to SQL Server '{ServerFQDN}' on {ServerPort}.", serverFQDN, serverPort);
 
             var connectionStringBuilder = new SqlClient.SqlConnectionStringBuilder
             {
-                DataSource = $"tcp:{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local,{serverService.Spec.Ports[0].Port}",
+                DataSource = $"tcp:{serverFQDN},{serverPort}",
             };
 
             if (request.DatabaseId != MasterDatabaseId)

@@ -21,28 +21,30 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     Create new <see cref="DatabaseServerDetail"/>.
         /// </summary>
-        /// <param name="serverId"></param>
-        /// <param name="serverName"></param>
-        /// <param name="kind"></param>
-        /// <param name="publicFQDN"></param>
-        /// <param name="publicPort"></param>
-        /// <param name="serverAction"></param>
-        /// <param name="phase"></param>
-        /// <param name="serverStatus"></param>
-        /// <param name="tenantId"></param>
-        /// <param name="tenantName"></param>
-        public DatabaseServerDetail(string serverId, string serverName, DatabaseServerKind kind, string publicFQDN, int? publicPort, ProvisioningAction serverAction, ServerProvisioningPhase phase, ProvisioningStatus serverStatus, string tenantId, string tenantName)
+        /// <param name="server">
+        ///     The underlying <see cref="DatabaseServer"/>.
+        /// </param>
+        /// <param name="tenant">
+        ///     The server's owning <see cref="Tenant"/>.
+        /// </param>
+        public DatabaseServerDetail(DatabaseServer server, Tenant tenant)
         {
-            Id = serverId;
-            Name = serverName;
-            Kind = kind;
-            PublicFQDN = publicFQDN;
-            PublicPort = publicPort;
-            Action = serverAction;
-            Phase = phase;
-            Status = serverStatus;
-            TenantId = tenantId;
-            TenantName = tenantName;
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            
+            if (tenant == null)
+                throw new ArgumentNullException(nameof(tenant));
+
+            Id = server.Id;
+            Name = server.Name;
+            Kind = server.Kind;
+            PublicFQDN = server.PublicFQDN;
+            PublicPort = server.PublicPort;
+            Action = server.Action;
+            Phase = server.Phase;
+            Status = server.Status;
+            TenantId = tenant.Id;
+            TenantName = tenant.Name;
         }
 
         /// <summary>

@@ -8,7 +8,7 @@ namespace DaaSDemo.Models.Data
     /// <summary>
     ///     Represents a database server allocated to a tenant.
     /// </summary>
-    [EntitySet("database-server")]
+    [EntitySet("DatabaseServer")]
     public class DatabaseServer
     {
         /// <summary>
@@ -51,11 +51,6 @@ namespace DaaSDemo.Models.Data
         /// </summary>
         [Required]
         public string TenantId { get; set; }
-
-        /// <summary>
-        ///     The name of the tenant that owns the database server.
-        /// </summary>
-        public string TenantName { get; set; }
 
         /// <summary>
         ///     The desired action for the server.

@@ -84,7 +84,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = Names.BaseName(server),
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id,
                     ["cloud.dimensiondata.daas.volume-type"] = "data"
                 }
             );
@@ -160,7 +160,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id
                 }
             );
         }
@@ -235,7 +235,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id
                 }
             );
         }
@@ -300,17 +300,15 @@ namespace DaaSDemo.Provisioning
         {
             if (server == null)
                 throw new ArgumentNullException(nameof(server));
-
-            string baseName = Names.BaseName(server);
             
             return Service(
-                name: $"{baseName}",
+                name: Names.BaseName(server),
                 kubeNamespace: kubeNamespace,
                 spec: Specs.InternalService(server),
                 labels: new Dictionary<string, string>
                 {
-                    ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["k8s-app"] = Names.BaseName(server),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id,
                     ["cloud.dimensiondata.daas.service-type"] = "internal"
                 }
             );
@@ -342,7 +340,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id,
                     ["cloud.dimensiondata.daas.service-type"] = "external"
                 }
             );
@@ -418,7 +416,7 @@ namespace DaaSDemo.Provisioning
                 labels: new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id,
                     ["cloud.dimensiondata.daas.monitor-type"] = "sql-server"
                 }
             );

@@ -16,6 +16,7 @@ using StatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
 namespace DaaSDemo.Api.Controllers
 {
     using Data;
+    using Data.Indexes;
     using Models.Api;
     using Models.Data;
 
@@ -132,8 +133,9 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            DatabaseServer tenantServer = DocumentSession.Query<DatabaseServer>().FirstOrDefault(server => server.TenantId == tenantId);
-            if (tenantServer == null)
+            DatabaseServer server = DocumentSession.Query<DatabaseServer>()
+                .FirstOrDefault(databaseServer => databaseServer.TenantId == tenantId);
+            if (server == null)
             {
                 return NotFound(new
                 {
@@ -143,18 +145,9 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            return Json(new DatabaseServerDetail(
-                tenantServer.Id,
-                tenantServer.Name,
-                tenantServer.Kind,
-                tenantServer.PublicFQDN,
-                tenantServer.PublicPort,
-                tenantServer.Action,
-                tenantServer.Phase,
-                tenantServer.Status,
-                tenant.Id,
-                tenant.Name
-            ));
+            return Json(
+                new DatabaseServerDetail(server, tenant)
+            );
         }
 
         /// <summary>
@@ -173,7 +166,7 @@ namespace DaaSDemo.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    EntityType = "Server",
+                    EntityType = "DatabaseServer",
                     Reason = "InvalidRequest",
                     Message = "Must supply database details in the request body."
                 });
@@ -189,7 +182,7 @@ namespace DaaSDemo.Api.Controllers
                 {
                     return BadRequest(new
                     {
-                        EntityType = "Server",
+                        EntityType = "DatabaseServer",
                         Reason = "NotImplemented",
                         Message = "RavenDB servers are not supported yet."
                     });
@@ -198,7 +191,7 @@ namespace DaaSDemo.Api.Controllers
                 {
                     return BadRequest(new
                     {
-                        EntityType = "Server",
+                        EntityType = "DatabaseServer",
                         Reason = "InvalidServerType",
                         Message = $"Unsupported server type '{newDatabaseServer.Kind}'."
                     });
@@ -237,7 +230,6 @@ namespace DaaSDemo.Api.Controllers
                 Kind = newDatabaseServer.Kind,
                 AdminPassword = newDatabaseServer.AdminPassword,
                 TenantId = tenant.Id,
-                TenantName = tenant.Name,
                 Action = ProvisioningAction.Provision,
                 Status = ProvisioningStatus.Pending
             };
@@ -380,42 +372,10 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            // TODO: This method is now seriously inefficient - consider restructuring the data model or simplifying the output of operation to avoid joins.
-            Dictionary<string, DatabaseServer> servers = DocumentSession.Query<DatabaseServer>()
-                .Where(
-                    server => server.TenantId == tenantId
-                )
-                .ToDictionary(
-                    server => server.Id
-                );
-
-            DatabaseInstance[] databases = DocumentSession.Query<DatabaseInstance>()
-                .Where(database => database.TenantId == tenantId)
-                .ToArray();
-
-            List<DatabaseInstanceDetail> databaseDetails = new List<DatabaseInstanceDetail>();
-            foreach (DatabaseInstance database in databases)
-            {
-                DatabaseServer server;
-                if (!servers.TryGetValue(database.ServerId, out server))
-                    continue;
-
-                databaseDetails.Add(new DatabaseInstanceDetail(
-                    database.Id,
-                    database.Name,
-                    database.DatabaseUser,
-                    database.Action,
-                    database.Status,
-                    server.Id,
-                    server.Name,
-                    server.PublicFQDN,
-                    server.PublicPort,
-                    tenant.Id,
-                    tenant.Name
-                ));
-            }
-
-            return Json(databaseDetails);
+            return Json(
+                DocumentSession.Query<DatabaseInstanceDetail, DatabaseInstanceDetails>()
+                    .Where(database => database.TenantId == tenantId)
+            );
         }
 
         /// <summary>
@@ -430,6 +390,17 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{tenantId}/databases")]
         public IActionResult CreateDatabase(string tenantId, [FromBody] NewDatabaseInstance newDatabase)
         {
+            Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
+            if (tenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = tenantId,
+                    EntityType = "Tenant",
+                    Message = $"Tenant not found with Id '{tenantId}."
+                });
+            }
+
             if (newDatabase == null)
             {
                 return BadRequest(new

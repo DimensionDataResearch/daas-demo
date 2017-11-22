@@ -1,9 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using System;
 using System.Reflection;
@@ -16,16 +18,34 @@ namespace DaaSDemo.Data
 
     public static class RegistrationExtensions
     {
-        public static void AddDaaSDataAccess(this IServiceCollection services)
+        /// <summary>
+        ///     The assembly containing indexes for the DaaS management database.
+        /// </summary>
+        public static readonly Assembly IndexesAssembly = typeof(RegistrationExtensions).Assembly;
+
+        /// <summary>
+        ///     Add components for access to the DaaS management database.
+        /// </summary>
+        /// <param name="services">
+        ///     The service collection to configure.
+        /// </param>
+        public static void AddDaaSDataAccess(this IServiceCollection services, string databaseName = "DaaS")
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
+
+            if (String.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'databaseName'.", nameof(databaseName));
             
             services.AddSingleton<IDocumentStore>(serviceProvider => 
             {
+                ILogger<IDocumentStore> logger = serviceProvider.GetRequiredService<ILogger<IDocumentStore>>();
+
                 DatabaseOptions databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
                 if (String.IsNullOrWhiteSpace(databaseOptions.ConnectionString))
                     throw new InvalidOperationException("Application configuration is missing database connection string.");
+
+                logger.LogInformation("Will use RavenDB server at {RavenServerUrl} for the management database.", databaseOptions.ConnectionString);
 
                 DocumentStore store = new DocumentStore
                 {
@@ -33,7 +53,7 @@ namespace DaaSDemo.Data
                     {
                         databaseOptions.ConnectionString
                     },
-                    Database = "DaaS",
+                    Database = databaseName,
                     Conventions =
                     {
                         IdentityPartsSeparator = "-",
@@ -55,7 +75,19 @@ namespace DaaSDemo.Data
                     }
                 };
 
-                return store.Initialize();
+                logger.LogDebug("Initialising the RavenDB document store...");
+
+                store.Initialize();
+
+                logger.LogDebug("RavenDB document store initialised.");
+
+                logger.LogInformation("Configuring RavenDB indexes...");
+
+                IndexCreation.CreateIndexes(IndexesAssembly, store);
+
+                logger.LogInformation("RavenDB indexes configured.");
+
+                return store;
             });
 
             services.AddTransient<IDocumentSession>(

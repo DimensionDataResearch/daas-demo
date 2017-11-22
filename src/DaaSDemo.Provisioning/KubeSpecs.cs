@@ -128,7 +128,7 @@ namespace DaaSDemo.Provisioning
                         Labels = new Dictionary<string, string>
                         {
                             ["k8s-app"] = baseName,
-                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString() // TODO: Use tenant Id instead
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id // TODO: Use tenant Id instead
                         }
                     },
                     Spec = new PodSpecV1
@@ -274,7 +274,7 @@ namespace DaaSDemo.Provisioning
                         Labels = new Dictionary<string, string>
                         {
                             ["k8s-app"] = baseName,
-                            ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString()
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id
                         }
                     },
                     Spec = new PodSpecV1
@@ -487,7 +487,7 @@ namespace DaaSDemo.Provisioning
                 {
                     MatchLabels = new Dictionary<string, string>
                     {
-                        ["cloud.dimensiondata.daas.server-id"] = server.Id.ToString(),
+                        ["cloud.dimensiondata.daas.server-id"] = server.Id,
                         ["cloud.dimensiondata.daas.service-type"] = "internal"
                     }
                 },
