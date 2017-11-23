@@ -7,6 +7,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
+import { sortByName } from '../../utilities/sorting';
 
 /**
  * Component for the Tenant detail view.
@@ -68,16 +69,7 @@ export class TenantDetail {
      */
     @computedFrom('servers')
     public get areServerActionsInProgress(): boolean {
-        const serverWithActionInProgress = this.servers.find(server => server.action !== ProvisioningAction.None);
-        if (serverWithActionInProgress) {
-            console.log('areServerActionsInProgress: true', serverWithActionInProgress);
-
-            return true;
-        } else {
-            console.log('areServerActionsInProgress: false');
-
-            return false;
-        }
+        return !!this.servers.find(server => server.action !== ProvisioningAction.None);
     }
 
     /**
@@ -141,14 +133,9 @@ export class TenantDetail {
                 }
             }
 
-            const addedServer = await this.api.getServer(serverId);
-            if (addedServer) {
-                this.servers = this.servers.splice(0, 0, addedServer);
-            } else {
-                await this.load(false);
-            }
-    
             this.hideCreateServerForm();
+
+            await this.load(false);
         } catch (error) {
             this.showError(error as Error);
         }
@@ -259,7 +246,9 @@ export class TenantDetail {
             const serversRequest = this.api.getTenantServers(this.tenantId);
 
             this.tenant = await tenantRequest;
-            this.servers = await serversRequest;
+            this.servers = sortByName(
+                await serversRequest
+            );
 
             if (!this.tenant) {
                 this.routeConfig.title = 'Tenant not found';

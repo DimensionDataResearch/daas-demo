@@ -137,6 +137,7 @@ namespace DaaSDemo.Api.Controllers
             return Json(
                 DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
                     .Where(server => server.TenantId == tenantId)
+                    .OrderBy(server => server.Name)
                     .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }

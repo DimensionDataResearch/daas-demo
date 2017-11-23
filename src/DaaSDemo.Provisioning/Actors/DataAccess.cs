@@ -31,7 +31,7 @@ namespace DaaSDemo.Provisioning.Actors
         public static readonly string ActorName = "data-access";
 
         /// <summary>
-        ///     References to management actors for tenant servers, keyed by tenant Id.
+        ///     References to management actors for tenant servers, keyed by server Id.
         /// </summary>
         readonly Dictionary<string, IActorRef> _serverManagers = new Dictionary<string, IActorRef>();
 
@@ -126,15 +126,15 @@ namespace DaaSDemo.Provisioning.Actors
                     );
 
                     IActorRef serverManager;
-                    if (!_serverManagers.TryGetValue(server.TenantId, out serverManager))
+                    if (!_serverManagers.TryGetValue(server.Id, out serverManager))
                     {
                         serverManager = Context.ActorOf(
                             Context.DI().Props<TenantServerManager>(),
-                            name: TenantServerManager.ActorName(server.TenantId)
+                            name: TenantServerManager.ActorName(server.Id)
                         );
                         Context.Watch(serverManager);
                         
-                        _serverManagers.Add(server.TenantId, serverManager);
+                        _serverManagers.Add(server.Id, serverManager);
 
                         serverManager.Tell(new TenantServerManager.Initialize(
                             initialState: server,

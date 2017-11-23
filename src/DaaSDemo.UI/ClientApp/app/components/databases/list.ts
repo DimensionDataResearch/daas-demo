@@ -3,6 +3,7 @@ import { RouteConfig } from 'aurelia-router';
 
 import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Database } from '../api/daas-api';
+import { sortByName } from '../../utilities/sorting';
 
 @inject(DaaSAPI)
 export class DatabaseList {
@@ -94,7 +95,9 @@ export class DatabaseList {
 
         try
         {
-            this.databases = await this.api.getDatabases();
+            this.databases = sortByName(
+                await this.api.getDatabases()
+            );
         }
         finally {
             this.isLoading = false;

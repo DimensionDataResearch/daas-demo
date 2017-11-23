@@ -261,7 +261,22 @@ namespace DaaSDemo.Provisioning.Actors
                             );
 
                             // We're done with the Deployment now that it's marked as Available, so we're ready to initialise the server configuration.
-                            StartProvisioningPhase(ServerProvisioningPhase.Configuration);
+                            if (Provisioner.State.Action == ProvisioningAction.Provision)
+                                StartProvisioningPhase(ServerProvisioningPhase.Configuration);
+                            else if (Provisioner.State.Action == ProvisioningAction.Reconfigure)
+                                StartReconfigurationPhase(ServerProvisioningPhase.Configuration);
+                            else
+                            {
+                                Log.Error("WaitForServerAvailable: Unexpected provisioning action '{Action}' on server {ServerId}.",
+                                    Provisioner.State.Action,
+                                    Provisioner.State.Id
+                                );
+
+                                FailCurrentAction();
+
+                                return;
+                            }
+
                             Become(Ready);
                         }
                         else
@@ -595,7 +610,7 @@ namespace DaaSDemo.Provisioning.Actors
                 }
                 case ServerProvisioningPhase.Monitoring:
                 {
-                    StartProvisioningPhase(ServerProvisioningPhase.Monitoring);
+                    StartReconfigurationPhase(ServerProvisioningPhase.Monitoring);
 
                     await Provisioner.EnsureServiceMonitorPresent();
 

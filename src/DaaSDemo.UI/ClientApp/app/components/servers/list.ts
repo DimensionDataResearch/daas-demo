@@ -2,6 +2,7 @@ import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
 
 import { DaaSAPI, Server, ProvisioningAction } from '../api/daas-api';
+import { sortByName } from '../../utilities/sorting';
 
 @inject(DaaSAPI)
 export class ServerList {
@@ -76,7 +77,9 @@ export class ServerList {
 
         try
         {
-            this.servers = await this.api.getServers();
+            this.servers = sortByName(
+                await this.api.getServers()
+            );
 
             if (this.servers && this.servers.find(server => server.action != ProvisioningAction.None)) {
                 this.pollHandle = window.setTimeout(() => this.load(true), 2000);

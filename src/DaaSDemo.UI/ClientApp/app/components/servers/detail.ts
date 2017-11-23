@@ -121,7 +121,7 @@ export class ServerDetail {
                 this.routeConfig.title = this.server.name;
                 if (this.server.action != ProvisioningAction.None)
                 {
-                    this.pollHandle = window.setTimeout(() => this.load(false), 1000);
+                    this.pollHandle = window.setTimeout(() => this.load(false), 2000);
 
                     if (this.progressBar)
                         this.progressBar.update();

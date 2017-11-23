@@ -66,6 +66,7 @@ namespace DaaSDemo.Api.Controllers
         {
             return Json(
                 DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
+                    .OrderBy(server => server.Name)
                     .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }
@@ -156,19 +157,6 @@ namespace DaaSDemo.Api.Controllers
                     Id = newDatabaseServer.TenantId,
                     EntityType = "Tenant",
                     Message = $"No tenant found with Id {newDatabaseServer.TenantId}."
-                });
-            }
-
-            // TODO: Support for multiple servers.
-            DatabaseServer existingServer = DocumentSession.Query<DatabaseServer>().FirstOrDefault(server => server.TenantId == tenant.Id);
-            if (existingServer != null)
-            {
-                return StatusCode(StatusCodes.Status409Conflict, new
-                {
-                    TenantId = existingServer,
-                    EntityType = "DatabaseServer",
-                    Message = $"Database server {existingServer.Id} already exists for tenant with Id {tenant.Id}",
-                    ExistingServer = existingServer
                 });
             }
 

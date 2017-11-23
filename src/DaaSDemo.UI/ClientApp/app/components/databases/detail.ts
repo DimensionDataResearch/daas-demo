@@ -95,7 +95,7 @@ export class DatabaseDetail {
             }
 
             if (this.database && this.database.action !== ProvisioningAction.None) {
-                this.pollHandle = window.setTimeout(() => this.load(true), 1000);
+                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
             }
         } catch (error) {
             this.showError(error as Error);
