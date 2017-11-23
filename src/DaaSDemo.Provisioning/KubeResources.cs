@@ -414,7 +414,7 @@ namespace DaaSDemo.Provisioning
                 {
                     ["k8s-app"] = baseName,
                     ["cloud.dimensiondata.daas.server-id"] = server.Id,
-                    ["cloud.dimensiondata.daas.monitor-type"] = "sql-server"
+                    ["cloud.dimensiondata.daas.monitor-type"] = "database-server"
                 }
             );
         }

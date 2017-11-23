@@ -36,3 +36,25 @@ spec:
       volumes:
       - emptyDir: {}
         name: es-persistent-storage
+
+--- 
+
+# Internally-facing service
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    k8s-app: elasticsearch-logging
+    kubernetes.io/cluster-service: "true"
+    kubernetes.io/name: Elasticsearch
+  name: elasticsearch-logging
+  namespace: kube-system
+spec: 
+  ports: 
+    - targetPort: db
+      port: 9200
+      protocol: TCP
+
+  selector: 
+    k8s-app: elasticsearch-logging
+  type: ClusterIP

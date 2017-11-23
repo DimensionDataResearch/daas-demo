@@ -1,0 +1,95 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: daas-sql-executor
+  labels:
+    k8s-app: daas-sql-executor
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      k8s-app: daas-sql-executor
+
+  strategy:
+        type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        k8s-app: daas-sql-executor
+    spec:
+      serviceAccountName: daas
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: daas-sql-executor
+        image: tintoy.azurecr.io/daas/daas-sql-executor:1.0.0-dev
+        imagePullPolicy: Always
+        env:
+          - name: PORT
+            value: '5000'
+          - name: ASPNETCORE_URLS
+            value: 'http://*:5000'
+          - name: IN_KUBERNETES
+            value: '1'
+          - name: DAAS_Logging__ElasticSearch__EndPoint
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_elasticsearch_logging
+          - name: DAAS_Database__ConnectionString
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: database_server_url
+          - name: DAAS_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: DAAS_Kubernetes__KubeNamespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+          - containerPort: 5000
+      
+      imagePullSecrets:
+          - name: daas-registry
+
+---
+
+# Internally-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-sql-executor
+  labels:
+    k8s-app: daas-sql-executor
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP
+    name: daas-sql-executor
+  selector:
+    k8s-app: daas-sql-executor
+
+---
+
+# Externally-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-sql-executor-external
+  labels:
+    k8s-app: daas-sql-executor
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    nodePort: 31250
+    targetPort: 5000
+    protocol: TCP
+    name: daas-sql-executor
+  selector:
+    k8s-app: daas-sql-executor

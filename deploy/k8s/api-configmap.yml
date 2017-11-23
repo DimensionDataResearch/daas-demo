@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name:  sql-api
-data:
-  ui_urls: 'http://portal.kr-cluster.tintoy.io:31313;http://kr-cluster.tintoy.io:31313;http://localhost:5000'

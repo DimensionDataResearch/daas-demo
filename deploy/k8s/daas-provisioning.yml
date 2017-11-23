@@ -1,14 +1,14 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: sql-provisioning
+  name: daas-provisioning
   labels:
-    k8s-app: sql-provisioning
+    k8s-app: daas-provisioning
 spec:
   replicas: 1
   selector:
     matchLabels:
-      k8s-app: sql-provisioning
+      k8s-app: daas-provisioning
 
   strategy:
         type: Recreate
@@ -16,31 +16,43 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: sql-provisioning
+        k8s-app: daas-provisioning
     spec:
-      serviceAccountName: sql-provisioning
+      serviceAccountName: daas
       terminationGracePeriodSeconds: 60
 
       containers:
-      - name: sql-provisioning
+      - name: daas-provisioning
         image: tintoy.azurecr.io/daas/provisioning:1.0.0-dev
         imagePullPolicy: Always
         env:
           - name: IN_KUBERNETES
             value: '1'
           - name: DAAS_Logging__ElasticSearch__EndPoint
-            value: 'http://elasticsearch-logging.kube-system.svc.cluster.local:9200'
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_elasticsearch_logging
           - name: DAAS_Provisioning__Images__SQL
             valueFrom:
               configMapKeyRef:
-                name: sql-provisioning
+                name: daas
                 key: image_name_sql
           - name: DAAS_Prometheus__ApiEndPoint
-            value: http://prometheus.kr-cluster.tintoy.io:30900/
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_prometheus
           - name: DAAS_SQL__ApiEndPoint
-            value: http://sql-executor-internal.default.svc.cluster.local:5000/
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_sql_executor
           - name: DAAS_Kubernetes__ClusterPublicFQDN
-            value: 'sql.kr-cluster.tintoy.io'
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: cluster_fqdn
           - name: DAAS_Kubernetes__PodName
             valueFrom:
               fieldRef:
@@ -50,12 +62,12 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: DAAS_Kubernetes__SqlStorageClass
-            value: 'sql-data'
+            value: 'daas-data'
           - name: DAAS_Database__ConnectionString
             valueFrom:
-              secretKeyRef:
-                name: sql-provisioning
-                key: connection_string
+              configMapKeyRef:
+                name: daas
+                key: database_server_url
         ports:
           - containerPort: 5000
       

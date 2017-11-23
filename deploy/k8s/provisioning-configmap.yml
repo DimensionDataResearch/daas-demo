@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name:  sql-provisioning
-data:
-  image_name_sql: 'microsoft/mssql-server-linux:2017-CU1'

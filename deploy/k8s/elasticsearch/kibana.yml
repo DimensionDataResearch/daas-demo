@@ -27,3 +27,25 @@ spec:
           name: ui
           protocol: TCP
         resources: {}
+
+--- 
+
+# Externally-facing service
+apiVersion: v1
+kind: Service
+metadata: 
+  labels: 
+    k8s-app: kibana-logging
+    kubernetes.io/cluster-service: "true"
+    kubernetes.io/name: Kibana
+  name: kibana-logging
+  namespace: kube-system
+spec: 
+  ports: 
+    - targetPort: ui
+      nodePort: 30560
+      port: 5601
+      protocol: TCP
+  selector: 
+    k8s-app: kibana-logging
+  type: NodePort

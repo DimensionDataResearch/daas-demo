@@ -1,14 +1,14 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: sql-ui
+  name: daas-ui
   labels:
-    k8s-app: sql-ui
+    k8s-app: daas-ui
 spec:
   replicas: 3
   selector:
     matchLabels:
-      k8s-app: sql-ui
+      k8s-app: daas-ui
 
   strategy:
         type: RollingUpdate
@@ -16,13 +16,13 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: sql-ui
+        k8s-app: daas-ui
     spec:
-      serviceAccountName: sql-ui
+      serviceAccountName: daas
       terminationGracePeriodSeconds: 60
 
       containers:
-      - name: sql-ui
+      - name: daas-ui
         image: tintoy.azurecr.io/daas/ui:1.0.0-dev
         imagePullPolicy: Always
         env:
@@ -33,7 +33,16 @@ spec:
           - name: ASPNETCORE_URLS
             value: 'http://*:5000'
           - name: DAAS_API__EndPoint
-            value: 'http://kr-cluster.tintoy.io:31200/api/v1/'
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_api_daas
+          - name: DAAS_Database__ConnectionString
+            valueFrom:
+              valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: database_server_url
           - name: DAAS_Kubernetes__PodName
             valueFrom:
               fieldRef:
@@ -42,13 +51,28 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DAAS_Database__ConnectionString
-            valueFrom:
-              secretKeyRef:
-                name: sql-ui
-                key: connection_string
         ports:
           - containerPort: 5000
       
       imagePullSecrets:
           - name: daas-registry
+
+---
+
+# Externally-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-ui-external
+  labels:
+    k8s-app: daas-ui
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    nodePort: 31313
+    targetPort: 5000
+    protocol: TCP
+    name: daas-ui
+  selector:
+    k8s-app: daas-ui

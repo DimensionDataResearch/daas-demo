@@ -166,7 +166,7 @@ namespace DaaSDemo.Provisioning.Provisioners
             RequireCurrentState();
 
             List<PrometheusServiceMonitorV1> matchingServices = await KubeClient.PrometheusServiceMonitorsV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {State.Id},cloud.dimensiondata.daas.monitor-type = sql-server",
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {State.Id},cloud.dimensiondata.daas.monitor-type = database-server",
                 kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)

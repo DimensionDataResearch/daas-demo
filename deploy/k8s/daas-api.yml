@@ -1,0 +1,105 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: daas-api
+  labels:
+    k8s-app: daas-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      k8s-app: daas-api
+
+  strategy:
+        type: RollingUpdate
+
+  template:
+    metadata:
+      labels:
+        k8s-app: daas-api
+    spec:
+      serviceAccountName: daas
+      terminationGracePeriodSeconds: 60
+
+      containers:
+      - name: daas-api
+        image: tintoy.azurecr.io/daas/api:1.0.0-dev
+        imagePullPolicy: Always
+        env:
+          - name: PORT
+            value: '5000'
+          - name: IN_KUBERNETES
+            value: '1'
+          - name: ASPNETCORE_URLS
+            value: 'http://*:5000'
+          - name: DAAS_Logging__ElasticSearch__EndPoint
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_elasticsearch_logging
+          - name: DAAS_Kubernetes__ClusterPublicFQDN
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: cluster_fqdn
+          - name: DAAS_Kubernetes__SqlStorageClass
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: storageclass_sql
+          - name: DAAS_Database__ConnectionString
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: database_server_url
+          - name: DAAS_Kubernetes__PodName
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: DAAS_Kubernetes__KubeNamespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        ports:
+          - containerPort: 5000
+      
+      imagePullSecrets:
+          - name: daas-registry
+
+---
+
+# Internally-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-api
+  labels:
+    k8s-app: daas-api
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP
+    name: daas-api
+  selector:
+    k8s-app: daas-api
+
+---
+
+# Externally-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-api-external
+  labels:
+    k8s-app: daas-api
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    nodePort: 31200
+    targetPort: 5000
+    protocol: TCP
+    name: daas-api
+  selector:
+    k8s-app: daas-api

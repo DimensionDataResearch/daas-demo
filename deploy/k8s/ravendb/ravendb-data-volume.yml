@@ -5,7 +5,7 @@ metadata:
   labels:
     k8s-app: ravendb
 spec:
-  storageClassName: raven-data
+  storageClassName: daas-data
   accessModes:
     - ReadWriteOnce
   resources:

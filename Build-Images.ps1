@@ -34,7 +34,7 @@ If ($Deploy) {
 
     Write-Host 'Deploying application...'
     ForEach ($Component in $Components) {
-        $manifestFile = Join-Path $manifestDirectory "$Component.yml"
+        $manifestFile = Join-Path $manifestDirectory "daas-$Component.yml"
 
         & $kubectl delete -f $manifestFile
         & $kubectl create -f $manifestFile

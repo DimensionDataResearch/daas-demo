@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: daas-prometheus
+  labels:
+    cloud.dimensiondata.daas.prometheus-type: "database-server"
+spec:
+  labels:
+    cloud.dimensiondata.daas.prometheus-type: "database-server"
+  serviceMonitorSelector:
+    matchLabels:
+      cloud.dimensiondata.daas.monitor-type: "database-server"
+  resources:
+    requests:
+      memory: 400Mi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: daas-prometheus
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    nodePort: 30900
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: daas-prometheus
