@@ -23,7 +23,7 @@ spec:
 
       containers:
       - name: daas-sql-executor
-        image: tintoy.azurecr.io/daas/daas-sql-executor:1.0.0-dev
+        image: tintoy.azurecr.io/daas/sql-executor:1.0.0-dev
         imagePullPolicy: Always
         env:
           - name: PORT

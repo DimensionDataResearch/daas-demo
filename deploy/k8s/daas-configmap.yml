@@ -5,8 +5,9 @@ metadata:
 data:
   endpoint_elasticsearch_logging: 'http://elasticsearch-logging.kube-system.svc.cluster.local:9200'
   endpoint_prometheus:            'http://prometheus.kr-cluster.tintoy.io:30900'
+  
   endpoint_api_sql_executor:      'http://daas-sql-executor.default.svc.cluster.local:5000'
-  endpoint_api_daas:              'http://kr-cluster.tintoy.io:31200/api/v1'
+  endpoint_api_daas:              'http://api.kr-cluster.tintoy.io:31200/api/v1/'
 
   database_server_url:            'http://raven.kr-cluster.tintoy.io:31880'
 

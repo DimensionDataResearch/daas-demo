@@ -37,6 +37,11 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: endpoint_elasticsearch_logging
+          - name: DAAS_CORS__UI
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: ui_urls
           - name: DAAS_Kubernetes__ClusterPublicFQDN
             valueFrom:
               configMapKeyRef:

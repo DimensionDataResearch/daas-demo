@@ -47,7 +47,7 @@ spec:
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: endpoint_sql_executor
+                key: endpoint_api_sql_executor
           - name: DAAS_Kubernetes__ClusterPublicFQDN
             valueFrom:
               configMapKeyRef:
