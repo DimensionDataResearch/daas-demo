@@ -241,6 +241,42 @@ export class DaaSAPI
     }
 
     /**
+     * Deploy a new RavenDB instance.
+     * 
+     * @param tenantId The Id of the tenant that will own the server.
+     * @param name The server name.
+     * 
+     * @returns The Id of the new server.
+     */
+    public async deployRavenServer(tenantId: string, name: string): Promise<string> {
+        await this.configured;
+
+        const response = await this.http.fetch(`servers`, {
+            method: 'POST',
+            body: json({
+                tenantId: tenantId,
+                name: name,
+                kind: DatabaseServerKind.RavenDB,
+                adminPassword: 'unU$ed123', // RavenDB uses X.509 certificates for authentication.
+                sizeMB: 600 // TODO: Expose this via the UI.
+            })
+        });
+        
+        const body = await response.json();
+        if (response.ok) {
+            const serverCreated = body as ServerCreated;
+
+            return serverCreated.id;
+        }
+        
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to create server for tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Destroy a database server.
      * 
      * @param serverId The server Id.

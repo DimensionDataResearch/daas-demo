@@ -135,19 +135,14 @@ namespace DaaSDemo.Api.Controllers
                 }
                 case DatabaseServerKind.RavenDB:
                 {
-                    return BadRequest(new
-                    {
-                        EntityType = "DatabaseServer",
-                        Reason = "NotImplemented",
-                        Message = "RavenDB servers are not supported yet."
-                    });
+                    break;
                 }
                 default:
                 {
                     return BadRequest(new
                     {
                         EntityType = "DatabaseServer",
-                        Reason = "InvalidServerType",
+                        Reason = "UnsupportedServerType",
                         Message = $"Unsupported server type '{newDatabaseServer.Kind}'."
                     });
                 }

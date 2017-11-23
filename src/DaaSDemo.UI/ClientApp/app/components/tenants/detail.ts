@@ -5,7 +5,7 @@ import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase  } from '../api/daas-api';
+import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
@@ -92,10 +92,8 @@ export class TenantDetail {
      * Show the server creation form.
      */
     public showCreateServerForm(): void {
-        this.newServer = {
-            name: null,
-            adminPassword: null
-        };
+        this.newServer = new NewServer();
+        this.newServer.kind = DatabaseServerKind.SqlServer; // The default.
     }
 
     /**
@@ -118,15 +116,36 @@ export class TenantDetail {
         if (this.newServer.name === null || this.newServer.adminPassword === null)
             return;
 
-        await this.api.deploySqlServer(
-            this.tenantId,
-            this.newServer.name,
-            this.newServer.adminPassword
-        );
-
-        this.hideCreateServerForm();
-
-        await this.load(true);
+        try {
+            switch (this.newServer.kind) {
+                case DatabaseServerKind.SqlServer: {
+                    await this.api.deploySqlServer(
+                        this.tenantId,
+                        this.newServer.name,
+                        this.newServer.adminPassword
+                    );
+    
+                    break;
+                }
+                case DatabaseServerKind.RavenDB: {
+                    await this.api.deployRavenServer(
+                        this.tenantId,
+                        this.newServer.name
+                    );
+    
+                    break;
+                }
+                default: {
+                    throw new Error(`Unsupported server kind (${this.newServer.kind}).`);
+                }
+            }
+    
+            this.hideCreateServerForm();
+    
+            await this.load(true);
+        } catch (error) {
+            this.showError(error as Error);
+        }
     }
 
     /**
@@ -261,6 +280,7 @@ export class TenantDetail {
  */
 export class NewServer {
     name: string | null = null;
+    kind: DatabaseServerKind;
     adminPassword: string | null = null;
 }
 

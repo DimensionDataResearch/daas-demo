@@ -153,6 +153,17 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
+            if (targetServer.Kind != DatabaseServerKind.SqlServer)
+            {
+                return BadRequest(new
+                {
+                    ServerId = targetServer.Id,
+                    ServerKind = targetServer.Kind,
+                    Reason = "NotImplemented",
+                    Message = $"Creation of databases in ${targetServer.Kind} servers is not supported yet."
+                });
+            }
+
             if (targetServer.Status != ProvisioningStatus.Ready)
             {
                 return StatusCode(StatusCodes.Status409Conflict, new

@@ -64,6 +64,14 @@
                         <input name="name" value.bind="newServer.name & validate" placeholder="Server name" type="text">
                     </div>
 
+                    <div class="required field">
+                        <label>Type</label>
+                        <select value.bind="newServer.kind">
+                            <option value="SqlServer">SQL Server</option>
+                            <option value="RavenDB">RavenDB</option>
+                        </select>
+                    </div>
+
                     <div class="field"
                         validation-errors.bind="adminPasswordErrors"
                         class.bind="adminPasswordErrors.length ? 'error' : ''"
