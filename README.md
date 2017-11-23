@@ -29,4 +29,4 @@ A quick-and-dirty PaaS implementation using SQL Server in Linux containers on Ku
 
 #### Kubernetes Resources
 
-Customise the files in [deploy/kubernetes](deploy/kubernetes) as required, and run `kubectl create -Rf deploy/kubernetes`.
+Customise the files in [deploy/k8s](deploy/k8s) as required, and run `kubectl create -Rf deploy/kubernetes`.
