@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using System;
 
-namespace DaaSDemo.Provisioning.Prometheus
+namespace DaaSDemo.Models.Prometheus
 {
     using Converters;
 

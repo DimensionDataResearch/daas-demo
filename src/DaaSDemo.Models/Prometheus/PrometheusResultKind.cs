@@ -1,4 +1,4 @@
-namespace DaaSDemo.Provisioning.Prometheus
+namespace DaaSDemo.Models.Prometheus
 {
     /// <summary>
     ///     Well-known kinds of results from Prometheus queries.

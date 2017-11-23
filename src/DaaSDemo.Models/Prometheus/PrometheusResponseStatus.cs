@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 
-namespace DaaSDemo.Provisioning.Prometheus
+namespace DaaSDemo.Models.Prometheus
 {
     /// <summary>
     ///     Represents the status of a Promethius request.

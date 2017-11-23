@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace DaaSDemo.Provisioning.Prometheus
+namespace DaaSDemo.Models.Prometheus
 {
     /// <summary>
     ///     Represents the data returned from a Prometheus query.

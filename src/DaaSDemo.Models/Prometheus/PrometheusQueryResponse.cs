@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace DaaSDemo.Provisioning.Prometheus
+namespace DaaSDemo.Models.Prometheus
 {
     /// <summary>
     ///     Represents a query response from the Prometheus API.
