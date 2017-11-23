@@ -408,8 +408,8 @@ export class DaaSAPI
         if (!endPointsResponse.ok)
             throw new Error('Failed to retrieve configuration for DaaS API end-points.');
 
-            const body = await endPointsResponse.json();
-            const endPoints = body as ApiEndPoints;
+        const body = await endPointsResponse.json();
+        const endPoints = body as ApiEndPoints;
 
         this.http.configure(request =>
             request.withBaseUrl(endPoints.default).withDefaults({

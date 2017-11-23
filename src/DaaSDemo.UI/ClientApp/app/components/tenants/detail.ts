@@ -117,9 +117,10 @@ export class TenantDetail {
             return;
 
         try {
+            let serverId: string;
             switch (this.newServer.kind) {
                 case DatabaseServerKind.SqlServer: {
-                    await this.api.deploySqlServer(
+                    serverId = await this.api.deploySqlServer(
                         this.tenantId,
                         this.newServer.name,
                         this.newServer.adminPassword
@@ -128,7 +129,7 @@ export class TenantDetail {
                     break;
                 }
                 case DatabaseServerKind.RavenDB: {
-                    await this.api.deployRavenServer(
+                    serverId = await this.api.deployRavenServer(
                         this.tenantId,
                         this.newServer.name
                     );
@@ -139,10 +140,15 @@ export class TenantDetail {
                     throw new Error(`Unsupported server kind (${this.newServer.kind}).`);
                 }
             }
+
+            const addedServer = await this.api.getServer(serverId);
+            if (addedServer) {
+                this.servers = this.servers.splice(0, 0, addedServer);
+            } else {
+                await this.load(false);
+            }
     
             this.hideCreateServerForm();
-    
-            await this.load(true);
         } catch (error) {
             this.showError(error as Error);
         }
