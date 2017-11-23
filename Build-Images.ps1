@@ -37,6 +37,6 @@ If ($Deploy) {
         $manifestFile = Join-Path $manifestDirectory "$Component.yml"
 
         & $kubectl delete -f $manifestFile
-        & $kubectl apply -f $manifestFile
+        & $kubectl create -f $manifestFile
     }
 }
