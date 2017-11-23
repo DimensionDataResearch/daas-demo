@@ -156,8 +156,19 @@ namespace DaaSDemo.Provisioning.Actors
                     }
 
                     Dictionary<string, DatabaseInstance> databases = await session.LoadAsync<DatabaseInstance>(server.DatabaseIds);
-                    foreach (DatabaseInstance database in databases.Values)
+                    foreach (string databaseId in databases.Keys)
                     {
+                        DatabaseInstance database = databases[databaseId];
+                        if (database == null)
+                        {
+                            Log.Warning("Server {ServerId} in management database refers to non-existent database {DatabaseId}.",
+                                server.Id,
+                                databaseId
+                            );
+
+                            continue;
+                        }
+
                         Log.Debug("Notifying TenantServerManager {ActorName} of current configuration for database {DatabaseId} in server {ServerId}.",
                             serverManager.Path.Name,
                             database.Id,
@@ -266,11 +277,23 @@ namespace DaaSDemo.Provisioning.Actors
             
             using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
-                DatabaseInstance database = await session.LoadAsync<DatabaseInstance>(databaseProvisioningNotification.DatabaseId);
+                DatabaseInstance database = await session
+                    .Include<DatabaseInstance>(db => db.ServerId)
+                    .LoadAsync<DatabaseInstance>(databaseProvisioningNotification.DatabaseId);
                 if (database == null)
                 {
                     Log.Warning("Received DatabaseStatusChanged notification for non-existent database (Id:{DatabaseId}).",
                         databaseProvisioningNotification.DatabaseId
+                    );
+
+                    return;
+                }
+
+                DatabaseServer server = await session.LoadAsync<DatabaseServer>(database.ServerId);
+                if (server == null)
+                {
+                    Log.Warning("Received DatabaseStatusChanged notification for database in non-existent server (Id:{ServerId}).",
+                        database.ServerId
                     );
 
                     return;
@@ -288,6 +311,7 @@ namespace DaaSDemo.Provisioning.Actors
                     }
                     case ProvisioningStatus.Deprovisioned:
                     {
+                        server.DatabaseIds.Remove(database.Id);
                         session.Delete(database);
 
                         break;

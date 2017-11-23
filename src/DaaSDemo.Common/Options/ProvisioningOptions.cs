@@ -43,5 +43,10 @@ namespace DaaSDemo.Common.Options
         ///     The Prometheus Exporter for SQL Server image name and tag.
         /// </summary>
         public string SQLExporter { get; set; }
+
+        /// <summary>
+        ///     The RavenDB image name and tag.
+        /// </summary>
+        public string RavenDB { get; set; }
     }
 }

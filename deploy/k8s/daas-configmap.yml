@@ -15,5 +15,6 @@ data:
   
   storageclass_sql: 'daas-data'
   image_name_sql: 'microsoft/msdaas-server-linux:2017-CU1'
+  image_name_ravendb: 'ravendb/ravendb:ubuntu-latest'
 
   cluster_fqdn: 'sql.kr-cluster.tintoy.io'

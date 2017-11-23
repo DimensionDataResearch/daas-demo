@@ -187,7 +187,7 @@ namespace DaaSDemo.Api.Controllers
                 AdminPassword = newDatabaseServer.AdminPassword,
                 Storage =
                 {
-                    SizeMB = newDatabaseServer.StorageMB
+                    SizeMB = newDatabaseServer.SizeMB
                 },
                 TenantId = tenant.Id,
                 Action = ProvisioningAction.Provision,

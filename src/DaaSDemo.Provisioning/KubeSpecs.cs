@@ -103,7 +103,7 @@ namespace DaaSDemo.Provisioning
 
             string baseName = Names.BaseName(server);
 
-            return new DeploymentSpecV1Beta1
+            var deploymentSpec = new DeploymentSpecV1Beta1
             {
                 Replicas = 1,
                 MinReadySeconds = 30,
@@ -125,7 +125,8 @@ namespace DaaSDemo.Provisioning
                         Labels = new Dictionary<string, string>
                         {
                             ["k8s-app"] = baseName,
-                            ["cloud.dimensiondata.daas.server-id"] = server.Id // TODO: Use tenant Id instead
+                            ["cloud.dimensiondata.daas.server-id"] = server.Id, // TODO: Use tenant Id instead
+                            ["cloud.dimensiondata.daas.server-kind"] = server.Kind.ToString()
                         }
                     },
                     Spec = new PodSpecV1
@@ -138,97 +139,12 @@ namespace DaaSDemo.Provisioning
                                 Name = "daas-registry"
                             }
                         },
-                        Containers = new List<ContainerV1>
-                        {
-                            // SQL Server
-                            new ContainerV1
-                            {
-                                Name = "sql-server",
-                                Image = ProvisioningOptions.Images.SQL,
-                                Resources = new ResourceRequirementsV1
-                                {
-                                    Requests = new Dictionary<string, string>
-                                    {
-                                        ["memory"] = "4Gi" // SQL Server for Linux requires at least 4 GB of RAM
-                                    },
-                                    Limits = new Dictionary<string, string>
-                                    {
-                                        ["memory"] = "6Gi" // If you're using more than 6 GB of RAM, then you should probably host stand-alone
-                                    }
-                                },
-                                Env = new List<EnvVarV1>
-                                {
-                                    new EnvVarV1
-                                    {
-                                        Name = "ACCEPT_EULA",
-                                        Value = "Y"
-                                    },
-                                    new EnvVarV1
-                                    {
-                                        Name = "SA_PASSWORD",
-                                        Value = server.AdminPassword // TODO: Use Secret resource instead.
-                                    }
-                                },
-                                Ports = new List<ContainerPortV1>
-                                {
-                                    new ContainerPortV1
-                                    {
-                                        ContainerPort = 1433
-                                    }
-                                },
-                                VolumeMounts = new List<VolumeMountV1>
-                                {
-                                    new VolumeMountV1
-                                    {
-                                        Name = "sql-data",
-                                        SubPath = baseName,
-                                        MountPath = "/var/opt/mssql"
-                                    }
-                                }
-                            },
-                            
-                            // Prometheus exporter
-                            new ContainerV1
-                            {
-                                Name = "prometheus-exporter",
-                                Image = ProvisioningOptions.Images.SQLExporter,
-                                Env = new List<EnvVarV1>
-                                {
-                                    new EnvVarV1
-                                    {
-                                        Name = "SERVER",
-                                        Value = "127.0.0.1",
-                                    },
-                                    new EnvVarV1
-                                    {
-                                        Name = "USERNAME",
-                                        Value = "sa" // TODO: Use Secret resource instead.
-                                    },
-                                    new EnvVarV1
-                                    {
-                                        Name = "PASSWORD",
-                                        Value = server.AdminPassword // TODO: Use Secret resource instead.
-                                    },
-                                    new EnvVarV1
-                                    {
-                                        Name = "DEBUG",
-                                        Value = "app"
-                                    }
-                                },
-                                Ports = new List<ContainerPortV1>
-                                {
-                                    new ContainerPortV1
-                                    {
-                                        ContainerPort = 4000
-                                    }
-                                }
-                            }
-                        },
+                        Containers = new List<ContainerV1>(),
                         Volumes = new List<VolumeV1>
                         {
                             new VolumeV1
                             {
-                                Name = "sql-data",
+                                Name = "data",
                                 PersistentVolumeClaim = new PersistentVolumeClaimVolumeSourceV1
                                 {
                                     ClaimName = Names.DataVolumeClaim(server)
@@ -238,6 +154,156 @@ namespace DaaSDemo.Provisioning
                     }
                 }
             };
+
+            PodSpecV1 podSpec = deploymentSpec.Template.Spec;
+            switch (server.Kind)
+            {
+                case DatabaseServerKind.SqlServer:
+                {
+                    // SQL Server
+                    podSpec.Containers.Add(new ContainerV1
+                    {
+                        Name = "sql-server",
+                        Image = ProvisioningOptions.Images.SQL,
+                        Resources = new ResourceRequirementsV1
+                        {
+                            Requests = new Dictionary<string, string>
+                            {
+                                ["memory"] = "4Gi" // SQL Server for Linux requires at least 4 GB of RAM
+                            },
+                            Limits = new Dictionary<string, string>
+                            {
+                                ["memory"] = "6Gi" // If you're using more than 6 GB of RAM, then you should probably host stand-alone
+                            }
+                        },
+                        Env = new List<EnvVarV1>
+                        {
+                            new EnvVarV1
+                            {
+                                Name = "ACCEPT_EULA",
+                                Value = "Y"
+                            },
+                            new EnvVarV1
+                            {
+                                Name = "SA_PASSWORD",
+                                Value = server.AdminPassword // TODO: Use Secret resource instead.
+                            }
+                        },
+                        Ports = new List<ContainerPortV1>
+                        {
+                            new ContainerPortV1
+                            {
+                                ContainerPort = 1433
+                            }
+                        },
+                        VolumeMounts = new List<VolumeMountV1>
+                        {
+                            new VolumeMountV1
+                            {
+                                Name = "data",
+                                SubPath = baseName,
+                                MountPath = "/var/opt/mssql"
+                            }
+                        }
+                    });
+                        
+                    // Prometheus exporter
+                    podSpec.Containers.Add(new ContainerV1
+                    {
+                        Name = "prometheus-exporter",
+                        Image = ProvisioningOptions.Images.SQLExporter,
+                        Env = new List<EnvVarV1>
+                        {
+                            new EnvVarV1
+                            {
+                                Name = "SERVER",
+                                Value = "127.0.0.1",
+                            },
+                            new EnvVarV1
+                            {
+                                Name = "USERNAME",
+                                Value = "sa" // TODO: Use Secret resource instead.
+                            },
+                            new EnvVarV1
+                            {
+                                Name = "PASSWORD",
+                                Value = server.AdminPassword // TODO: Use Secret resource instead.
+                            },
+                            new EnvVarV1
+                            {
+                                Name = "DEBUG",
+                                Value = "app"
+                            }
+                        },
+                        Ports = new List<ContainerPortV1>
+                        {
+                            new ContainerPortV1
+                            {
+                                ContainerPort = 4000
+                            }
+                        }
+                    });
+
+                    break;
+                }
+                case DatabaseServerKind.RavenDB:
+                {
+                    podSpec.Containers.Add(new ContainerV1
+                    {
+                        Name = "ravendb",
+                        Image = ProvisioningOptions.Images.RavenDB,
+                        Resources = new ResourceRequirementsV1
+                        {
+                            Requests = new Dictionary<string, string>
+                            {
+                                ["memory"] = "1Gi"
+                            },
+                            Limits = new Dictionary<string, string>
+                            {
+                                ["memory"] = "3Gi"
+                            }
+                        },
+                        Env = new List<EnvVarV1>
+                        {
+                            new EnvVarV1
+                            {
+                                Name = "UNSECURED_ACCESS_ALLOWED",
+                                Value = "PublicNetwork"
+                            }
+                        },
+                        Ports = new List<ContainerPortV1>
+                        {
+                            new ContainerPortV1
+                            {
+                                Name = "http",
+                                ContainerPort = 8080
+                            },
+                            new ContainerPortV1
+                            {
+                                Name = "tcp",
+                                ContainerPort = 38888
+                            }
+                        },
+                        VolumeMounts = new List<VolumeMountV1>
+                        {
+                            new VolumeMountV1
+                            {
+                                Name = "data",
+                                SubPath = baseName,
+                                MountPath = "/databases"
+                            }
+                        }
+                    });
+
+                    break;
+                }
+                default:
+                {
+                    throw new NotSupportedException($"Unsupported server kind ({server.Kind}).");
+                }
+            }
+
+            return deploymentSpec;
         }
 
         /// <summary>
@@ -326,7 +392,7 @@ namespace DaaSDemo.Provisioning
                                 {
                                     new VolumeMountV1
                                     {
-                                        Name = "sql-data",
+                                        Name = "data",
                                         SubPath = baseName,
                                         MountPath = "/var/opt/mssql"
                                     }
@@ -374,7 +440,7 @@ namespace DaaSDemo.Provisioning
                         {
                             new VolumeV1
                             {
-                                Name = "sql-data",
+                                Name = "data",
                                 PersistentVolumeClaim = new PersistentVolumeClaimVolumeSourceV1
                                 {
                                     ClaimName = Names.DataVolumeClaim(server)
@@ -402,28 +468,58 @@ namespace DaaSDemo.Provisioning
 
             string baseName = Names.BaseName(server);
 
-            return new ServiceSpecV1
+            var spec = new ServiceSpecV1
             {
-                Ports = new List<ServicePortV1>
-                {
-                    new ServicePortV1
-                    {
-                        Name = "sql-server",
-                        Port = 1433,
-                        Protocol = "TCP"
-                    },
-                    new ServicePortV1
-                    {
-                        Name = "prometheus-exporter",
-                        Port = 4000,
-                        Protocol = "TCP"
-                    }
-                },
+                Ports = new List<ServicePortV1>(),
                 Selector = new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName
                 }
             };
+
+            switch (server.Kind)
+            {
+                case DatabaseServerKind.SqlServer:
+                {
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "sql-server",
+                        Port = 1433,
+                        Protocol = "TCP"
+                    });
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "prometheus-exporter",
+                        Port = 4000,
+                        Protocol = "TCP"
+                    });
+
+                    break;
+                }
+                case DatabaseServerKind.RavenDB:
+                {
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "http",
+                        Port = 8080,
+                        Protocol = "TCP"
+                    });
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "tcp",
+                        Port = 38888,
+                        Protocol = "TCP"
+                    });
+
+                    break;
+                }
+                default:
+                {
+                    throw new NotSupportedException($"Unsupported server type ({server.Kind}).");
+                }
+            }
+
+            return spec;
         }
 
         /// <summary>
@@ -442,23 +538,53 @@ namespace DaaSDemo.Provisioning
 
             string baseName = Names.BaseName(server);
 
-            return new ServiceSpecV1
+            var spec = new ServiceSpecV1
             {
                 Type = "NodePort",
-                Ports = new List<ServicePortV1>
-                {
-                    new ServicePortV1
-                    {
-                        Name = "sql-server",
-                        Port = 1433,
-                        Protocol = "TCP"
-                    }
-                },
+                Ports = new List<ServicePortV1>(),
                 Selector = new Dictionary<string, string>
                 {
                     ["k8s-app"] = baseName
                 }
             };
+
+            switch (server.Kind)
+            {
+                case DatabaseServerKind.SqlServer:
+                {
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "sql-server",
+                        Port = 1433,
+                        Protocol = "TCP"
+                    });
+
+                    break;
+                }
+                case DatabaseServerKind.RavenDB:
+                {
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "http",
+                        Port = 8080,
+                        Protocol = "TCP"
+                    });
+                    spec.Ports.Add(new ServicePortV1
+                    {
+                        Name = "tcp",
+                        Port = 38888,
+                        Protocol = "TCP"
+                    });
+
+                    break;
+                }
+                default:
+                {
+                    throw new NotSupportedException($"Unsupported server type ({server.Kind}).");
+                }
+            }
+
+            return spec;
         }
 
         /// <summary>

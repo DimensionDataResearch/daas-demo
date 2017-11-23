@@ -193,6 +193,10 @@ namespace DaaSDemo.Api.Controllers
                 Name = newDatabase.Name,
                 DatabaseUser = newDatabase.DatabaseUser,
                 DatabasePassword = newDatabase.DatabasePassword,
+                Storage =
+                {
+                    SizeMB = newDatabase.SizeMB
+                },
                 ServerId = targetServer.Id,
                 TenantId = ownerTenant.Id,
                 Action = ProvisioningAction.Provision,

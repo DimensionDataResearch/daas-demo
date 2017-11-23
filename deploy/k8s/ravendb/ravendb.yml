@@ -35,7 +35,7 @@ spec:
             mountPath: /databases
 
         ports:
-          - name: https
+          - name: http
             containerPort: 8080
           - name: tcp
             containerPort: 38888

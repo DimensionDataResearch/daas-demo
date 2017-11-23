@@ -465,6 +465,13 @@ namespace DaaSDemo.Provisioning.Provisioners
         {
             RequireCurrentState();
 
+            if (State.Kind != DatabaseServerKind.SqlServer)
+            {
+                Log.LogInformation("Skipping monitoring configuration for server {ServerId} (not SQL Server).", State.Id);
+
+                return;
+            }
+
             PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
             if (existingServiceMonitor == null)
             {
@@ -498,6 +505,13 @@ namespace DaaSDemo.Provisioning.Provisioners
         public async Task EnsureServiceMonitorAbsent()
         {
             RequireCurrentState();
+
+            if (State.Kind != DatabaseServerKind.SqlServer)
+            {
+                Log.LogInformation("Skipping monitoring configuration for server {ServerId} (not SQL Server).", State.Id);
+
+                return;
+            }
 
             PrometheusServiceMonitorV1 existingServiceMonitor = await FindServiceMonitor();
             if (existingServiceMonitor != null)
@@ -612,6 +626,13 @@ namespace DaaSDemo.Provisioning.Provisioners
         public async Task InitialiseServerConfiguration()
         {
             RequireCurrentState();
+
+            if (State.Kind != DatabaseServerKind.SqlServer)
+            {
+                Log.LogInformation("Skipping initialisation of configuration for server {ServerId} (not SQL Server).", State.Id);
+
+                return;
+            }
 
             Log.LogInformation("Initialising configuration for server {ServerId}...", State.Id);
             

@@ -44,6 +44,6 @@ namespace DaaSDemo.Models.Api
         /// </summary>
         [Required]
         [Range(minimum: 10, maximum: 4000)]
-        public int StorageMB { get; set; }
+        public int SizeMB { get; set; }
     }
 }
