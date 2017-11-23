@@ -1,10 +1,8 @@
 <template>
     <require from="../dialogs/confirm"></require>
+    <require from="../menus/actions/server"></require>
     <require from="../progress/server-provisioning-phase"></require>
     <require from="../status/server-provisioning-status"></require>
-    
-    <require from="./elements/detail/server-connectivity"></require>
-    <require from="./elements/detail/server-actions"></require>
 
     <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="loading">
@@ -14,32 +12,46 @@
         <div if.bind="!hasError">
             <h1 class="ui header">Tenant: ${ tenant.name }</h1>
 
-            <h3 class="ui dividing header">Server</h3>
+            <h3 class="ui dividing header">Servers</h3>
 
-            <div if.bind="hasServer">
-                <strong>Name</strong>: ${ server.name }
-                <br/>
-                <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
-                <br/>
-                <div if.bind="isServerActionInProgress">
-                    <strong>Requested Action</strong>: ${ server.action }
-                    <br/>
-                    <div if.bind="serverPhaseDescription">
-                        <strong>Phase</strong>: ${ serverPhaseDescription }
-                        <div class="ui grid">
-                            <div class="four wide column">
-                                <server-provisioning-phase-progress server.bind="server"></server-provisioning-phase-progress>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <br/>
-
-                <server-connectivity server.bind="server"></server-connectivity>
-
-                <div style="margin-top: 20px;">
-                    <server-actions tenant.bind="tenant" server.bind="server" destroy-server-clicked.call="destroyServer()"></server-actions>
-                </div>
+            <div if.bind="hasServer && !addingServer">
+                <button class="ui icon button" click.delegate="showCreateServerForm()">
+                    <i class="add circle icon"></i> Add Server
+                </button>
+                <button class="ui right floated circular icon button" click.delegate="load(true)">
+                    <i class="refresh icon"></i>
+                </button>
+    
+                <table class="ui striped celled table">
+                    <thead>
+                        <tr>
+                            <th class="center aligned"></th>
+                            <th class="center aligned">Name</th>
+                            <th class="center aligned">Tenant</th>
+                            <th class="center aligned">Public FQDN</th>
+                            <th class="center aligned">Public Port</th>
+                            <th class="center aligned">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr repeat.for="server of servers">
+                            <td class="collapsing center aligned">
+                                <server-actions-menu server.bind="server" destroy-clicked.call="destroyServer(server)" repair-clicked.call="reconfigureServer(server)"></server-actions-menu>
+                            </td>
+                            <td class="center aligned">
+                                <a route-href="route: server; params.bind: { id: server.id }">${ server.name }</a>
+                            </td>
+                            <td class="center aligned">
+                                <a route-href="route: tenant; params.bind: { id: server.tenantId }">${ server.tenantName }</a>
+                            </td>
+                            <td class="center aligned">${ server.publicFQDN }</td>
+                            <td class="center aligned">${ server.publicPort }</td>
+                            <td class="collapsing center aligned">
+                                <server-provisioning-status server.bind="server"></server-provisioning-status>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <div if.bind="addingServer">

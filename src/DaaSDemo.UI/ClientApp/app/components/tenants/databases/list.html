@@ -12,7 +12,7 @@
 
         <div if.bind="!hasError">
             <div if.bind="addingDatabase">
-                <new-database-form new-database.bind="newDatabase"
+                <new-database-form new-database.bind="newDatabase" servers.bind="servers"
                     create-clicked.call="createDatabase()"
                     cancel-clicked.call="hideCreateDatabaseForm()"
                 />

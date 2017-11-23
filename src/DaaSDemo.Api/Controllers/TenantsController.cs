@@ -115,13 +115,13 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
-        ///     Get a tenant's database server.
+        ///     Get all servers owned by a tenant.
         /// </summary>
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        [HttpGet("{tenantId}/server")]
-        public IActionResult GetServer(string tenantId)
+        [HttpGet("{tenantId}/servers")]
+        public IActionResult GetServers(string tenantId)
         {
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
@@ -130,24 +130,14 @@ namespace DaaSDemo.Api.Controllers
                 {
                     Id = tenantId,
                     EntityType = "Tenant",
-                    Message = $"No tenant found with Id {tenantId}"
-                });
-            }
-
-            DatabaseServer server = DocumentSession.Query<DatabaseServer>()
-                .FirstOrDefault(databaseServer => databaseServer.TenantId == tenantId);
-            if (server == null)
-            {
-                return NotFound(new
-                {
-                    TenantId = tenantId,
-                    EntityType = "DatabaseServer",
-                    Message = $"No database server found for tenant with Id {tenantId}"
+                    Message = $"Tenant not found with Id '{tenantId}."
                 });
             }
 
             return Json(
-                new DatabaseServerDetail(server, tenant)
+                DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
+                    .Where(server => server.TenantId == tenantId)
+                    .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }
 

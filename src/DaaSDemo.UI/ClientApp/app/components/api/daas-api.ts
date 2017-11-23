@@ -150,32 +150,26 @@ export class DaaSAPI
     }
 
     /**
-     * Get information about a tenant's SQL server instance.
+     * Get information about a tenant's database servers.
      * 
-     * @param tenantId The Id of the tenant that owns the server.
-     * @returns The server, or null if the tenant does not have a server.
+     * @param tenantId The tenant Id.
+     * 
+     * @returns The servers.
      */
-    public async getTenantServer(tenantId: string): Promise<Server | null> {
+    public async getTenantServers(tenantId: string): Promise<Server[]> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/server`);
+        const response = await this.http.fetch(`tenants/${tenantId}/servers`);
         const body = await response.json();
 
         if (response.ok) {
-            return body as Server;
-        }
-
-        if (response.status === 404)
-        {
-            const notFound = body as NotFoundResponse;
-            if (notFound.entityType == 'DatabaseServer')
-                return null;
+            return body as Server[];
         }
 
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to retrieve details for server owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to retrieve details for servers owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -292,7 +286,7 @@ export class DaaSAPI
         const errorResponse = body as ApiResponse;
 
         throw new Error(
-            `Failed to reconfigure server for tenant with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
+            `Failed to reconfigure server ${serverId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 

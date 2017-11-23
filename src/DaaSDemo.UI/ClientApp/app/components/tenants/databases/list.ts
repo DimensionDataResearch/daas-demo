@@ -3,8 +3,9 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
+import { DaaSAPI, Server, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
 import { ConfirmDialog } from '../../dialogs/confirm';
+import { NewDatabase } from './forms/new';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
@@ -15,6 +16,7 @@ export class TenantDatabaseList {
 
     @bindable public isLoading: boolean = false;
     @bindable public tenant: Tenant | null = null;
+    @bindable public servers: Server[] = [];
     @bindable public databases: Database[] | null = null;
     @bindable public newDatabase: NewDatabase | null = null;
     @bindable public errorMessage: string | null = null;
@@ -99,18 +101,14 @@ export class TenantDatabaseList {
         if (this.validationController.errors.length)
             return;
 
-        if (this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
+        if (this.newDatabase.serverId == null || this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
             return;
 
         this.clearError();
 
         try {
-            const server = await this.api.getTenantServer(this.tenantId);
-            if (!server)
-                throw new Error(`Tenant ${this.tenantId} does not have any database servers.`);
-
             await this.api.createDatabase(
-                server.id,
+                this.newDatabase.serverId,
                 this.newDatabase.name,
                 this.newDatabase.user,
                 this.newDatabase.password
@@ -193,6 +191,7 @@ export class TenantDatabaseList {
         try
         {
             const tenantRequest = this.api.getTenant(this.tenantId);
+            const serversRequest = this.api.getTenantServers(this.tenantId);
             const databasesRequest = this.api.getTenantDatabases(this.tenantId);
     
             this.tenant = await tenantRequest;
@@ -202,6 +201,7 @@ export class TenantDatabaseList {
             else
                 this.routeConfig.title = 'Tenant not found';
     
+            this.servers = await serversRequest;
             this.databases = await databasesRequest;
 
             if (this.databases && this.databases.find(database => database.action != ProvisioningAction.None)) {
@@ -245,38 +245,6 @@ export class TenantDatabaseList {
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 }
-
-/**
- * Represents the form values for creating a database.
- */
-export class NewDatabase {
-    /**
-     * The database name.
-     */
-    name: string | null = null;
-
-    /**
-     * The database user's name.
-     */
-    user: string | null = null;
-
-    /**
-     * The database user's password.
-     */
-    password: string | null = null;
-}
-
-ValidationRules
-    .ensure('name').displayName('Database name')
-        .required()
-        .minLength(5)
-    .ensure('user').displayName('User name')
-        .required()
-        .minLength(4)
-    .ensure('password').displayName('Password')
-        .required()
-        .minLength(6)
-    .on(NewDatabase);
 
 /**
  * Route parameters for the Tenant databases view.

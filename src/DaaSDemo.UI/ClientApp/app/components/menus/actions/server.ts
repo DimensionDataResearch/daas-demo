@@ -19,7 +19,13 @@ export class ServerActionsMenu {
 
     public attached(): void {
         if (this.rootElement) {
-            $(this.rootElement).dropdown();
+            $(this.rootElement).dropdown('setting', 'keepOnScreen', true);
+        }
+    }
+
+    public detached(): void {
+        if (this.rootElement) {
+            $(this.rootElement).dropdown('destroy');
         }
     }
 

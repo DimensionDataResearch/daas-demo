@@ -3,10 +3,11 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Database, Tenant } from '../../../api/daas-api';
+import { DaaSAPI, Database, Tenant, Server } from '../../../api/daas-api';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class NewDatabaseForm {
+    @bindable public servers: Server[] = [];
     @bindable public newDatabase: NewDatabase | null = null;
 
     @bindable public createClicked: (newDatabase: NewDatabase) => void;
@@ -27,12 +28,15 @@ export class NewDatabaseForm {
  * Represents the form values for creating a database.
  */
 export class NewDatabase {
+    serverId: string | null = null;
     name: string | null = null;
     user: string | null = null;
     password: string | null = null;
 }
 
 ValidationRules
+    .ensure('serverId').displayName('Server')
+        .required()
     .ensure('name').displayName('Database name')
         .required()
         .minLength(5)

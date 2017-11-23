@@ -213,15 +213,14 @@ namespace DaaSDemo.Api.Controllers
         [HttpPost("{serverId}/reconfigure")]
         public IActionResult ReconfigureServer(string serverId)
         {
-            DatabaseServer targetServer = DocumentSession.GetDatabaseServerByTenantId(serverId);
+            DatabaseServer targetServer = DocumentSession.GetDatabaseServerById(serverId);
             if (targetServer == null)
             {
                 return NotFound(new
                 {
-                    Id = (string)null,
-                    TenantId = serverId,
+                    Id = serverId,
                     EntityType = "DatabaseServer",
-                    Message = $"No database server found for tenant {serverId}."
+                    Message = $"No database server found with Id '{serverId}'."
                 });
             }
 

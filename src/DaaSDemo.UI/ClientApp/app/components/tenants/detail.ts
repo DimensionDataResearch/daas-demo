@@ -19,7 +19,7 @@ export class TenantDetail {
     
     @bindable public loading: boolean = false;
     @bindable public tenant: Tenant | null = null;
-    @bindable public server: Server | null = null;
+    @bindable public servers: Server[] = [];
     @bindable public errorMessage: string | null = null;
     @bindable public newServer: NewServer | null = null;
 
@@ -56,54 +56,27 @@ export class TenantDetail {
     }
 
     /**
-     * Does the tenant currently have a server?
+     * Does the tenant currently have at least one server?
      */
-    @computedFrom('server')
+    @computedFrom('servers')
     public get hasServer(): boolean {
-        return this.server !== null;
+        return this.servers.length !== 0;
     }
 
     /**
-     * Is the tenant's server ready for use?
+     * Are any actions in progress for the tenant's servers?
      */
-    @computedFrom('server')
-    public get isServerReady(): boolean {
-        return this.server !== null && this.server.status === ProvisioningStatus.Ready;
-    }
+    @computedFrom('servers')
+    public get areServerActionsInProgress(): boolean {
+        const serverWithActionInProgress = this.servers.find(server => server.action !== ProvisioningAction.None);
+        if (serverWithActionInProgress) {
+            console.log('areServerActionsInProgress: true', serverWithActionInProgress);
 
-    /**
-     * Is a provisioning action currently in progress for the tenant's server?
-     */
-    @computedFrom('server')
-    public get isServerActionInProgress(): boolean {
-        return this.server !== null && this.server.action !== ProvisioningAction.None;
-    }
+            return true;
+        } else {
+            console.log('areServerActionsInProgress: false');
 
-    /**
-     * The current provisioning phase (if any) for the tenant's server.
-     */
-    @computedFrom('server')
-    public get serverPhaseDescription(): string | null {
-        if (!this.server || !this.isServerActionInProgress)
-            return null;
-
-        switch (this.server.phase) {
-            case ServerProvisioningPhase.None:
-                return 'Waiting';
-                case ServerProvisioningPhase.Storage:
-                return 'Storage';
-            case ServerProvisioningPhase.Instance:
-                return 'Server Instance';
-            case ServerProvisioningPhase.Network:
-                return 'Internal Network';
-            case ServerProvisioningPhase.Monitoring:
-                return 'Monitoring';
-            case ServerProvisioningPhase.Configuration:
-                return 'Server Configuration';
-            case ServerProvisioningPhase.Ingress:
-                return 'External Network';
-            default:
-                return this.server.phase;
+            return false;
         }
     }
 
@@ -145,38 +118,55 @@ export class TenantDetail {
         if (this.newServer.name === null || this.newServer.adminPassword === null)
             return;
 
-        this.server = null;
-
         await this.api.deploySqlServer(
             this.tenantId,
             this.newServer.name,
             this.newServer.adminPassword
         );
 
-        await this.load(true);
-
         this.hideCreateServerForm();
+
+        await this.load(true);
     }
 
     /**
-     * Destroy the tenant's server.
+     * Reconfigure / repair a server.
      */
-    public async destroyServer(): Promise<void> {
+    public async reconfigureServer(server: Server): Promise<void> {
         this.clearError();
         
         try {
-            if (!this.tenant || !this.server || !this.confirmDialog)
-                return;
-
-            const confirm = await this.confirmDialog.show('Destroy Server',
-                `Delete server "${this.server.name}"?`
+            const confirm = await this.confirmDialog.show('Repair Server',
+                `Repair server "${server.name}"?`
             );
             if (!confirm)
                 return;
 
-            await this.api.destroyServer(
-                this.server.id
+            await this.api.reconfigureServer(server.id);
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        await this.load(true);
+    }
+
+    /**
+     * Destroy a server.
+     */
+    public async destroyServer(server: Server): Promise<void> {
+        this.clearError();
+        
+        try {
+            const confirm = await this.confirmDialog.show('Destroy Server',
+                `Delete server "${server.name}"?`
             );
+            if (!confirm)
+                return;
+
+            await this.api.destroyServer(server.id);
         }
         catch (error) {
             this.showError(error as Error);
@@ -241,10 +231,10 @@ export class TenantDetail {
 
         try {
             const tenantRequest = this.api.getTenant(this.tenantId);
-            const serverRequest = this.api.getTenantServer(this.tenantId);
+            const serversRequest = this.api.getTenantServers(this.tenantId);
 
             this.tenant = await tenantRequest;
-            this.server = await serverRequest;
+            this.servers = await serversRequest;
 
             if (!this.tenant) {
                 this.routeConfig.title = 'Tenant not found';
@@ -253,8 +243,8 @@ export class TenantDetail {
                 this.routeConfig.title = this.tenant.name;
             }
 
-            if (this.server && this.server.action !== ProvisioningAction.None) {
-                this.pollHandle = window.setTimeout(() => this.load(true), 1000);
+            if (this.areServerActionsInProgress) {
+                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
             }
         } catch (error) {
             this.showError(error as Error);
