@@ -110,6 +110,28 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
+        ///     Get events for the specified database server.
+        /// </summary>
+        [HttpGet("{serverId}/events")]
+        public IActionResult GetEvents(string serverId)
+        {
+            DatabaseServer server = DocumentSession.Load<DatabaseServer>(serverId);
+            if (server == null)
+            {
+                return NotFound(new
+                {
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    Message = $"No server found with Id {serverId}."
+                });
+            }
+
+            return Ok(
+                server.Events.OrderBy(evt => evt.Timestamp)
+            );
+        }
+
+        /// <summary>
         ///     Provision a database server for a tenant.
         /// </summary>
         /// <param name="newDatabaseServer">
@@ -174,9 +196,12 @@ namespace DaaSDemo.Api.Controllers
                 },
                 TenantId = tenant.Id,
                 Action = ProvisioningAction.Provision,
-                Status = ProvisioningStatus.Pending
+                Status = ProvisioningStatus.Pending,
             };
             DocumentSession.Store(databaseServer);
+
+            databaseServer.AddProvisioningEvent($"Provisioning requested for '${databaseServer.Id}'.");
+
             DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -223,6 +248,8 @@ namespace DaaSDemo.Api.Controllers
 
             targetServer.Action = ProvisioningAction.Reconfigure;
             targetServer.Status = ProvisioningStatus.Pending;
+            targetServer.AddProvisioningEvent($"Reconfiguration requested for '${targetServer.Id}'.");
+
             DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
@@ -283,6 +310,7 @@ namespace DaaSDemo.Api.Controllers
 
             targetServer.Action = ProvisioningAction.Deprovision;
             targetServer.Status = ProvisioningStatus.Pending;
+            targetServer.AddProvisioningEvent($"De-provisioning requested for '${targetServer.Id}'.");
             DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new

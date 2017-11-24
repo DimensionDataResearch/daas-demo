@@ -222,6 +222,8 @@ namespace DaaSDemo.Provisioning.Actors
                     server.Phase
                 );
 
+                ProvisioningAction action = server.Action;
+
                 if (serverProvisioningNotification.Status.HasValue)
                 {
                     server.Status = serverProvisioningNotification.Status.Value;
@@ -255,6 +257,16 @@ namespace DaaSDemo.Provisioning.Actors
                     server.Phase
                 );
 
+                if (server.Action == ProvisioningAction.None)
+                {
+                    if (server.Status == ProvisioningStatus.Ready)
+                        server.AddProvisioningEvent($"Action completed successfully: {action}.");
+                    else if (server.Status == ProvisioningStatus.Error)
+                        server.AddProvisioningEvent($"Action failed: {action}.");
+                }
+                else
+                    server.AddProvisioningEvent();
+
                 await session.SaveChangesAsync();
             }
 
@@ -264,7 +276,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Update database provisioning status.
         /// </summary>
-        /// <param name="databaseIngressChanged">
+        /// <param name="databaseProvisioningNotification">
         ///     A <see cref="DatabaseStatusChanged"/> message describing the change.
         /// </param>
         /// <returns>
@@ -350,6 +362,7 @@ namespace DaaSDemo.Provisioning.Actors
 
                 server.PublicFQDN = serverIngressChanged.PublicFQDN;
                 server.PublicPort = serverIngressChanged.PublicPort;
+                server.AddIngressChangedEvent();
 
                 await session.SaveChangesAsync();
             }
