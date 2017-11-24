@@ -38,6 +38,11 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: image_name_sql
+          - name: DAAS_Provisioning__Images__RavenDB
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: image_name_ravendb
           - name: DAAS_Prometheus__ApiEndPoint
             valueFrom:
               configMapKeyRef:

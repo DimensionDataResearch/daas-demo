@@ -680,7 +680,7 @@ export enum DatabaseServerKind
     /**
      * RavenDB.
      */
-    RavenDB = 'SqlServer'
+    RavenDB = 'RavenDB'
 }
 
 /**
