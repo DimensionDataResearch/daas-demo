@@ -44,7 +44,7 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the SQL executor API.
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database proxy API.
         /// </summary>
         DatabaseProxyApiClient SqlClient { get; set; }
 

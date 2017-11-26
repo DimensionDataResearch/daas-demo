@@ -57,7 +57,7 @@ namespace DaaSDemo.Provisioning.Exceptions
         ///     The Id of the database where the error occurred.
         /// </param>
         /// <param name="sqlMessages">
-        ///     Messages (if any) generated during T-SQL execution.
+        ///     Messages (if any) generated during T-SQL proxy.
         /// </param>
         /// <param name="sqlErrors">
         ///     An <see cref="SqlError"/> list representing the error(s) that occurred.
@@ -93,7 +93,7 @@ namespace DaaSDemo.Provisioning.Exceptions
         ///     The Id of the database where the error occurred.
         /// </param>
         /// <param name="sqlMessages">
-        ///     Messages (if any) generated during T-SQL execution.
+        ///     Messages (if any) generated during T-SQL proxy.
         /// </param>
         /// <param name="sqlErrors">
         ///     An <see cref="SqlError"/> list representing the error(s) that occurred.
