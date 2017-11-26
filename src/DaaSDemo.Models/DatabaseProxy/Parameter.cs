@@ -4,7 +4,7 @@ using System;
 using System.Data;
 using System.Data.SqlClient;
 
-namespace DaaSDemo.Models.Sql
+namespace DaaSDemo.Models.DatabaseProxy
 {
     /// <summary>
     ///     A T-SQL parameter for a command or query.

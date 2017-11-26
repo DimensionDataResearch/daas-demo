@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 
-namespace DaaSDemo.Models.Sql
+namespace DaaSDemo.Models.DatabaseProxy
 {
     /// <summary>
     ///     The base class for T-SQL requests.

@@ -17,9 +17,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Models", "src\DaaS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Provisioning", "src\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj", "{BF04ED23-547A-47EB-80E8-6B117EB52A48}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.SqlExecutor", "src\DaaSDemo.SqlExecutor\DaaSDemo.SqlExecutor.csproj", "{0819EDBC-F0C5-4382-B1EF-59DD135A686B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.DatabaseProxy", "src\DaaSDemo.DatabaseProxy\DaaSDemo.DatabaseProxy.csproj", "{0819EDBC-F0C5-4382-B1EF-59DD135A686B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.SqlExecutor.Client", "src\DaaSDemo.SqlExecutor.Client\DaaSDemo.SqlExecutor.Client.csproj", "{05A938CF-AA23-48E1-A88B-6A06960669D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.DatabaseProxy.Client", "src\DaaSDemo.DatabaseProxy.Client\DaaSDemo.DatabaseProxy.Client.csproj", "{05A938CF-AA23-48E1-A88B-6A06960669D3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D0233EE6-8347-4D14-856E-34981CD8226F}"
 EndProject

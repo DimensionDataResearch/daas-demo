@@ -20,12 +20,7 @@ A quick-and-dirty PaaS implementation using SQL Server in Linux containers on Ku
 
 #### Images
 
-* `docker build -t sql-executor-image-name:sql-executor-image-tag -f .\Dockerfile.sql-executor .`
-* `docker push sql-executor-image-name:sql-executor-image-tag`
-* `docker build -t api-image-name:api-image-tag -f .\Dockerfile.api .`
-* `docker push api-image-name:api-image-tag`
-* `docker build -t provisioning-image-name:provisioning-image-tag -f .\Dockerfile.provisioning .`
-* `docker push provisioning-image-name:provisioning-image-tag`
+Run `.\Build-Images.ps1` or `./build-images.sh`.
 
 #### Kubernetes Resources
 

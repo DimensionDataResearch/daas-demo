@@ -153,13 +153,14 @@ export class DaaSAPI
      * Get information about a tenant's database servers.
      * 
      * @param tenantId The tenant Id.
+     * @param ensureUpToDate Ensure that the results are as up-to-date as possible?
      * 
      * @returns The servers.
      */
-    public async getTenantServers(tenantId: string): Promise<Server[]> {
+    public async getTenantServers(tenantId: string, ensureUpToDate: boolean = false): Promise<Server[]> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/servers`);
+        const response = await this.http.fetch(`tenants/${tenantId}/servers?ensureUpToDate=${ensureUpToDate}`);
         const body = await response.json();
 
         if (response.ok) {
@@ -177,12 +178,14 @@ export class DaaSAPI
      * Get information about a tenant's SQL server instance.
      * 
      * @param tenantId The Id of the tenant that owns the server.
+     * @param ensureUpToDate Ensure that the results are as up-to-date as possible?
+     * 
      * @returns The databases, or null if the tenant does not have a server.
      */
-    public async getTenantDatabases(tenantId: string): Promise<Database[] | null> {
+    public async getTenantDatabases(tenantId: string, ensureUpToDate: boolean = false): Promise<Database[] | null> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/databases`);
+        const response = await this.http.fetch(`tenants/${tenantId}/databases?ensureUpToDate=${ensureUpToDate}`);
         const body = await response.json();
 
         if (response.ok) {

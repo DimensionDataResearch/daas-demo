@@ -20,6 +20,7 @@ namespace DaaSDemo.Api.Controllers
     using Data.Indexes;
     using Models.Api;
     using Models.Data;
+    using Raven.Client.Documents.Linq;
 
     /// <summary>
     ///     Controller for the tenants API.
@@ -120,8 +121,11 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
+        /// <param name="ensureUpToDate">
+        ///     Ensure that the results are as up-to-date as possible?
+        /// </param>
         [HttpGet("{tenantId}/servers")]
-        public IActionResult GetServers(string tenantId)
+        public IActionResult GetServers(string tenantId, bool ensureUpToDate = false)
         {
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
@@ -134,11 +138,22 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
+            IRavenQueryable<DatabaseServer> query = DocumentSession.Query<DatabaseServer, DatabaseServerDetails>();
+            if (ensureUpToDate)
+            {
+                query = query.Customize(
+                    queryConfig => queryConfig.WaitForNonStaleResults(
+                        waitTimeout: TimeSpan.FromSeconds(5)
+                    )
+                );
+            }
+
             return Json(
-                DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
-                    .Where(server => server.TenantId == tenantId)
-                    .OrderBy(server => server.Name)
-                    .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
+                query.Where(
+                    server => server.TenantId == tenantId
+                )
+                .OrderBy(server => server.Name)
+                .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }
 
@@ -148,8 +163,11 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
+        /// <param name="ensureUpToDate">
+        ///     Ensure that the results are as up-to-date as possible?
+        /// </param>
         [HttpGet("{tenantId}/databases")]
-        public IActionResult GetDatabases(string tenantId)
+        public IActionResult GetDatabases(string tenantId, bool ensureUpToDate = false)
         {
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
@@ -162,10 +180,21 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
+            IRavenQueryable<DatabaseInstance> query = DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>();
+            if (ensureUpToDate)
+            {
+                query = query.Customize(
+                    queryConfig => queryConfig.WaitForNonStaleResults(
+                        waitTimeout: TimeSpan.FromSeconds(5)
+                    )
+                );
+            }
+
             return Json(
-                DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>()
-                    .Where(database => database.TenantId == tenantId)
-                    .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
+                query.Where(
+                    database => database.TenantId == tenantId
+                )
+                .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
             );
         }
     }

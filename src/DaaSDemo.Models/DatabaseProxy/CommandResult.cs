@@ -1,13 +1,12 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-namespace DaaSDemo.Models.Sql
+namespace DaaSDemo.Models.DatabaseProxy
 {
     /// <summary>
-    ///     Response body when executing a T-SQL query.
+    ///     Response body when executing a T-SQL command (i.e. a non-query).
     /// </summary>
-    public class QueryResult
+    public class CommandResult
     {
         /// <summary>
         ///     Was the T-SQL successfully executed?
@@ -15,7 +14,7 @@ namespace DaaSDemo.Models.Sql
         public bool Success => Errors.Count == 0;
 
         /// <summary>
-        ///     The query's result code (usually the number of rows affected).
+        ///     The command's result code (usually the number of rows affected).
         /// </summary>
         public int ResultCode { get; set; }
 
@@ -30,22 +29,5 @@ namespace DaaSDemo.Models.Sql
         /// </summary>
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
         public List<SqlError> Errors { get; } = new List<SqlError>();
-
-        /// <summary>
-        ///     The result set(s) returned by the query.
-        /// </summary>
-        public List<ResultSet> ResultSets { get; } = new List<ResultSet>();
-    }
-
-    public class ResultSet
-    {
-        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
-        public List<ResultRow> Rows { get; } = new List<ResultRow>();
-    }
-
-    public class ResultRow
-    {
-        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
-        public Dictionary<string, JValue> Columns { get; } = new Dictionary<string, JValue>();
     }
 }

@@ -11,7 +11,7 @@
     <ProjectReference Include="..\..\src\DaaSDemo.KubeClient\DaaSDemo.KubeClient.csproj" />
     <ProjectReference Include="..\..\src\DaaSDemo.Models\DaaSDemo.Models.csproj" />
     <ProjectReference Include="..\..\src\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj" />
-    <ProjectReference Include="..\..\src\DaaSDemo.SqlExecutor.Client\DaaSDemo.SqlExecutor.Client.csproj" />
+    <ProjectReference Include="..\..\src\DaaSDemo.DatabaseProxy.Client\DaaSDemo.DatabaseProxy.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

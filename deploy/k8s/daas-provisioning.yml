@@ -48,11 +48,11 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: endpoint_prometheus
-          - name: DAAS_SQL__ApiEndPoint
+          - name: DAAS_DatabaseProxy__ApiEndPoint
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: endpoint_api_sql_executor
+                key: endpoint_api_database_proxy
           - name: DAAS_Kubernetes__ClusterPublicFQDN
             valueFrom:
               configMapKeyRef:
@@ -66,8 +66,11 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DAAS_Kubernetes__SqlStorageClass
-            value: 'daas-data'
+          - name: DAAS_Kubernetes__DatabaseStorageClass
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: storageclass_data
           - name: DAAS_Database__ConnectionString
             valueFrom:
               configMapKeyRef:

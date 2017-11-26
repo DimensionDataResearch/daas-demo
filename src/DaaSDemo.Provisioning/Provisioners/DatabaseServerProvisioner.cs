@@ -13,8 +13,8 @@ namespace DaaSDemo.Provisioning.Provisioners
     using KubeClient;
     using KubeClient.Models;
     using Models.Data;
-    using Models.Sql;
-    using SqlExecutor.Client;
+    using Models.DatabaseProxy;
+    using DatabaseProxy.Client;
 
     /// <summary>
     ///     Provisioning facility for a <see cref="DatabaseServer"/>.
@@ -37,9 +37,9 @@ namespace DaaSDemo.Provisioning.Provisioners
         ///     A factory for Kubernetes resource models.
         /// </param>
         /// <param name="sqlClient">
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
-        public DatabaseServerProvisioner(ILogger<DatabaseServerProvisioner> logger, KubeApiClient kubeClient, SqlApiClient sqlClient, IOptions<KubernetesOptions> kubeOptions, KubeResources kubeResources)
+        public DatabaseServerProvisioner(ILogger<DatabaseServerProvisioner> logger, KubeApiClient kubeClient, DatabaseProxyApiClient sqlClient, IOptions<KubernetesOptions> kubeOptions, KubeResources kubeResources)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
@@ -79,9 +79,9 @@ namespace DaaSDemo.Provisioning.Provisioners
         KubeApiClient KubeClient { get; }
 
         /// <summary>
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </summary>
-        SqlApiClient SqlClient { get; }
+        DatabaseProxyApiClient SqlClient { get; }
 
         /// <summary>
         ///     Application-level Kubernetes settings.
@@ -638,7 +638,7 @@ namespace DaaSDemo.Provisioning.Provisioners
             
             CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: State.Id,
-                databaseId: SqlApiClient.MasterDatabaseId,
+                databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024),
                 executeAsAdminUser: true
             );
@@ -665,7 +665,7 @@ namespace DaaSDemo.Provisioning.Provisioners
 
                 throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {State.Id}).",
                     serverId: State.Id,
-                    databaseId: SqlApiClient.MasterDatabaseId,
+                    databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                     sqlMessages: commandResult.Messages,
                     sqlErrors: commandResult.Errors
                 );

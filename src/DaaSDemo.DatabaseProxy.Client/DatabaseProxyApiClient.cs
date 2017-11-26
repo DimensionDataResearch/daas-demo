@@ -7,17 +7,17 @@ using System.Net.Security;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DaaSDemo.SqlExecutor.Client
+namespace DaaSDemo.DatabaseProxy.Client
 {
-    using Models.Sql;
+    using Models.DatabaseProxy;
 
     /// <summary>
-    ///     Client for the SQL Executor API.
+    ///     Client for the Database Proxy API.
     /// </summary>
     /// <remarks>
     ///     TODO: Add authentication.
     /// </remarks>
-    public sealed class SqlApiClient
+    public sealed class DatabaseProxyApiClient
         : IDisposable
     {
         /// <summary>
@@ -26,12 +26,12 @@ namespace DaaSDemo.SqlExecutor.Client
         public static readonly string MasterDatabaseId = "master";
 
         /// <summary>
-        ///     Create a new <see cref="SqlApiClient"/>.
+        ///     Create a new <see cref="DatabaseProxyApiClient"/>.
         /// </summary>
         /// <param name="httpClient">
         ///     The underlying HTTP client.
         /// </param>
-        SqlApiClient(HttpClient httpClient)
+        DatabaseProxyApiClient(HttpClient httpClient)
         {
             if (httpClient == null)
                 throw new ArgumentNullException(nameof(httpClient));
@@ -40,7 +40,7 @@ namespace DaaSDemo.SqlExecutor.Client
         }
 
         /// <summary>
-        ///     Dispose of resources being used by the <see cref="SqlApiClient"/>.
+        ///     Dispose of resources being used by the <see cref="DatabaseProxyApiClient"/>.
         /// </summary>
         public void Dispose() => Http?.Dispose();
 
@@ -144,26 +144,26 @@ namespace DaaSDemo.SqlExecutor.Client
         }
 
         /// <summary>
-        ///     Create a new <see cref="SqlApiClient"/>.
+        ///     Create a new <see cref="DatabaseProxyApiClient"/>.
         /// </summary>
         /// <param name="endPointUri">
         ///     The base address for the Kubernetes API end-point.
         /// </param>
         /// <returns>
-        ///     The configured <see cref="SqlApiClient"/>.
+        ///     The configured <see cref="DatabaseProxyApiClient"/>.
         /// </returns>
-        public static SqlApiClient Create(Uri endPointUri)
+        public static DatabaseProxyApiClient Create(Uri endPointUri)
         {
             if (endPointUri == null)
                 throw new ArgumentNullException(nameof(endPointUri));
             
-            return new SqlApiClient(
+            return new DatabaseProxyApiClient(
                 new HttpClient { BaseAddress = endPointUri }
             );
         }
 
         /// <summary>
-        ///     Request definitions for the SQL Executor API.
+        ///     Request definitions for the Database Proxy API.
         /// </summary>
         public static class Requests
         {

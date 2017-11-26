@@ -77,7 +77,7 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Application-level Kubernetes settings.
         /// </param>
         /// <param name="sqlClient">
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL Executor API.
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
         public TenantServerManager(DatabaseServerProvisioner provisioner, IOptions<KubernetesOptions> kubeOptions)
         {

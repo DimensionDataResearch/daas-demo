@@ -17,6 +17,7 @@ export class TenantDetail {
     private routeConfig: RouteConfig;
     private tenantId: string;
     private pollHandle: number = 0;
+    private ensureUpToDate: boolean = false;
     
     @bindable public loading: boolean = false;
     @bindable public tenant: Tenant | null = null;
@@ -132,10 +133,12 @@ export class TenantDetail {
                     throw new Error(`Unsupported server kind (${this.newServer.kind}).`);
                 }
             }
+            
+            this.ensureUpToDate = true;
+            await this.load(false);
 
             this.hideCreateServerForm();
 
-            await this.load(false);
         } catch (error) {
             this.showError(error as Error);
         }
@@ -162,6 +165,7 @@ export class TenantDetail {
             return;
         }
 
+        this.ensureUpToDate = true;
         await this.load(true);
     }
 
@@ -186,6 +190,7 @@ export class TenantDetail {
             return;
         }
 
+        this.ensureUpToDate = true;
         await this.load(true);
     }
 
@@ -243,7 +248,7 @@ export class TenantDetail {
 
         try {
             const tenantRequest = this.api.getTenant(this.tenantId);
-            const serversRequest = this.api.getTenantServers(this.tenantId);
+            const serversRequest = this.api.getTenantServers(this.tenantId, this.ensureUpToDate);
 
             this.tenant = await tenantRequest;
             this.servers = sortByName(
@@ -266,6 +271,8 @@ export class TenantDetail {
         finally {
             if (!isReload)
                 this.loading = false;
+
+            this.ensureUpToDate = false;
         }
     }
 }

@@ -14,7 +14,7 @@ namespace DaaSDemo.Provisioning.Host
     using Data;
     using KubeClient;
     using Logging;
-    using SqlExecutor.Client;
+    using DatabaseProxy.Client;
 
     /// <summary>
     ///     Host for the Database-as-a-Service provisioning engine.
@@ -55,7 +55,7 @@ namespace DaaSDemo.Provisioning.Host
                     services.AddDaaSDataAccess();
 
                     services.AddKubeClient();
-                    services.AddSqlApiClient();
+                    services.AddDatabaseProxyApiClient();
                     services.AddProvisioning();
 
                     DatabaseOptions databaseOptions = DatabaseOptions.From(hostContext.Configuration);

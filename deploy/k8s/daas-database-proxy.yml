@@ -1,14 +1,14 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: daas-sql-executor
+  name: daas-database-proxy
   labels:
-    k8s-app: daas-sql-executor
+    k8s-app: daas-database-proxy
 spec:
   replicas: 3
   selector:
     matchLabels:
-      k8s-app: daas-sql-executor
+      k8s-app: daas-database-proxy
 
   strategy:
         type: RollingUpdate
@@ -16,14 +16,14 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: daas-sql-executor
+        k8s-app: daas-database-proxy
     spec:
       serviceAccountName: daas
       terminationGracePeriodSeconds: 60
 
       containers:
-      - name: daas-sql-executor
-        image: tintoy.azurecr.io/daas/sql-executor:1.0.0-dev
+      - name: daas-database-proxy
+        image: tintoy.azurecr.io/daas/database-proxy:1.0.0-dev
         imagePullPolicy: Always
         env:
           - name: PORT
@@ -62,17 +62,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: daas-sql-executor
+  name: daas-database-proxy
   labels:
-    k8s-app: daas-sql-executor
+    k8s-app: daas-database-proxy
 spec:
   ports:
   - port: 5000
     targetPort: 5000
     protocol: TCP
-    name: daas-sql-executor
+    name: daas-database-proxy
   selector:
-    k8s-app: daas-sql-executor
+    k8s-app: daas-database-proxy
 
 ---
 
@@ -80,9 +80,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: daas-sql-executor-external
+  name: daas-database-proxy-external
   labels:
-    k8s-app: daas-sql-executor
+    k8s-app: daas-database-proxy
 spec:
   type: NodePort
   ports:
@@ -90,6 +90,6 @@ spec:
     nodePort: 31250
     targetPort: 5000
     protocol: TCP
-    name: daas-sql-executor
+    name: daas-database-proxy
   selector:
-    k8s-app: daas-sql-executor
+    k8s-app: daas-database-proxy

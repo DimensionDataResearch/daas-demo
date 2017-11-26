@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 
 using SqlClient = System.Data.SqlClient;
 
-namespace DaaSDemo.SqlExecutor.Controllers
+namespace DaaSDemo.DatabaseProxy.Controllers
 {
     using Common.Options;
     using Data;
     using Models.Data;
     using KubeClient;
     using KubeClient.Models;
-    using Models.Sql;
+    using Models.DatabaseProxy;
 
     /// <summary>
     ///     Controller for the T-SQL execution API.

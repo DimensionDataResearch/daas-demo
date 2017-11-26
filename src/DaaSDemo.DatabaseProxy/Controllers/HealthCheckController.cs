@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace DaaSDemo.SqlExecutor.Controllers
+namespace DaaSDemo.DatabaseProxy.Controllers
 {
     /// <summary>
     ///     Controller for health checks.

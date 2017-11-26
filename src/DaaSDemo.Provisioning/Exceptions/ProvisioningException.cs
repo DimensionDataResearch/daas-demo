@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DaaSDemo.Provisioning.Exceptions
 {
     using System.Text;
-    using Models.Sql;
+    using Models.DatabaseProxy;
 
     /// <summary>
     ///     Exception raised when an error is encountered while provisioning.
@@ -39,7 +39,7 @@ namespace DaaSDemo.Provisioning.Exceptions
     }
 
     /// <summary>
-    ///     Exception raised when one or more errors are encountered while executing SQL via the SQL Executor API.
+    ///     Exception raised when one or more errors are encountered while executing SQL via the Database Proxy API.
     /// </summary>
     public class SqlExecutionException
         : ProvisioningException

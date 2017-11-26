@@ -3,18 +3,18 @@ using Microsoft.Extensions.Configuration;
 namespace DaaSDemo.Common.Options
 {
     /// <summary>
-    ///     SqlExecutorClient-related options for the DaaS API.
+    ///     DatabaseProxyClient-related options for the DaaS API.
     /// </summary>
-    public class SqlExecutorClientOptions
+    public class DatabaseProxyClientOptions
         : OptionsBase
     {
         /// <summary>
-        ///     The base address of the SQL Executor API end-point.
+        ///     The base address of the Database Proxy API end-point.
         /// </summary>
         public string ApiEndPoint { get; set; }
 
         /// <summary>
-        ///     Load <see cref="SqlExecutorClientOptions"/> from configuration.
+        ///     Load <see cref="DatabaseProxyClientOptions"/> from configuration.
         /// </summary>
         /// <param name="configuration">
         ///     The <see cref="IConfiguration"/>.
@@ -23,8 +23,8 @@ namespace DaaSDemo.Common.Options
         ///     An optional sub-key name to load from.
         /// </param>
         /// <returns>
-        ///     The <see cref="SqlExecutorClientOptions"/>.
+        ///     The <see cref="DatabaseProxyClientOptions"/>.
         /// </returns>
-        public static SqlExecutorClientOptions From(IConfiguration configuration, string key = "SQL") => Load<SqlExecutorClientOptions>(configuration, key);
+        public static DatabaseProxyClientOptions From(IConfiguration configuration, string key = "DatabaseProxy") => Load<DatabaseProxyClientOptions>(configuration, key);
     }
 }

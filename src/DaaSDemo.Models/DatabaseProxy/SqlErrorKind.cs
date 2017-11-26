@@ -1,4 +1,4 @@
-namespace DaaSDemo.Models.Sql
+namespace DaaSDemo.Models.DatabaseProxy
 {
     /// <summary>
     ///     Represents a kind of error encountered while executing T-SQL.

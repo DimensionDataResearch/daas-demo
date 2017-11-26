@@ -47,11 +47,11 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: cluster_fqdn
-          - name: DAAS_Kubernetes__SqlStorageClass
+          - name: DAAS_Kubernetes__DatabaseStorageClass
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: storageclass_sql
+                key: storageclass_data
           - name: DAAS_Database__ConnectionString
             valueFrom:
               configMapKeyRef:

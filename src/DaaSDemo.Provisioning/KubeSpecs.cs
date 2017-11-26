@@ -76,7 +76,7 @@ namespace DaaSDemo.Provisioning
                 {
                     "ReadWriteOnce"
                 },
-                StorageClassName = KubeOptions.SqlStorageClass,
+                StorageClassName = KubeOptions.DatabaseStorageClass,
                 Resources = new ResourceRequirementsV1
                 {
                     Requests = new Dictionary<string, string>

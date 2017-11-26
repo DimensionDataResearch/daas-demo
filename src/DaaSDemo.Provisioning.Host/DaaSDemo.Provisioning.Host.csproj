@@ -16,7 +16,7 @@
     <ProjectReference Include="..\DaaSDemo.Logging\DaaSDemo.Logging.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
     <ProjectReference Include="..\DaaSDemo.Provisioning\DaaSDemo.Provisioning.csproj" />
-    <ProjectReference Include="..\DaaSDemo.SqlExecutor.Client\DaaSDemo.SqlExecutor.Client.csproj" />
+    <ProjectReference Include="..\DaaSDemo.DatabaseProxy.Client\DaaSDemo.DatabaseProxy.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

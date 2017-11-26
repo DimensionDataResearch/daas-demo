@@ -3,18 +3,27 @@ Param(
     [string] $Repo,
 
     [Parameter()]
+    [string] $OnlyComponent = $null,
+
+    [Parameter()]
     [string] $Version = '1.0.0-dev',
 
     [Parameter()]
     [switch] $Deploy
 )
 
-$Components = @(
-    'api',
-    'sql-executor',
-    'provisioning',
-    'ui'
-)
+If ($OnlyComponent) {
+    $Components = @(
+        $OnlyComponent
+    )
+} Else {
+    $Components = @(
+        'api',
+        'database-proxy',
+        'provisioning',
+        'ui'
+    )
+}
 
 $docker = Get-Command docker
 

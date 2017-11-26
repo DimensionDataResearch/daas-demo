@@ -27,7 +27,7 @@ namespace DaaSDemo.Common.Options
         /// <summary>
         ///     The storage class used for PersistentVolumes that hold SQL Server data.
         /// </summary>
-        public string SqlStorageClass { get; set; }
+        public string DatabaseStorageClass { get; set; }
 
         /// <summary>
         ///     The base address of the Kubernetes API end-point.

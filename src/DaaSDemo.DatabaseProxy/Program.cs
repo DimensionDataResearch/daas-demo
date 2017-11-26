@@ -10,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.Logging;
 
-namespace DaaSDemo.SqlExecutor
+namespace DaaSDemo.DatabaseProxy
 {
     using Logging;
 

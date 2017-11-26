@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DaaSDemo.Provisioning
 {
-    using Models.Sql;
+    using Models.DatabaseProxy;
     using Newtonsoft.Json.Linq;
 
     /// <summary>

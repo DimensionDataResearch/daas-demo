@@ -36,7 +36,7 @@ namespace DaaSDemo.Provisioning
         ///     The application-level database options.
         /// </param>
         /// <param name="sqlClientOptions">
-        ///     The application-level SQL Executor API client options.
+        ///     The application-level Database Proxy API client options.
         /// </param>
         /// <param name="kubeOptions">
         ///     The application-level Kubernetes options.
@@ -47,7 +47,7 @@ namespace DaaSDemo.Provisioning
         /// <param name="provisioningOptions">
         ///     The application-level provisioning options.
         /// </param>
-        public ProvisioningEngine(IServiceScopeFactory scopeFactory, IOptions<DatabaseOptions> databaseOptions, IOptions<SqlExecutorClientOptions> sqlClientOptions, IOptions<KubernetesOptions> kubeOptions, IOptions<PrometheusOptions> prometheusOptions, IOptions<ProvisioningOptions> provisioningOptions)
+        public ProvisioningEngine(IServiceScopeFactory scopeFactory, IOptions<DatabaseOptions> databaseOptions, IOptions<DatabaseProxyClientOptions> sqlClientOptions, IOptions<KubernetesOptions> kubeOptions, IOptions<PrometheusOptions> prometheusOptions, IOptions<ProvisioningOptions> provisioningOptions)
         {
             if (scopeFactory == null)
                 throw new ArgumentNullException(nameof(scopeFactory));
@@ -81,9 +81,9 @@ namespace DaaSDemo.Provisioning
         DatabaseOptions DatabaseOptions { get; set; }
 
         /// <summary>
-        ///     The application-level SQL Executor API client options.
+        ///     The application-level Database Proxy API client options.
         /// </summary>
-        SqlExecutorClientOptions SqlClientOptions { get; set; }
+        DatabaseProxyClientOptions SqlClientOptions { get; set; }
 
         /// <summary>
         ///     The application-level Kubernetes options.

@@ -32,7 +32,7 @@ namespace DaaSDemo.Common.Options
             services.Configure<DatabaseOptions>(
                 configuration.GetSection("Database")
             );
-            services.Configure<SqlExecutorClientOptions>(
+            services.Configure<DatabaseProxyClientOptions>(
                 configuration.GetSection("SQL")
             );
             services.Configure<KubernetesOptions>(

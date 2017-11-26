@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-COMPONENTS='api provisioning sql-executor ui'
+COMPONENTS='api provisioning database-proxy ui'
 REPO=tintoy.azurecr.io/daas
 TAG=${1:-1.0.0-dev}
 

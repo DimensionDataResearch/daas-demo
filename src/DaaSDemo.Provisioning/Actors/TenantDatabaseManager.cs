@@ -16,9 +16,9 @@ namespace DaaSDemo.Provisioning.Actors
     using Data;
     using Messages;
     using Models.Data;
-    using Models.Sql;
+    using Models.DatabaseProxy;
     using Exceptions;
-    using SqlExecutor.Client;
+    using DatabaseProxy.Client;
 
     /// <summary>
     ///     Actor that manages a specific tenant database.
@@ -35,7 +35,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="dataAccess">
         ///     A reference to the <see cref="Actors.DataAccess"/> actor.
         /// </param>
-        public TenantDatabaseManager(SqlApiClient sqlClient)
+        public TenantDatabaseManager(DatabaseProxyApiClient sqlClient)
         {
             if (sqlClient == null)
                 throw new ArgumentNullException(nameof(sqlClient));
@@ -44,9 +44,9 @@ namespace DaaSDemo.Provisioning.Actors
         }
 
         /// <summary>
-        ///     The <see cref="SqlApiClient"/> used to communicate with the SQL executor API.
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the SQL executor API.
         /// </summary>
-        SqlApiClient SqlClient { get; set; }
+        DatabaseProxyApiClient SqlClient { get; set; }
 
         /// <summary>
         ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
@@ -245,7 +245,7 @@ namespace DaaSDemo.Provisioning.Actors
         {
             QueryResult result = await SqlClient.ExecuteQuery(
                 serverId: CurrentState.ServerId,
-                databaseId: SqlApiClient.MasterDatabaseId,
+                databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.CheckDatabaseExists(),
                 parameters: ManagementSql.Parameters.CheckDatabaseExists(
                     databaseName: CurrentState.Name
@@ -272,7 +272,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.ServerId,
-                databaseId: SqlApiClient.MasterDatabaseId,
+                databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.CreateDatabase(
                     CurrentState.Name,
                     CurrentState.DatabaseUser,
@@ -333,7 +333,7 @@ namespace DaaSDemo.Provisioning.Actors
 
             CommandResult commandResult = await SqlClient.ExecuteCommand(
                 serverId: CurrentState.ServerId,
-                databaseId: SqlApiClient.MasterDatabaseId,
+                databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),
                 executeAsAdminUser: true
             );
