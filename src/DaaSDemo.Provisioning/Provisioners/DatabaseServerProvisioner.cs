@@ -36,10 +36,10 @@ namespace DaaSDemo.Provisioning.Provisioners
         /// <param name="kubeResources">
         ///     A factory for Kubernetes resource models.
         /// </param>
-        /// <param name="sqlClient">
+        /// <param name="databaseProxyClient">
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
-        public DatabaseServerProvisioner(ILogger<DatabaseServerProvisioner> logger, KubeApiClient kubeClient, DatabaseProxyApiClient sqlClient, IOptions<KubernetesOptions> kubeOptions, KubeResources kubeResources)
+        public DatabaseServerProvisioner(ILogger<DatabaseServerProvisioner> logger, KubeApiClient kubeClient, DatabaseProxyApiClient databaseProxyClient, IOptions<KubernetesOptions> kubeOptions, KubeResources kubeResources)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
@@ -47,8 +47,8 @@ namespace DaaSDemo.Provisioning.Provisioners
             if (kubeClient == null)
                 throw new ArgumentNullException(nameof(kubeClient));
 
-            if (sqlClient == null)
-                throw new ArgumentNullException(nameof(sqlClient));
+            if (databaseProxyClient == null)
+                throw new ArgumentNullException(nameof(databaseProxyClient));
             
             if (kubeOptions == null)
                 throw new ArgumentNullException(nameof(kubeOptions));
@@ -58,7 +58,7 @@ namespace DaaSDemo.Provisioning.Provisioners
 
             Log = logger;
             KubeClient = kubeClient;
-            SqlClient = sqlClient;
+            DatabaseProxyClient = databaseProxyClient;
             KubeOptions = kubeOptions.Value;
             KubeResources = kubeResources;
         }
@@ -81,7 +81,7 @@ namespace DaaSDemo.Provisioning.Provisioners
         /// <summary>
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </summary>
-        DatabaseProxyApiClient SqlClient { get; }
+        DatabaseProxyApiClient DatabaseProxyClient { get; }
 
         /// <summary>
         ///     Application-level Kubernetes settings.
@@ -618,7 +618,7 @@ namespace DaaSDemo.Provisioning.Provisioners
         }
 
         /// <summary>
-        ///     Execute T-SQL to initialise the server configuration.
+        ///     Initialise the server's configuration.
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
@@ -627,48 +627,62 @@ namespace DaaSDemo.Provisioning.Provisioners
         {
             RequireCurrentState();
 
-            if (State.Kind != DatabaseServerKind.SqlServer)
-            {
-                Log.LogInformation("Skipping initialisation of configuration for server {ServerId} (not SQL Server).", State.Id);
-
-                return;
-            }
-
             Log.LogInformation("Initialising configuration for server {ServerId}...", State.Id);
-            
-            CommandResult commandResult = await SqlClient.ExecuteCommand(
-                serverId: State.Id,
-                databaseId: DatabaseProxyApiClient.MasterDatabaseId,
-                sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024),
-                executeAsAdminUser: true
-            );
 
-            for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
+            switch (State.Kind)
             {
-                Log.LogInformation("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
-                    messageIndex,
-                    State.Id,
-                    commandResult.Messages[messageIndex]
-                );
-            }
-
-            if (!commandResult.Success)
-            {
-                foreach (SqlError error in commandResult.Errors)
+                case DatabaseServerKind.SqlServer:
                 {
-                    Log.LogWarning("Error encountered while initialising configuration for server {ServerId} ({ErrorKind}: {ErrorMessage})",
-                        State.Id,
-                        error.Kind,
-                        error.Message
+                    CommandResult commandResult = await DatabaseProxyClient.ExecuteCommand(
+                        serverId: State.Id,
+                        databaseId: DatabaseProxyApiClient.MasterDatabaseId,
+                        sql: ManagementSql.ConfigureServerMemory(maxMemoryMB: 500 * 1024),
+                        executeAsAdminUser: true
                     );
-                }
 
-                throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {State.Id}).",
-                    serverId: State.Id,
-                    databaseId: DatabaseProxyApiClient.MasterDatabaseId,
-                    sqlMessages: commandResult.Messages,
-                    sqlErrors: commandResult.Errors
-                );
+                    for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
+                    {
+                        Log.LogInformation("T-SQL message [{MessageIndex}] from server {ServerId}: {TSqlMessage}",
+                            messageIndex,
+                            State.Id,
+                            commandResult.Messages[messageIndex]
+                        );
+                    }
+
+                    if (!commandResult.Success)
+                    {
+                        foreach (SqlError error in commandResult.Errors)
+                        {
+                            Log.LogWarning("Error encountered while initialising configuration for server {ServerId} ({ErrorKind}: {ErrorMessage})",
+                                State.Id,
+                                error.Kind,
+                                error.Message
+                            );
+                        }
+
+                        throw new SqlExecutionException($"One or more errors were encountered while configuring server (Id: {State.Id}).",
+                            serverId: State.Id,
+                            databaseId: DatabaseProxyApiClient.MasterDatabaseId,
+                            sqlMessages: commandResult.Messages,
+                            sqlErrors: commandResult.Errors
+                        );
+                    }
+
+                    break;
+                }
+                case DatabaseServerKind.RavenDB:
+                {
+                    if (State.Action == ProvisioningAction.Provision) // For now, we don't attempt this during a Reconfigure (not sure if RavenDB allows running it more than once).
+                        await DatabaseProxyClient.InitializeRavenServerConfiguration(State.Id);
+
+                    break;
+                }
+                default:
+                {
+                    Log.LogInformation("Skipping initialisation of configuration for server {ServerId} (initialisation not supported for servers of kind {ServerKind}).", State.Id, State.Kind);
+
+                    return;
+                }
             }
 
             Log.LogInformation("Configuration initialised for server {ServerId}.", State.Id);

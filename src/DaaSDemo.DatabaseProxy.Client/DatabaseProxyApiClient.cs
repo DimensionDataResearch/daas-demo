@@ -89,7 +89,7 @@ namespace DaaSDemo.DatabaseProxy.Client
                 command.Parameters.AddRange(parameters);
 
             return
-                await Http.PostAsJsonAsync(Requests.Command,
+                await Http.PostAsJsonAsync(Requests.SqlCommand,
                     postBody: command,
                     cancellationToken: cancellationToken
                 )
@@ -136,11 +136,41 @@ namespace DaaSDemo.DatabaseProxy.Client
                 query.Parameters.AddRange(parameters);
 
             return
-                await Http.PostAsJsonAsync(Requests.Query,
+                await Http.PostAsJsonAsync(Requests.SqlQuery,
                     postBody: query,
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<QueryResult, JObject>();
+        }
+
+        /// <summary>
+        ///     Request initialisation of configuration for a RavenDB server.
+        /// </summary>
+        /// <param name="serverId">
+        ///     The Id of the target server.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     A <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        public async Task InitializeRavenServerConfiguration(string serverId, CancellationToken cancellationToken = default)
+        {
+            if (String.IsNullOrWhiteSpace(serverId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
+            
+            HttpResponseMessage response = await Http.PostAsync(
+                Requests.RavenInitializeConfiguration.WithTemplateParameters(new
+                {
+                    ServerId = serverId
+                }),
+                cancellationToken: cancellationToken
+            );
+            using (response)
+            {
+                response.EnsureSuccessStatusCode();
+            }
         }
 
         /// <summary>
@@ -168,19 +198,29 @@ namespace DaaSDemo.DatabaseProxy.Client
         public static class Requests
         {
             /// <summary>
-            ///     The base request definition for the SQL Excecutor API.
+            ///     The base request definition for the SQL proxy API.
             /// </summary>
-            public static HttpRequest Api = HttpRequest.Factory.Json("api/v1/sql");
+            public static HttpRequest SqlApi = HttpRequest.Factory.Json("api/v1/sql");
 
             /// <summary>
             ///     Invoke T-SQL as a command.
             /// </summary>
-            public static HttpRequest Command = Api.WithRelativeUri("command");
+            public static HttpRequest SqlCommand = SqlApi.WithRelativeUri("command");
 
             /// <summary>
             ///     Invoke T-SQL as a query.
             /// </summary>
-            public static HttpRequest Query = Api.WithRelativeUri("query");
+            public static HttpRequest SqlQuery = SqlApi.WithRelativeUri("query");
+
+            /// <summary>
+            ///     The base request definition for the RavenDB proxy API.
+            /// </summary>
+            public static HttpRequest RavenApi = HttpRequest.Factory.Json("api/v1/raven");
+
+            /// <summary>
+            ///     Initialize RavenDB server configuration.
+            /// </summary>
+            public static HttpRequest RavenInitializeConfiguration = RavenApi.WithRelativeUri("{ServerId}/initialize");
         }
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Sinks.Elasticsearch;
 using System;
+using Serilog.Events;
 
 namespace DaaSDemo.Logging
 {
@@ -35,8 +36,15 @@ namespace DaaSDemo.Logging
             if (String.IsNullOrWhiteSpace(daasComponentName))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'daasComponentName'.", nameof(daasComponentName));
 
+            string logLevelValue = configuration.GetValue<string>("Logging:Level") ?? LogEventLevel.Information.ToString();
+            LogEventLevel logLevel = (LogEventLevel)Enum.Parse(
+                enumType: typeof(LogEventLevel),
+                value: logLevelValue,
+                ignoreCase: true
+            );
+
             var loggerConfiguration = new LoggerConfiguration()
-                .MinimumLevel.Information()
+                .MinimumLevel.Is(logLevel)
                 .WriteTo.LiterateConsole()
                 .WriteTo.Debug()
                 .Enrich.FromLogContext()

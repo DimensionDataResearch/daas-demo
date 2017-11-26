@@ -29,24 +29,21 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Create a new <see cref="TenantDatabaseManager"/>.
         /// </summary>
-        /// <param name="serverManager">
-        ///     A reference to the <see cref="TenantServerManager"/> actor.
+        /// <param name="databaseProxyClient">
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
-        /// <param name="dataAccess">
-        ///     A reference to the <see cref="Actors.DataAccess"/> actor.
-        /// </param>
-        public TenantDatabaseManager(DatabaseProxyApiClient sqlClient)
+        public TenantDatabaseManager(DatabaseProxyApiClient databaseProxyClient)
         {
-            if (sqlClient == null)
-                throw new ArgumentNullException(nameof(sqlClient));
+            if (databaseProxyClient == null)
+                throw new ArgumentNullException(nameof(databaseProxyClient));
 
-            SqlClient = sqlClient;
+            DatabaseProxyClient = databaseProxyClient;
         }
 
         /// <summary>
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database proxy API.
         /// </summary>
-        DatabaseProxyApiClient SqlClient { get; set; }
+        DatabaseProxyApiClient DatabaseProxyClient { get; set; }
 
         /// <summary>
         ///     A reference to the <see cref="Actors.TenantServerManager"/> actor whose server hosts the database.
@@ -76,10 +73,10 @@ namespace DaaSDemo.Provisioning.Actors
         /// </summary>
         protected override void PostStop()
         {
-            if (SqlClient != null)
+            if (DatabaseProxyClient != null)
             {
-                SqlClient.Dispose();
-                SqlClient = null;
+                DatabaseProxyClient.Dispose();
+                DatabaseProxyClient = null;
             }
         }
 
@@ -243,7 +240,7 @@ namespace DaaSDemo.Provisioning.Actors
         /// </returns>
         async Task<bool> DoesDatabaseExist()
         {
-            QueryResult result = await SqlClient.ExecuteQuery(
+            QueryResult result = await DatabaseProxyClient.ExecuteQuery(
                 serverId: CurrentState.ServerId,
                 databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.CheckDatabaseExists(),
@@ -270,7 +267,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.ServerId
             );
 
-            CommandResult commandResult = await SqlClient.ExecuteCommand(
+            CommandResult commandResult = await DatabaseProxyClient.ExecuteCommand(
                 serverId: CurrentState.ServerId,
                 databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.CreateDatabase(
@@ -331,7 +328,7 @@ namespace DaaSDemo.Provisioning.Actors
                 CurrentState.ServerId
             );
 
-            CommandResult commandResult = await SqlClient.ExecuteCommand(
+            CommandResult commandResult = await DatabaseProxyClient.ExecuteCommand(
                 serverId: CurrentState.ServerId,
                 databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),

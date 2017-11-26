@@ -87,11 +87,51 @@ namespace DaaSDemo.DatabaseProxy.Controllers
         /// </summary>
         ILogger Log { get; }
 
+        /// <summary>
+        ///     Initialise configuration for a RavenDB server.
+        /// </summary>
+        /// <param name="serverId">
+        ///     The Id of the target server.
+        /// </param>
         [HttpPost("{serverId}/initialize")]
-        async Task<IActionResult> InitializeServerConfiguration(string serverId)
+        public async Task<IActionResult> InitializeServerConfiguration(string serverId)
         {
             if (String.IsNullOrWhiteSpace(serverId))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
+
+            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
+            if (targetServer == null)
+            {
+                Log.LogWarning("Cannot determine connection string for server {ServerId} (server not found).",
+                    serverId
+                );
+
+                return NotFound(new
+                {
+                    Reason = "NotFound",
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    Message = $"Database Server not found with Id '{serverId}'."
+                });
+            }
+
+            if (targetServer.Kind != DatabaseServerKind.RavenDB)
+            {
+                Log.LogWarning("Target server {ServerId} is not a RavenDB server (actual server type is {ServerKind}).",
+                    serverId,
+                    targetServer.Kind
+                );
+
+                return BadRequest(new
+                {
+                    Reason = "ServerTypeIncompatible",
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    RequiredServerKind = DatabaseServerKind.RavenDB,
+                    ActualServerKind = targetServer.Kind,
+                    Message = $"Database Server '{serverId}' is not a RavenDB server."
+                });
+            }
 
             Log.LogInformation("Initialising configuration for server {ServerId}...", serverId);
 
@@ -99,7 +139,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             using (HttpClient client = new HttpClient())
             using (CancellationTokenSource cancellationSource = new CancellationTokenSource())
             {
-                client.BaseAddress = await GetServerBaseAddress(serverId);
+                client.BaseAddress = await GetServerBaseAddress(targetServer);
                 if (client.BaseAddress == null)
                     return NotFound($"Cannot determine base address for server '{serverId}'.");
 
@@ -148,7 +188,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                         {
                             Log.LogDebug("Checking to see if server {ServerId} has restarted...", serverId);
 
-                            response = await client.PostAsync(Requests.IsServerAlive,
+                            response = await client.GetAsync(Requests.IsServerAlive,
                                 cancellationToken: cancellationSource.Token
                             );
                             using (response)
@@ -181,24 +221,14 @@ namespace DaaSDemo.DatabaseProxy.Controllers
         /// <returns>
         ///     The base URL, or <c>null</c> if the connection string could not be determined.
         /// </returns>
-        async Task<Uri> GetServerBaseAddress(string serverId)
+        async Task<Uri> GetServerBaseAddress(DatabaseServer targetServer)
         {
-            if (serverId == null)
-                throw new ArgumentNullException(nameof(serverId));
+            if (targetServer == null)
+                throw new ArgumentNullException(nameof(targetServer));
 
             Log.LogInformation("Determining connection string for server {ServerId}...",
-                serverId
+                targetServer.Id
             );
-
-            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
-            if (targetServer == null)
-            {
-                Log.LogWarning("Cannot determine connection string for server {ServerId} (server not found).",
-                    serverId
-                );
-
-                return null;
-            }
 
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
                 labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal",
@@ -207,7 +237,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             if (matchingServices.Count == 0)
             {
                 Log.LogWarning("Cannot determine connection string for server {ServerId} (server's associated Kubernetes Service not found).",
-                    serverId
+                    targetServer.Id
                 );
 
                 return null;
