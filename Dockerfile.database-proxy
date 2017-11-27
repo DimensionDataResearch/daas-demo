@@ -6,6 +6,7 @@ COPY DaaS.Demo.sln nuget.config /build/
 COPY src/Common.props /build/src/
 COPY src/DaaSDemo.Api/*.csproj /build/src/DaaSDemo.Api/
 COPY src/DaaSDemo.Common/*.csproj /build/src/DaaSDemo.Common/
+COPY src/DaaSDemo.Crypto/*.csproj /build/src/DaaSDemo.Crypto/
 COPY src/DaaSDemo.Data/*.csproj /build/src/DaaSDemo.Data/
 COPY src/DaaSDemo.DatabaseProxy/*.csproj /build/src/DaaSDemo.DatabaseProxy/
 COPY src/DaaSDemo.DatabaseProxy.Client/*.csproj /build/src/DaaSDemo.DatabaseProxy.Client/
