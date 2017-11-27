@@ -160,7 +160,11 @@ export class DaaSAPI
     public async getTenantServers(tenantId: string, ensureUpToDate: boolean = false): Promise<Server[]> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/servers?ensureUpToDate=${ensureUpToDate}`);
+        let requestURI = `tenants/${tenantId}/servers`;
+        if (ensureUpToDate)
+            requestURI += '?ensureUpToDate=true';
+
+        const response = await this.http.fetch(requestURI);
         const body = await response.json();
 
         if (response.ok) {
@@ -185,7 +189,11 @@ export class DaaSAPI
     public async getTenantDatabases(tenantId: string, ensureUpToDate: boolean = false): Promise<Database[] | null> {
         await this.configured;
 
-        const response = await this.http.fetch(`tenants/${tenantId}/databases?ensureUpToDate=${ensureUpToDate}`);
+        let requestURI = `tenants/${tenantId}/databases`;
+        if (ensureUpToDate)
+            requestURI += '?ensureUpToDate=true';
+
+        const response = await this.http.fetch(requestURI);
         const body = await response.json();
 
         if (response.ok) {
@@ -203,6 +211,37 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to retrieve databases owned by tenant with Id ${tenantId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Create a tenant.
+     * 
+     * @param name The tenant name.
+     * 
+     * @returns The Id of the new tenant.
+     */
+    public async createTenant(name: string): Promise<string> {
+        await this.configured;
+
+        const response = await this.http.fetch('tenants', {
+            method: 'POST',
+            body: json({
+                name: name
+            })
+        });
+        
+        const body = await response.json();
+        if (response.ok) {
+            const tenantCreated = body as TenantCreated;
+
+            return tenantCreated.id;
+        }
+        
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to create tenant '${name}': ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -701,6 +740,11 @@ interface ApiResponse {
 }
 
 interface ServerCreated extends ApiResponse {
+    id: string;
+    name: string;
+}
+
+interface TenantCreated extends ApiResponse {
     id: string;
     name: string;
 }

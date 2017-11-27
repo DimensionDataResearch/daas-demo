@@ -1,31 +1,47 @@
 <template>
+    <require from="./forms/new"></require>
+
     <div class="ui segment" style="min-height: 10.0rem;">
-        <div class="ui active dimmer" if.bind="!tenants">
+        <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="tenants">
+        <div if.bind="addingTenant">
+            <new-tenant-form new-tenant.bind="newTenant"
+                create-clicked.call="createTenant()"
+                cancel-clicked.call="hideCreateTenantForm()"
+            />
+        </div>
+        
+        <div if.bind="hasTenant && !addingTenant">
             <h1 class="ui dividing header">Tenants</h1>
 
-            <div class="ui relaxed divided list">
-                <div class="item" repeat.for="tenant of tenants">
-                    <i class="large user icon"></i>
-                    <div class="content">
-                        <div class="header">
-                            <a route-href="route: tenant; params.bind: {id: tenant.id}">
-                                ${ tenant.name }
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <button class="ui icon button" disabled="disabled">
-                <i class="add circle icon"></i> Add Tenant
+            <button class="ui icon button" click.delegate="showCreateTenantForm()">
+                <i class="add circle icon"></i> Add
             </button>
+            <button class="ui right floated circular icon button" click.delegate="load(true)">
+                <i class="refresh icon"></i>
+            </button>
+
+            <table class="ui striped celled compact table">
+                <thead>
+                    <tr>
+                        <th class="collapsing left aligned">Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr repeat.for="tenant of tenants">
+                        <td class="collapsing left aligned">
+                            <a route-href="route: tenant; params.bind: {id: tenant.id}">
+                                <i class="large user icon"></i> ${ tenant.name }
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <h3 if.bind="noTenants">
+        <h3 if.bind="!hasTenant && !addingTenant">
             No tenants
         </h3>
     </div>

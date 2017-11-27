@@ -28,6 +28,7 @@ export class TenantDatabaseList {
      * Create a new tenant databases view model.
      * 
      * @param api The DaaS API client.
+     * @param validationController The validation controller for the current context.
      */
     constructor(private api: DaaSAPI, public validationController: ValidationController) { }
 
