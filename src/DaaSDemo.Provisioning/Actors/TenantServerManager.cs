@@ -259,7 +259,9 @@ namespace DaaSDemo.Provisioning.Actors
                         {
                             Log.Warning("{Action} failed - cannot find Deployment for server {ServerId}.", actionDescription, ServerId);
 
-                            FailCurrentAction();
+                            FailCurrentAction(
+                                reason: $"Cannot find server's associated Deployment in Kubernetes."
+                            );
 
                             Become(Ready);
                         }
@@ -283,7 +285,9 @@ namespace DaaSDemo.Provisioning.Actors
                                     Provisioner.State.Id
                                 );
 
-                                FailCurrentAction();
+                                FailCurrentAction(
+                                    reason: $"Server has unexpected provisioning action ({Provisioner.State.Action})."
+                                );
 
                                 return;
                             }
@@ -305,7 +309,9 @@ namespace DaaSDemo.Provisioning.Actors
                     {
                         Log.Warning("{Action} failed - timed out waiting server {ServerId}'s Deployment to become ready.", actionDescription, ServerId);
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: "Timed out waiting for server's associated Deployment in Kubernetes to become available."
+                        );
 
                         Become(Ready);
 
@@ -354,7 +360,9 @@ namespace DaaSDemo.Provisioning.Actors
                             provisioningFailed.Response.Message
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to provision server {Provisioner.State.Id} ({provisioningFailed.Response.Reason}): {provisioningFailed.Response.Message}"
+                        );
 
                         return;
                     }
@@ -364,7 +372,9 @@ namespace DaaSDemo.Provisioning.Actors
                             Provisioner.State.Id
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to provision server (unexpected error): " + provisioningFailed.Message
+                        );
 
                         return;
                     }
@@ -387,7 +397,9 @@ namespace DaaSDemo.Provisioning.Actors
                             reconfigurationFailed.Response.Message
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to reconfigure server {Provisioner.State.Id} ({reconfigurationFailed.Response.Reason}): {reconfigurationFailed.Response.Message}"
+                        );
 
                         return;
                     }
@@ -397,7 +409,9 @@ namespace DaaSDemo.Provisioning.Actors
                             Provisioner.State.Id
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to reconfigure server (unexpected error): " + reconfigurationFailed.Message
+                        );
 
                         return;
                     }
@@ -420,7 +434,9 @@ namespace DaaSDemo.Provisioning.Actors
                             deprovisioningFailed.Response.Message
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to de-provision server {Provisioner.State.Id} ({deprovisioningFailed.Response.Reason}): {deprovisioningFailed.Response.Message}"
+                        );
 
                         return;
                     }
@@ -430,7 +446,9 @@ namespace DaaSDemo.Provisioning.Actors
                             Provisioner.State.Id
                         );
 
-                        FailCurrentAction();
+                        FailCurrentAction(
+                            reason: $"Failed to de-provision server (unexpected error): " + deprovisioningFailed.Message
+                        );
 
                         return;
                     }
@@ -876,7 +894,10 @@ namespace DaaSDemo.Provisioning.Actors
         /// <summary>
         ///     Fail the current provision / reconfigure / de-provision action.
         /// </summary>
-        void FailCurrentAction()
+        /// <param name="reason">
+        ///     A message indicating the reason for the failure.
+        /// </param>
+        void FailCurrentAction(string reason)
         {
             Provisioner.State.Status = ProvisioningStatus.Error;
             switch (Provisioner.State.Action)
@@ -884,7 +905,7 @@ namespace DaaSDemo.Provisioning.Actors
                 case ProvisioningAction.Provision:
                 {
                     DataAccess.Tell(
-                        new ServerProvisioningFailed(ServerId)
+                        new ServerProvisioningFailed(ServerId, reason)
                     );
 
                     break;
@@ -892,7 +913,7 @@ namespace DaaSDemo.Provisioning.Actors
                 case ProvisioningAction.Reconfigure:
                 {
                     DataAccess.Tell(
-                        new ServerReconfigurationFailed(ServerId)
+                        new ServerReconfigurationFailed(ServerId, reason)
                     );
 
                     break;
@@ -900,7 +921,7 @@ namespace DaaSDemo.Provisioning.Actors
                 case ProvisioningAction.Deprovision:
                 {
                     DataAccess.Tell(
-                        new ServerDeprovisioningFailed(ServerId)
+                        new ServerDeprovisioningFailed(ServerId, reason)
                     );
 
                     break;

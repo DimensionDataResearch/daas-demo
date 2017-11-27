@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+
 namespace DaaSDemo.Provisioning.Messages
 {
     using Models.Data;
@@ -19,10 +23,16 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(string serverId, ProvisioningStatus status)
+        /// <param name="messages">
+        ///     Messages (if any) associated with the status change.
+        /// </param>
+        protected ServerStatusChanged(string serverId, ProvisioningStatus status, IEnumerable<string> messages = null)
         {
             ServerId = serverId;
             Status = status;
+
+            if (messages != null)
+                Messages = Messages.AddRange(messages);
         }
 
         /// <summary>
@@ -37,10 +47,16 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(string serverId, ServerProvisioningPhase phase)
+        /// <param name="messages">
+        ///     Messages (if any) associated with the status change.
+        /// </param>
+        protected ServerStatusChanged(string serverId, ServerProvisioningPhase phase, IEnumerable<string> messages = null)
         {
             ServerId = serverId;
             Phase = phase;
+
+            if (messages != null)
+                Messages = Messages.AddRange(messages);
         }
 
         /// <summary>
@@ -55,11 +71,17 @@ namespace DaaSDemo.Provisioning.Messages
         /// <param name="phase">
         ///     The server's current provisioning phase (if any).
         /// </param>
-        protected ServerStatusChanged(string serverId, ProvisioningStatus status, ServerProvisioningPhase phase)
+        /// <param name="messages">
+        ///     Messages (if any) associated with the status change.
+        /// </param>
+        protected ServerStatusChanged(string serverId, ProvisioningStatus status, ServerProvisioningPhase phase, IEnumerable<string> messages = null)
         {
             ServerId = serverId;
             Status = status;
             Phase = phase;
+            
+            if (messages != null)
+                Messages = Messages.AddRange(messages);
         }
 
         /// <summary>
@@ -76,5 +98,10 @@ namespace DaaSDemo.Provisioning.Messages
         ///     The server's current provisioning phase.
         /// </summary>
         public ServerProvisioningPhase? Phase { get; }
+
+        /// <summary>
+        ///     Messages (if any) associated with the status change.
+        /// </summary>
+        public ImmutableList<string> Messages { get; } = ImmutableList<string>.Empty;
     }
 }

@@ -257,15 +257,7 @@ namespace DaaSDemo.Provisioning.Actors
                     server.Phase
                 );
 
-                if (server.Action == ProvisioningAction.None)
-                {
-                    if (server.Status == ProvisioningStatus.Ready)
-                        server.AddProvisioningEvent($"Action completed successfully: {action}.");
-                    else if (server.Status == ProvisioningStatus.Error)
-                        server.AddProvisioningEvent($"Action failed: {action}.");
-                }
-                else
-                    server.AddProvisioningEvent();
+                server.AddProvisioningEvent(serverProvisioningNotification.Messages);
 
                 await session.SaveChangesAsync();
             }
