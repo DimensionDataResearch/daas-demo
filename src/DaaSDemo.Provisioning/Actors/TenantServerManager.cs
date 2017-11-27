@@ -79,15 +79,19 @@ namespace DaaSDemo.Provisioning.Actors
         /// <param name="sqlClient">
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
-        public TenantServerManager(DatabaseServerProvisioner provisioner, IOptions<KubernetesOptions> kubeOptions)
+        public TenantServerManager(DatabaseServerProvisioner provisioner, ServerCredentialsProvisioner credentialsProvisioner, IOptions<KubernetesOptions> kubeOptions)
         {
             if (provisioner == null)
                 throw new ArgumentNullException(nameof(provisioner));
+
+            if (credentialsProvisioner == null)
+                throw new ArgumentNullException(nameof(credentialsProvisioner));
 
             if (kubeOptions == null)
                 throw new ArgumentNullException(nameof(kubeOptions));
 
             Provisioner = provisioner;
+            CredentialsProvisioner = credentialsProvisioner;
             KubeOptions = kubeOptions.Value;
         }
 
@@ -100,6 +104,11 @@ namespace DaaSDemo.Provisioning.Actors
         ///     Provisioning facility for the target server.
         /// </summary>
         DatabaseServerProvisioner Provisioner { get; }
+
+        /// <summary>
+        ///     Credential-provisioning facility for the target server.
+        /// </summary>
+        ServerCredentialsProvisioner CredentialsProvisioner { get; }
 
         /// <summary>
         ///     Application-level Kubernetes settings.
@@ -130,7 +139,8 @@ namespace DaaSDemo.Provisioning.Actors
             {
                 DataAccess = initialize.DataAccess;
                 ServerId = initialize.ServerId;
-                Provisioner.State = initialize.InitialState;
+                Provisioner.State = initialize.InitialState.Clone();
+                CredentialsProvisioner.State = initialize.InitialState.Clone();
 
                 Self.Tell(Provisioner.State); // Kick off initial state-management actions.
 
@@ -165,6 +175,7 @@ namespace DaaSDemo.Provisioning.Actors
                 );
 
                 Provisioner.State = databaseServer.Clone();
+                CredentialsProvisioner.State = databaseServer.Clone();
 
                 await UpdateServerState();
             });
@@ -521,6 +532,14 @@ namespace DaaSDemo.Provisioning.Actors
 
                     await Provisioner.EnsureDataVolumeClaimPresent();
                     
+                    goto case ServerProvisioningPhase.Security;
+                }
+                case ServerProvisioningPhase.Security:
+                {
+                    StartProvisioningPhase(ServerProvisioningPhase.Security);
+
+                    await CredentialsProvisioner.EnsureCredentialsSecretPresent();
+                    
                     goto case ServerProvisioningPhase.Instance;
                 }
                 case ServerProvisioningPhase.Instance:
@@ -589,6 +608,14 @@ namespace DaaSDemo.Provisioning.Actors
                     StartReconfigurationPhase(ServerProvisioningPhase.Storage);
 
                     await Provisioner.EnsureDataVolumeClaimPresent();
+                    
+                    goto case ServerProvisioningPhase.Security;
+                }
+                case ServerProvisioningPhase.Security:
+                {
+                    StartReconfigurationPhase(ServerProvisioningPhase.Security);
+
+                    await CredentialsProvisioner.EnsureCredentialsSecretPresent();
                     
                     goto case ServerProvisioningPhase.Instance;
                 }
@@ -683,6 +710,14 @@ namespace DaaSDemo.Provisioning.Actors
 
                     await Provisioner.EnsureDeploymentAbsent();
                     
+                    goto case ServerProvisioningPhase.Security;
+                }
+                case ServerProvisioningPhase.Security:
+                {
+                    StartDeprovisioningPhase(ServerProvisioningPhase.Security);
+
+                    await CredentialsProvisioner.EnsureCredentialsSecretAbsent();
+                    
                     goto case ServerProvisioningPhase.Storage;
                 }
                 case ServerProvisioningPhase.Storage:
@@ -713,20 +748,21 @@ namespace DaaSDemo.Provisioning.Actors
             int? externalPort = await Provisioner.GetPublicPort();
             if (externalPort != null)
             {
-                if (KubeOptions.ClusterPublicFQDN != Provisioner.State.PublicFQDN || externalPort != Provisioner.State.PublicPort)
+                string serverFQDN = $"database.{KubeOptions.ClusterPublicFQDN}";
+                if (serverFQDN != Provisioner.State.PublicFQDN || externalPort != Provisioner.State.PublicPort)
                 {
                     Log.Info("Server {ServerName} is accessible at {ClusterPublicFQDN}:{PublicPortPort}",
                         Provisioner.State.Name,
-                        KubeOptions.ClusterPublicFQDN,
+                        serverFQDN,
                         externalPort.Value
                     );
 
                     DataAccess.Tell(
-                        new ServerIngressChanged(ServerId, KubeOptions.ClusterPublicFQDN, externalPort)
+                        new ServerIngressChanged(ServerId, serverFQDN, externalPort)
                     );
 
                     // Capture current ingress details to enable subsequent provisioning actions (if any).
-                    Provisioner.State.PublicFQDN = KubeOptions.ClusterPublicFQDN;
+                    Provisioner.State.PublicFQDN = serverFQDN;
                     Provisioner.State.PublicPort = externalPort;
                 }
 

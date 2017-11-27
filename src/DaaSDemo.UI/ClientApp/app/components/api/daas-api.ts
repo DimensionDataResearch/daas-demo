@@ -634,6 +634,11 @@ export enum ServerProvisioningPhase
     Storage = 'Storage',
 
     /**
+     * Security configuration (e.g. credentials, firewall rules).
+     */
+    Security = 'Security',
+
+    /**
      * The server instance.
      */
     Instance = 'Instance',

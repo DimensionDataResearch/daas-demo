@@ -107,13 +107,15 @@ export class TenantDetail {
      * Request creation of a new server.
      */
     public async createServer(): Promise<void> {
+        console.log('createServer');
+
         if (this.hasValidationErrors)
             return;
 
         if (this.newServer === null)
             return;
 
-        if (this.newServer.name === null || this.newServer.adminPassword === null)
+        if (this.newServer.name === null)
             return;
 
         try {
@@ -123,7 +125,7 @@ export class TenantDetail {
                     serverId = await this.api.deploySqlServer(
                         this.tenantId,
                         this.newServer.name,
-                        this.newServer.adminPassword
+                        this.newServer.adminPassword || ''
                     );
     
                     break;

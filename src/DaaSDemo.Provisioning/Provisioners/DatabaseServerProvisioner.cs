@@ -20,6 +20,7 @@ namespace DaaSDemo.Provisioning.Provisioners
     ///     Provisioning facility for a <see cref="DatabaseServer"/>.
     /// </summary>
     public class DatabaseServerProvisioner
+        : Provisioner
     {
         /// <summary>
         ///     Create a new <see cref="DatabaseServerProvisioner"/>.
@@ -40,6 +41,7 @@ namespace DaaSDemo.Provisioning.Provisioners
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
         public DatabaseServerProvisioner(ILogger<DatabaseServerProvisioner> logger, KubeApiClient kubeClient, DatabaseProxyApiClient databaseProxyClient, IOptions<KubernetesOptions> kubeOptions, KubeResources kubeResources)
+            : base(logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
@@ -56,17 +58,11 @@ namespace DaaSDemo.Provisioning.Provisioners
             if (kubeResources == null)
                 throw new ArgumentNullException(nameof(kubeResources));
 
-            Log = logger;
             KubeClient = kubeClient;
             DatabaseProxyClient = databaseProxyClient;
             KubeOptions = kubeOptions.Value;
             KubeResources = kubeResources;
         }
-
-        /// <summary>
-        ///     The provisioner's logger.
-        /// </summary>
-        public ILogger Log { get; set; }
 
         /// <summary>
         ///     The server's current state (if known).

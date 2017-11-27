@@ -9,6 +9,8 @@ data:
   endpoint_api_database_proxy:      'http://daas-database-proxy.default.svc.cluster.local:5000'
   endpoint_api_daas:              'http://api.kr-cluster.tintoy.io:31200/api/v1/'
 
+  endpoint_vault:                 'http://daas-vault-vault.default.svc.cluster.local:8200'
+
   database_server_url:            'http://raven.kr-cluster.tintoy.io:31880'
 
   ui_urls: 'http://portal.kr-cluster.tintoy.io:31313;http://localhost:5000'
@@ -18,4 +20,8 @@ data:
   image_name_sql: 'microsoft/mssql-server-linux:2017-CU1'
   image_name_ravendb: 'ravendb/ravendb:ubuntu-latest'
 
-  cluster_fqdn: 'sql.kr-cluster.tintoy.io'
+  cluster_fqdn: 'kr-cluster.tintoy.io'
+
+  vault_token:                    'c5be72ec-d70f-c410-f486-f910c77a5b69'
+  vault_pki_base_path:            '/daas/pki'
+  vault_certificate_policy_name:  'daas.server.database'

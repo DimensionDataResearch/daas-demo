@@ -34,7 +34,18 @@ namespace DaaSDemo.Provisioning
         public virtual string BaseName(DatabaseServer server) => SafeId(server.Id);
 
         /// <summary>
-        ///     Get the name of the PersistentVolumeClaim used for storing SQL Server data.
+        ///     Get the name of the Secret used for storing the specified server's credentials.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server
+        /// </param>
+        /// <returns>
+        ///     The Secret name.
+        /// </returns>
+        public virtual string CredentialsSecret(DatabaseServer server) => $"{BaseName(server)}-credentials";
+
+        /// <summary>
+        ///     Get the name of the PersistentVolumeClaim used for storing the specified server's data.
         /// </summary>
         /// <param name="server">
         ///     A <see cref="DatabaseServer"/> representing the target server

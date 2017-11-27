@@ -11,6 +11,7 @@ using System.IO;
 namespace DaaSDemo.Provisioning.Host
 {
     using Common.Options;
+    using Crypto;
     using Data;
     using KubeClient;
     using Logging;
@@ -56,6 +57,7 @@ namespace DaaSDemo.Provisioning.Host
 
                     services.AddKubeClient();
                     services.AddDatabaseProxyApiClient();
+                    services.AddVaultClient();
                     services.AddProvisioning();
 
                     DatabaseOptions databaseOptions = DatabaseOptions.From(hostContext.Configuration);

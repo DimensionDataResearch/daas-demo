@@ -33,7 +33,7 @@ namespace DaaSDemo.Common.Options
                 configuration.GetSection("Database")
             );
             services.Configure<DatabaseProxyClientOptions>(
-                configuration.GetSection("SQL")
+                configuration.GetSection("DatabaseProxy")
             );
             services.Configure<KubernetesOptions>(
                 configuration.GetSection("Kubernetes")
@@ -43,6 +43,9 @@ namespace DaaSDemo.Common.Options
             );
             services.Configure<ProvisioningOptions>(
                 configuration.GetSection("Provisioning")
+            );
+            services.Configure<VaultOptions>(
+                configuration.GetSection("Vault")
             );
         }
     }

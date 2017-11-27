@@ -16,33 +16,38 @@ namespace DaaSDemo.Models.Data
         Storage = 1,
 
         /// <summary>
+        ///     The server's security configuration (credentials, firewall rules, etc).
+        /// </summary>
+        Security = 2,
+
+        /// <summary>
         ///     The server instance.
         /// </summary>
-        Instance = 2,
+        Instance = 3,
 
         /// <summary>
         ///     The server's internal network connectivity.
         /// </summary>
-        Network = 3,
+        Network = 4,
 
         /// <summary>
         ///     The server's monitoring infrastructure.
         /// </summary>
-        Monitoring = 4,
+        Monitoring = 5,
 
         /// <summary>
         ///     The server's configuration.
         /// </summary>
-        Configuration = 5,
+        Configuration = 6,
 
         /// <summary>
         ///     The server's external network connectivity.
         /// </summary>
-        Ingress = 6,
+        Ingress = 7,
 
         /// <summary>
         ///     The server's current action has been completed.
         /// </summary>
-        Done = 7
+        Done = 8
     }
 }

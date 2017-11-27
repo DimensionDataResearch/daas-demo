@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Text;
+using VaultSharp.Backends.Secret.Models.PKI;
 
 namespace DaaSDemo.Provisioning
 {
     using Common.Options;
+    using Crypto;
     using KubeClient.Models;
     using Messages;
     using Models.Data;
@@ -56,6 +59,118 @@ namespace DaaSDemo.Provisioning
         ///     Application-level Kubernetes settings.
         /// </summary>
         public KubernetesOptions KubeOptions { get; }
+
+        /// <summary>
+        ///     Create a new <see cref="SecretV1"/> for the specified database server's credentials.
+        /// </summary>
+        /// <param name="server">
+        ///     A <see cref="DatabaseServer"/> representing the target server.
+        /// </param>
+        /// <param name="serverCertificate">
+        ///     <see cref="CertificateCredentials"/> representing the server certificate.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="SecretV1"/>.
+        /// </returns>
+        public SecretV1 CredentialsSecret(DatabaseServer server, CertificateCredentials serverCertificate, string kubeNamespace = null)
+        {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+
+            if (serverCertificate == null)
+                throw new ArgumentNullException(nameof(serverCertificate));
+
+            string pfxPassword = Guid.NewGuid().ToString("N"); // TODO: Use a cryptographically-secure RNG.
+
+            var secretData = new Dictionary<string, string>();
+            
+            secretData["certificate.pem"] = Convert.ToBase64String(
+                Encoding.ASCII.GetBytes(serverCertificate.CertificateContent)
+            );
+            secretData["key.pem"] = Convert.ToBase64String(
+                Encoding.ASCII.GetBytes(serverCertificate.PrivateKey)
+            );
+            secretData["certificate.pfx"] = Convert.ToBase64String(
+                serverCertificate.ToPfx(pfxPassword)
+            );
+            secretData["pfx-password"] = Convert.ToBase64String(
+                Encoding.ASCII.GetBytes(pfxPassword)
+            );
+
+            if (!String.IsNullOrWhiteSpace(server.AdminPassword))
+            {
+                secretData["sa-password"] = Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes(server.AdminPassword)
+                );
+            }
+
+            if (!String.IsNullOrWhiteSpace(serverCertificate.IssuingCACertificateContent))
+            {
+                secretData["ca.pem"] = Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes(serverCertificate.IssuingCACertificateContent)
+                );
+            }
+
+            return CredentialsSecret(
+                name: Names.CredentialsSecret(server),
+                kubeNamespace: kubeNamespace,
+                data: secretData,
+                labels: new Dictionary<string, string>
+                {
+                    ["k8s-app"] = Names.BaseName(server),
+                    ["cloud.dimensiondata.daas.server-id"] = server.Id,
+                    ["cloud.dimensiondata.daas.secret-type"] = "credentials"
+                }
+            );
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="SecretV1"/>.
+        /// </summary>
+        /// <param name="name">
+        ///     The deployment name.
+        /// </param>
+        /// <param name="data">
+        ///     The secret data.
+        /// </param>
+        /// <param name="labels">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing labels to apply to the persistent volume claim.
+        /// </param>
+        /// <param name="annotations">
+        ///     An optional <see cref="Dictionary{TKey, TValue}"/> containing annotations to apply to the persistent volume claim.
+        /// </param>
+        /// <param name="kubeNamespace">
+        ///     An optional target Kubernetes namespace.
+        /// </param>
+        /// <returns>
+        ///     The configured <see cref="SecretV1"/>.
+        /// </returns>
+        public SecretV1 CredentialsSecret(string name, Dictionary<string, string> data, Dictionary<string, string> labels = null, Dictionary<string, string> annotations = null, string kubeNamespace = null)
+        {
+            if (String.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'name'.", nameof(name));
+            
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+
+            return new SecretV1
+            {
+                ApiVersion = "v1",
+                Kind = "Secret",
+                Type = "Opaque",
+                Metadata = new ObjectMetaV1
+                {
+                    Name = name,
+                    Namespace = kubeNamespace,
+                    Labels = labels,
+                    Annotations = annotations
+                },
+                Data = data
+            };
+        }
 
         /// <summary>
         ///     Create a new <see cref="PersistentVolumeClaimV1"/> for the specified database server.

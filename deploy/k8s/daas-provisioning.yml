@@ -76,6 +76,26 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: database_server_url
+          - name: DAAS_Vault__EndPoint
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: endpoint_vault
+          - name: DAAS_Vault__Token # TODO: Get this from a Secret instead.
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: vault_token
+          - name: DAAS_Vault__PkiBasePath
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: vault_pki_base_path
+          - name: DAAS_Vault__CertificatePolicyName
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: vault_certificate_policy_name
         ports:
           - containerPort: 5000
       
