@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Text;
 using VaultSharp.Backends.Secret.Models.PKI;
 
@@ -83,17 +84,31 @@ namespace DaaSDemo.Provisioning
             if (serverCertificate == null)
                 throw new ArgumentNullException(nameof(serverCertificate));
 
-            string pfxPassword = Guid.NewGuid().ToString("N"); // TODO: Use a cryptographically-secure RNG.
-
             var secretData = new Dictionary<string, string>();
+
+            if (!String.IsNullOrWhiteSpace(serverCertificate.IssuingCACertificateContent))
+            {
+                secretData["ca.crt"] = Convert.ToBase64String(
+                    Encoding.ASCII.GetBytes(serverCertificate.IssuingCACertificateContent)
+                );
+            }
             
-            secretData["certificate.pem"] = Convert.ToBase64String(
+            secretData["server.crt"] = Convert.ToBase64String(
                 Encoding.ASCII.GetBytes(serverCertificate.CertificateContent)
             );
-            secretData["key.pem"] = Convert.ToBase64String(
+            secretData["server.key"] = Convert.ToBase64String(
                 Encoding.ASCII.GetBytes(serverCertificate.PrivateKey)
             );
-            secretData["certificate.pfx"] = Convert.ToBase64String(
+
+            string pfxPassword;
+            byte[] passwordBytes = new byte[16];
+            using (RandomNumberGenerator random = RandomNumberGenerator.Create())
+            {
+                random.GetBytes(passwordBytes);
+            }
+            pfxPassword = Convert.ToBase64String(passwordBytes);
+
+            secretData["server.pfx"] = Convert.ToBase64String(
                 serverCertificate.ToPfx(pfxPassword)
             );
             secretData["pfx-password"] = Convert.ToBase64String(
@@ -104,13 +119,6 @@ namespace DaaSDemo.Provisioning
             {
                 secretData["sa-password"] = Convert.ToBase64String(
                     Encoding.ASCII.GetBytes(server.AdminPassword)
-                );
-            }
-
-            if (!String.IsNullOrWhiteSpace(serverCertificate.IssuingCACertificateContent))
-            {
-                secretData["ca.pem"] = Convert.ToBase64String(
-                    Encoding.ASCII.GetBytes(serverCertificate.IssuingCACertificateContent)
                 );
             }
 
@@ -319,37 +327,6 @@ namespace DaaSDemo.Provisioning
                 },
                 Spec = spec
             };
-        }
-
-        /// <summary>
-        ///     Create a new <see cref="ReplicationControllerV1"/> for the specified database server.
-        /// </summary>
-        /// <param name="server">
-        ///     A <see cref="DatabaseServer"/> representing the target server.
-        /// </param>
-        /// <param name="kubeNamespace">
-        ///     An optional target Kubernetes namespace.
-        /// </param>
-        /// <returns>
-        ///     The configured <see cref="ReplicationControllerV1"/>.
-        /// </returns>
-        public ReplicationControllerV1 ReplicationController(DatabaseServer server, string kubeNamespace = null)
-        {
-            if (server == null)
-                throw new ArgumentNullException(nameof(server));
-
-            string baseName = Names.BaseName(server);
-            
-            return ReplicationController(
-                name: baseName,
-                kubeNamespace: kubeNamespace,
-                spec: Specs.ReplicationController(server),
-                labels: new Dictionary<string, string>
-                {
-                    ["k8s-app"] = baseName,
-                    ["cloud.dimensiondata.daas.server-id"] = server.Id
-                }
-            );
         }
 
         /// <summary>
