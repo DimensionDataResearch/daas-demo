@@ -132,13 +132,13 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
-        ///     Provision a database server for a tenant.
+        ///     Provision an SQL Server instance for a tenant.
         /// </summary>
         /// <param name="newDatabaseServer">
-        ///     The request body as a <see cref="NewDatabaseServer"/>.
+        ///     The request body as a <see cref="NewSqlServer"/>.
         /// </param>
-        [HttpPost]
-        public IActionResult CreateServer([FromBody] NewDatabaseServer newDatabaseServer)
+        [HttpPost("create/sql")]
+        public IActionResult CreateSqlServer([FromBody] NewSqlServer newDatabaseServer)
         {
             if (newDatabaseServer == null)
             {
@@ -148,27 +148,6 @@ namespace DaaSDemo.Api.Controllers
                     Reason = "InvalidRequest",
                     Message = "Must supply database details in the request body."
                 });
-            }
-
-            switch (newDatabaseServer.Kind)
-            {
-                case DatabaseServerKind.SqlServer:
-                {
-                    break;
-                }
-                case DatabaseServerKind.RavenDB:
-                {
-                    break;
-                }
-                default:
-                {
-                    return BadRequest(new
-                    {
-                        EntityType = "DatabaseServer",
-                        Reason = "UnsupportedServerType",
-                        Message = $"Unsupported server type '{newDatabaseServer.Kind}'."
-                    });
-                }
             }
 
             Tenant tenant = DocumentSession.Load<Tenant>(newDatabaseServer.TenantId);
@@ -188,7 +167,7 @@ namespace DaaSDemo.Api.Controllers
             var databaseServer = new DatabaseServer
             {
                 Name = newDatabaseServer.Name,
-                Kind = newDatabaseServer.Kind,
+                Kind = DatabaseServerKind.SqlServer,
                 AdminPassword = newDatabaseServer.AdminPassword,
                 Storage =
                 {
@@ -208,7 +187,66 @@ namespace DaaSDemo.Api.Controllers
             {
                 Id = databaseServer.Id,
                 Name = databaseServer.Name,
-                Message = $"Database server {databaseServer.Id} queued for creation."
+                Message = $"SQL Server instance {databaseServer.Id} queued for creation."
+            });
+        }
+
+        /// <summary>
+        ///     Provision a RavenDB instance for a tenant.
+        /// </summary>
+        /// <param name="newDatabaseServer">
+        ///     The request body as a <see cref="NewRavenServer"/>.
+        /// </param>
+        [HttpPost("create/ravendb")]
+        public IActionResult CreateRavenServer([FromBody] NewRavenServer newDatabaseServer)
+        {
+            if (newDatabaseServer == null)
+            {
+                return BadRequest(new
+                {
+                    EntityType = "DatabaseServer",
+                    Reason = "InvalidRequest",
+                    Message = "Must supply database details in the request body."
+                });
+            }
+
+            Tenant tenant = DocumentSession.Load<Tenant>(newDatabaseServer.TenantId);
+            if (tenant == null)
+            {
+                return NotFound(new
+                {
+                    Id = newDatabaseServer.TenantId,
+                    EntityType = "Tenant",
+                    Message = $"No tenant found with Id {newDatabaseServer.TenantId}."
+                });
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var databaseServer = new DatabaseServer
+            {
+                Name = newDatabaseServer.Name,
+                Kind = DatabaseServerKind.RavenDB,
+                Storage =
+                {
+                    SizeMB = newDatabaseServer.SizeMB
+                },
+                TenantId = tenant.Id,
+                Action = ProvisioningAction.Provision,
+                Status = ProvisioningStatus.Pending,
+            };
+            DocumentSession.Store(databaseServer);
+
+            databaseServer.AddProvisioningEvent($"Provisioning requested for '${databaseServer.Id}'.");
+
+            DocumentSession.SaveChanges();
+
+            return StatusCode(StatusCodes.Status202Accepted, new
+            {
+                Id = databaseServer.Id,
+                Name = databaseServer.Name,
+                Message = $"RavenDB instance {databaseServer.Id} queued for creation."
             });
         }
 

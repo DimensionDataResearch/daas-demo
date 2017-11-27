@@ -5,9 +5,9 @@ namespace DaaSDemo.Models.Api
     using Models.Data;
 
     /// <summary>
-    ///     Model for creation of a new <see cref="Data.Models.DatabaseServer"/>.
+    ///     Base model for creation of a new <see cref="Data.Models.DatabaseServer"/>.
     /// </summary>
-    public class NewDatabaseServer
+    public abstract class NewDatabaseServer
     {
         /// <summary>
         ///     The Id of the tenant that will own the server.
@@ -16,13 +16,32 @@ namespace DaaSDemo.Models.Api
         public string TenantId { get; set; }
 
         /// <summary>
-        ///     The server (container / deployment) name.
+        ///     The server name.
         /// </summary>
         [MaxLength(200)]
         [Required(AllowEmptyStrings = false)]
         [RegularExpression("[a-zA-Z][a-zA-Z0-9._]{2,}", ErrorMessage = "Server names can only contain letters, numbers, '.', and '_'.")]
         public string Name { get; set; }
 
+        /// <summary>
+        ///     The kind of database server to create.
+        /// </summary>
+        public abstract DatabaseServerKind Kind { get; }
+
+        /// <summary>
+        ///     The total amount of storage (in MB) to allocate to the server.
+        /// </summary>
+        [Required]
+        [Range(minimum: 10, maximum: 4000)]
+        public int SizeMB { get; set; }
+    }
+
+    /// <summary>
+    ///     Request to create a new SQL Server instance
+    /// </summary>
+    public class NewSqlServer
+        : NewDatabaseServer
+    {
         /// <summary>
         ///     The server's administrative ("sa" user) password.
         /// </summary>
@@ -33,14 +52,18 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The kind of database server to create.
         /// </summary>
-        [Required]
-        public DatabaseServerKind Kind { get; set; }
+        public override DatabaseServerKind Kind => DatabaseServerKind.SqlServer;
+    }
 
+    /// <summary>
+    ///     Request to create a new SQL Server instance
+    /// </summary>
+    public class NewRavenServer
+        : NewDatabaseServer
+    {
         /// <summary>
-        ///     The total amount of storage (in MB) to allocate to the server.
+        ///     The kind of database server to create.
         /// </summary>
-        [Required]
-        [Range(minimum: 10, maximum: 4000)]
-        public int SizeMB { get; set; }
+        public override DatabaseServerKind Kind => DatabaseServerKind.RavenDB;
     }
 }

@@ -82,6 +82,13 @@ export class TenantDetail {
     }
 
     /**
+     * Should the password field be displayed?
+     */
+    public get showPasswordField(): boolean {
+        return this.newServer !== null && this.newServer.kind == DatabaseServerKind.SqlServer;
+    }
+
+    /**
      * Show the server creation form.
      */
     public showCreateServerForm(): void {
@@ -291,7 +298,6 @@ ValidationRules
         .required()
         .minLength(5)
     .ensure('password').displayName('Administrator password')
-        .required()
         .minLength(6)
     .on(NewServer);
 

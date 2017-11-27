@@ -218,7 +218,7 @@ export class DaaSAPI
     public async deploySqlServer(tenantId: string, name: string, adminPassword: string): Promise<string> {
         await this.configured;
 
-        const response = await this.http.fetch(`servers`, {
+        const response = await this.http.fetch('servers/create/sql', {
             method: 'POST',
             body: json({
                 tenantId: tenantId,
@@ -254,13 +254,12 @@ export class DaaSAPI
     public async deployRavenServer(tenantId: string, name: string): Promise<string> {
         await this.configured;
 
-        const response = await this.http.fetch(`servers`, {
+        const response = await this.http.fetch('servers/create/ravendb', {
             method: 'POST',
             body: json({
                 tenantId: tenantId,
                 name: name,
                 kind: DatabaseServerKind.RavenDB,
-                adminPassword: 'unU$ed123', // RavenDB uses X.509 certificates for authentication.
                 sizeMB: 600 // TODO: Expose this via the UI.
             })
         });

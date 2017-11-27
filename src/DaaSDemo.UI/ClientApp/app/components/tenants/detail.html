@@ -56,15 +56,7 @@
 
             <div if.bind="addingServer">
                 <form class="ui form">
-                    <div class="required field"
-                        validation-errors.bind="nameErrors"
-                        class.bind="nameErrors.length ? 'error' : ''"
-                    >
-                        <label>Name</label>
-                        <input name="name" value.bind="newServer.name & validate" placeholder="Server name" type="text">
-                    </div>
-
-                    <div class="required field">
+                    <div class="required six wide field">
                         <label>Type</label>
                         <select value.bind="newServer.kind">
                             <option value="SqlServer">SQL Server</option>
@@ -72,7 +64,16 @@
                         </select>
                     </div>
 
-                    <div class="field"
+                    <div class="required six wide field"
+                        validation-errors.bind="nameErrors"
+                        class.bind="nameErrors.length ? 'error' : ''"
+                    >
+                        <label>Name</label>
+                        <input name="name" value.bind="newServer.name & validate" placeholder="Server name" type="text">
+                    </div>
+
+                    <div class="required six wide field"
+                        if.bind="showPasswordField"
                         validation-errors.bind="adminPasswordErrors"
                         class.bind="adminPasswordErrors.length ? 'error' : ''"
                     >

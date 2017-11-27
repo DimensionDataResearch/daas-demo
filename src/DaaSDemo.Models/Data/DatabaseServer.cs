@@ -33,9 +33,8 @@ namespace DaaSDemo.Models.Data
         public DatabaseServerKind Kind { get; set; }
 
         /// <summary>
-        ///     The server's administrative ("sa" user) password.
+        ///     The server's administrative ("sa" user) password (if required by the server kind).
         /// </summary>
-        [Required(AllowEmptyStrings = false)]
         public string AdminPassword { get; set; }
 
         /// <summary>
