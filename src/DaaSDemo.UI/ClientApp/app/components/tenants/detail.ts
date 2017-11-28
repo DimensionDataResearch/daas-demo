@@ -186,7 +186,7 @@ export class TenantDetail {
         
         try {
             const confirm = await this.confirmDialog.show('Destroy Server',
-                `Delete server "${server.name}"?`
+                `Destroy server "${server.name}"?`
             );
             if (!confirm)
                 return;

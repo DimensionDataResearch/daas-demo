@@ -4,7 +4,7 @@ import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Database, ProvisioningAction, ProvisioningStatus  } from '../api/daas-api';
+import { DaaSAPI, Database, ProvisioningAction, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
 
 /**
  * Component for the Database detail view.
@@ -40,6 +40,21 @@ export class DatabaseDetail {
     @computedFrom('database')
     public get isDatabaseReady(): boolean {
         return this.database !== null && this.database.status == ProvisioningStatus.Ready;
+    }
+
+    /**
+     * The database connection string.
+     */
+    public get connectionString(): string | null {
+        if (!this.database || !this.database.serverPublicFQDN || !this.database.serverPublicPort)
+            return null;
+
+        if (this.database.serverKind === DatabaseServerKind.SqlServer)
+            return `Data Source=tcp:${this.database.serverPublicFQDN},${this.database.serverPublicPort};Initial Catalog=${this.database.name};User=${this.database.databaseUser};Password=<your password>`;
+        else if (this.database.serverKind === DatabaseServerKind.RavenDB)
+            return `http://${this.database.serverPublicFQDN}:${this.database.serverPublicPort}/`;
+        else
+            return null;
     }
 
     /**

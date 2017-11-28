@@ -53,7 +53,9 @@ namespace DaaSDemo.Provisioning.Host
                     services.AddOptions();
                     services.AddDaaSOptions(hostContext.Configuration);
 
-                    services.AddDaaSDataAccess();
+                    services.AddDaaSDataAccess(
+                        createIndexes: true
+                    );
 
                     services.AddKubeClient();
                     services.AddDatabaseProxyApiClient();

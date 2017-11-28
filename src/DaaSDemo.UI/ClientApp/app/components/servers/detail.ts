@@ -8,6 +8,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 import * as $ from 'jquery';
 import 'semantic';
 
+import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
@@ -25,6 +26,7 @@ export class ServerDetail {
     public errorMessage: string | null = null;
 
     @bindable private progressBar: ServerProvisioningPhaseProgress
+    @bindable private confirmDialog: ConfirmDialog
     
     /**
      * Create a new Server detail view model.
@@ -60,11 +62,30 @@ export class ServerDetail {
     }
 
     /**
-     * Is a provisioning action currently in progress for the tenant's server?
+     * Destroy a server.
      */
-    @computedFrom('server')
-    public get isServerActionInProgress(): boolean {
-        return this.server !== null && this.server.action !== ProvisioningAction.None;
+    public async destroyServer(): Promise<void> {
+        if (this.server === null)
+            return;
+
+        this.clearError();
+        
+        try {
+            const confirm = await this.confirmDialog.show('Destroy Server',
+                `Destroy server "${this.server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.destroyServer(this.server.id);
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        this.router.navigate('servers');
     }
 
     /**
@@ -88,6 +109,24 @@ export class ServerDetail {
             window.clearTimeout(this.pollHandle);
             this.pollHandle = 0;
         }
+    }
+
+    /**
+     * Clear the current error message (if any).
+     */
+    public clearError(): void {
+        this.errorMessage = null;
+    }
+
+    /**
+     * Show an error message.
+     * 
+     * @param error The error to show.
+     */
+    public showError(error: Error): void {
+        console.log(error);
+        
+        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 
     /**

@@ -44,6 +44,7 @@ namespace DaaSDemo.Models.Api
             
             Id = database.Id;
             Name = database.Name;
+            DatabaseUser = database.DatabaseUser;
 
             StorageMB = database.Storage.SizeMB;
 
@@ -52,12 +53,12 @@ namespace DaaSDemo.Models.Api
 
             ServerId = server.Id;
             ServerName = server.Name;
+            ServerKind = server.Kind;
+            ServerPublicFQDN = server.PublicFQDN;
+            ServerPublicPort = server.PublicPort;
 
             TenantId = tenant.Id;
             TenantName = tenant.Name;
-
-            if (!String.IsNullOrWhiteSpace(server.PublicFQDN) && server.PublicPort != null)
-                ConnectionString = $"Data Source=tcp:{server.PublicFQDN}:{server.PublicPort};Initial Catalog={Name};User={database.DatabaseUser};Password=<password>";
         }
 
         /// <summary>
@@ -71,6 +72,11 @@ namespace DaaSDemo.Models.Api
         public string Name { get; set; }
 
         /// <summary>
+        ///     The name of the user assigned to the database.
+        /// </summary>
+        public string DatabaseUser { get; set; }
+
+        /// <summary>
         ///     The Id of the server that hosts the database.
         /// </summary>
         public string ServerId { get; set; }
@@ -79,6 +85,21 @@ namespace DaaSDemo.Models.Api
         ///     The name of the server that hosts the database.
         /// </summary>
         public string ServerName { get; set; }
+
+        /// <summary>
+        ///     The kind of server that hosts the database.
+        /// </summary>
+        public DatabaseServerKind ServerKind { get; set; }
+
+        /// <summary>
+        ///     The server's fully-qualified public domain name (if available).
+        /// </summary>
+        public string ServerPublicFQDN { get; set; }
+
+        /// <summary>
+        ///     The server's public TCP port (if available).
+        /// </summary>
+        public int? ServerPublicPort { get; set; }
 
         /// <summary>
         ///     The Id of the tenant that owns the database.
@@ -103,12 +124,6 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     The amount of storage (in MB) allocated to the database.
         /// </summary>
-        [Required]
         public int StorageMB { get; set; }
-
-        /// <summary>
-        ///     The database connection string.
-        /// </summary>
-        public string ConnectionString { get; set; }
     }
 }

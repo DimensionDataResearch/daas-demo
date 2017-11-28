@@ -557,6 +557,11 @@ export interface Database {
     name: string;
 
     /**
+     * The name of the user assigned to the database.
+     */
+    databaseUser: string;
+
+    /**
      * The Id of the server that hosts the database.
      */
     serverId: string;
@@ -565,6 +570,21 @@ export interface Database {
      * The name of the server that hosts the database.
      */
     serverName: string;
+
+    /**
+     * The kind of server that hosts the database.
+     */
+    serverKind: DatabaseServerKind;
+
+    /**
+     * The server's fully-qualified public domain name (if available).
+     */
+    serverPublicFQDN: string | null;
+
+    /**
+     * The server's public TCP port (if available).
+     */
+    serverPublicPort: number | null;
 
     /**
      * The Id of the tenant that owns the database.
@@ -585,11 +605,6 @@ export interface Database {
      * The database provisioning status.
      */
     status: ProvisioningStatus;
-
-    /**
-     * The database connection string (if available).
-     */
-    connectionString: string | null;
 }
 
 /**

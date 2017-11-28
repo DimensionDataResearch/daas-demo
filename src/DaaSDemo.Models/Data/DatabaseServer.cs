@@ -87,14 +87,6 @@ namespace DaaSDemo.Models.Data
         public HashSet<string> DatabaseIds { get; private set; } = new HashSet<string>();
 
         /// <summary>
-        ///     Get the connection string for the DaaS master database.
-        /// </summary>
-        /// <returns>
-        ///     The connection string.
-        /// </returns>
-        public string GetMasterConnectionString() => $"Data Source={PublicFQDN},{PublicPort};Initial Catalog=master;User=sa;Password={AdminPassword}";
-
-        /// <summary>
         ///     Create a deep clone of the <see cref="DatabaseServer"/>.
         /// </summary>
         /// <returns>

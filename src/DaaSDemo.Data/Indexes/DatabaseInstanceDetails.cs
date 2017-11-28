@@ -25,6 +25,7 @@ namespace DaaSDemo.Data.Indexes
                 {
                     Id = database.Id,
                     Name = database.Name,
+                    DatabaseUser = database.DatabaseUser,
 
                     StorageMB = database.Storage.SizeMB,
                     
@@ -33,11 +34,12 @@ namespace DaaSDemo.Data.Indexes
 
                     ServerId = database.ServerId,
                     ServerName = server.Name,
+                    ServerKind = server.Kind,
+                    ServerPublicFQDN = server.PublicFQDN,
+                    ServerPublicPort = server.PublicPort,
 
                     TenantId = database.TenantId,
-                    TenantName = tenant.Name,
-
-                    ConnectionString = (server.PublicPort != null) ? $"Data Source=tcp:{server.PublicFQDN}:{server.PublicPort};Initial Catalog={database.Name};User={database.DatabaseUser};Password=<password>" : null
+                    TenantName = tenant.Name
                 };
 
             StoreAllFields(FieldStorage.Yes);

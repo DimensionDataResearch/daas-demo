@@ -1,5 +1,7 @@
 <template>
     <require from="./elements/detail/server-actions"></require>
+    
+    <require from="../dialogs/confirm"></require>
     <require from="../progress/server-provisioning-phase"></require>
     <require from="../status/server-provisioning-status"></require>
 
@@ -37,7 +39,7 @@
                     Connection details are not currently available for this server.
                 </div>
 
-                <div style="margin-top: 0.5rem;">
+                <div style="margin-top: 1.0rem;">
                     <server-actions server.bind="server" destroy-server-clicked.call="destroyServer()"></server-actions>
                 </div>
             </div>
@@ -55,4 +57,6 @@
             </p>
         </div>
     </div>
+
+    <confirm-dialog view-model.ref="confirmDialog"></confirm-dialog>
 </template>

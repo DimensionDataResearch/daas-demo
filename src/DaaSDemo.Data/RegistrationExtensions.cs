@@ -29,7 +29,13 @@ namespace DaaSDemo.Data
         /// <param name="services">
         ///     The service collection to configure.
         /// </param>
-        public static void AddDaaSDataAccess(this IServiceCollection services, string databaseName = "DaaS")
+        /// <param name="databaseName">
+        ///     The name of the DaaS database.
+        /// </param>
+        /// <param name="createIndexes">
+        ///     Create / update indexes when first connecting to the database?
+        /// </param>
+        public static void AddDaaSDataAccess(this IServiceCollection services, string databaseName = "DaaS", bool createIndexes = false)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
@@ -81,11 +87,14 @@ namespace DaaSDemo.Data
 
                 logger.LogDebug("RavenDB document store initialised.");
 
-                logger.LogInformation("Configuring RavenDB indexes...");
+                if (createIndexes)
+                {
+                    logger.LogInformation("Configuring RavenDB indexes...");
 
-                IndexCreation.CreateIndexes(IndexesAssembly, store);
+                    IndexCreation.CreateIndexes(IndexesAssembly, store);
 
-                logger.LogInformation("RavenDB indexes configured.");
+                    logger.LogInformation("RavenDB indexes configured.");
+                }
 
                 return store;
             });
