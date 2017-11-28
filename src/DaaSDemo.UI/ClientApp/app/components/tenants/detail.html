@@ -36,7 +36,13 @@
                     <tbody>
                         <tr repeat.for="server of servers">
                             <td class="collapsing center aligned">
-                                <server-actions-menu server.bind="server" destroy-clicked.call="destroyServer(server)" repair-clicked.call="reconfigureServer(server)"></server-actions-menu>
+                                <server-actions-menu
+                                    server.bind="server"
+                                    destroy-clicked.call="destroyServer(server)"
+                                    repair-clicked.call="reconfigureServer(server)"
+                                    show-databases-clicked.call="showDatabases(server)"
+                                >
+                                </server-actions-menu>
                             </td>
                             <td class="center aligned">
                                 <a route-href="route: server; params.bind: { id: server.id }">${ server.name }</a>

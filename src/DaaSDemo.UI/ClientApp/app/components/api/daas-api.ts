@@ -150,6 +150,34 @@ export class DaaSAPI
     }
 
     /**
+     * Get information about all databases hosted by the specified server.
+     * 
+     * @returns The databases.
+     */
+    public async getServerDatabases(serverId: string): Promise<Database[]> {
+        await this.configured;
+
+        const response = await this.http.fetch(`servers/${serverId}/databases`);
+        const body = await response.json();
+
+        if (response.ok)
+            return body as Database[];
+
+        if (response.status === 404)
+        {
+            const notFound = body as NotFoundResponse;
+            if (notFound.entityType == 'DatabaseServer')
+                throw new Error(`Server not found with Id '${serverId}'.`);
+        }
+
+        const errorResponse = body as ApiResponse;
+        
+        throw new Error(
+            `Failed to retrieve databases for server with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Get information about a tenant's database servers.
      * 
      * @param tenantId The tenant Id.

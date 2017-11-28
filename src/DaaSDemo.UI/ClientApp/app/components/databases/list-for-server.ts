@@ -1,17 +1,19 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
-import { RouteConfig } from 'aurelia-router';
+import { Router, RouteConfig } from 'aurelia-router';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Server, Database } from '../api/daas-api';
+import { DaaSAPI, Server, Database, ProvisioningAction } from '../api/daas-api';
 import { sortByName } from '../../utilities/sorting';
 
 import { NewDatabase } from './forms/new';
 
-@inject(DaaSAPI)
-export class DatabaseList {
+@inject(DaaSAPI, Router)
+export class DatabaseListForServer {
     private routeConfig: RouteConfig;
-    
-    @bindable public servers: Server[] = [];
+    private serverId: string;
+    private pollHandle: number = 0;
+
+    @bindable public server: Server;
     @bindable public databases: Database[] = [];
     @bindable public newDatabase: NewDatabase | null = null;
     @bindable public errorMessage: string | null = null;
@@ -20,11 +22,20 @@ export class DatabaseList {
     @bindable private confirmDialog: ConfirmDialog
 
     /**
-     * Create a new database list view model.
+     * Create a new server-scoped database list view model.
      * 
      * @param api The DaaS API client.
+     * @param router The router service.
      */
-    constructor(private api: DaaSAPI) { }
+    constructor(private api: DaaSAPI, private router: Router) { }
+
+    /**
+     * Servers for the add-database form.
+     */
+    @computedFrom('server')
+    public get servers(): Server[] {
+        return [ this.server ];
+    }
 
     /**
      * Are there no databases defined in the system?
@@ -37,7 +48,6 @@ export class DatabaseList {
     /**
      * Is the add-database form displayed?
      */
-    @computedFrom('newDatabase')
     public get addingDatabase(): boolean {
         return this.newDatabase !== null;
     }
@@ -58,8 +68,14 @@ export class DatabaseList {
 
         try {
             this.databases = sortByName(
-                await this.api.getDatabases()
+                await this.api.getServerDatabases(this.serverId)
             );
+
+            if (this.databases.find(database => database.action !== ProvisioningAction.None)) {
+                this.pollHandle = window.setTimeout(() => this.refreshDatabaseList(), 2000);
+            } else {
+                this.pollHandle = 0;
+            }
         } catch (error) {
             this.showError(error as Error);
         }
@@ -69,7 +85,7 @@ export class DatabaseList {
      * Show the database creation form.
      */
     public showCreateDatabaseForm(): void {
-        this.newDatabase = new NewDatabase();
+        this.newDatabase = new NewDatabase(this.serverId);
     }
 
     /**
@@ -101,10 +117,10 @@ export class DatabaseList {
         }
         catch (error) {
             this.showError(error as Error);
-
+            
             return;
         }
-        
+
         await this.refreshDatabaseList();
 
         this.hideCreateDatabaseForm();
@@ -145,10 +161,24 @@ export class DatabaseList {
      * @param params Route parameters.
      * @param routeConfig The configuration for the currently-active route.
      */
-    public activate(params: any, routeConfig: RouteConfig): void {
+    public activate(params: RouteParams, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
+        if (!params.serverId) {
+            this.router.navigateToRoute('databases')
+
+            return;
+        }
+
+        this.serverId = params.serverId;
 
         this.load();
+    }
+
+    public deactivate(): void {
+        if (this.pollHandle !== 0) {
+            window.clearTimeout(this.pollHandle);
+            this.pollHandle = 0;
+        }
     }
 
     /**
@@ -159,10 +189,16 @@ export class DatabaseList {
 
         try
         {
-            const serversRequest = this.api.getServers();
-            const databasesRequest = this.api.getDatabases();
+            const serverRequest = this.api.getServer(this.serverId);
+            const databasesRequest = this.serverId ? this.api.getServerDatabases(this.serverId) : this.api.getDatabases();
 
-            this.servers = await serversRequest;
+            const server = await serverRequest;
+            if (!server)
+                throw new Error(`Server not found with Id '${this.serverId}'.`);
+
+            this.server = server;
+            this.routeConfig.title = `Databases (${this.server.name})`;
+
             this.databases = sortByName(
                 await databasesRequest
             );
@@ -192,4 +228,14 @@ export class DatabaseList {
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
+}
+
+/**
+ * Route parameters for the database list view.
+ */
+interface RouteParams {
+    /**
+     * If specified, then only databases for the specified server will be shown.
+     */
+    serverId: string;
 }

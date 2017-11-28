@@ -148,6 +148,17 @@ export class TenantDetail {
     }
 
     /**
+     * Show the server's databases.
+     * 
+     * @param server The target server.
+     */
+    public showDatabases(server: Server): void {
+        this.router.navigateToRoute('serverDatabases', {
+            serverId: server.id
+        });
+    }
+
+    /**
      * Reconfigure / repair a server.
      */
     public async reconfigureServer(server: Server): Promise<void> {

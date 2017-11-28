@@ -360,17 +360,18 @@ namespace DaaSDemo.Api.Controllers
         }
 
         /// <summary>
-        ///     Get all servers hosted by the specified server.
+        ///     Get all databases hosted by the specified server.
         /// </summary>
         /// <param name="serverId">
         ///     The server Id.
         /// </param>
         [HttpGet("{serverId}/databases")]
-        public IActionResult GetDatabasesByServer(string serverId)
+        public IActionResult GetDatabases(string serverId)
         {
             return Json(
                 DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>()
                     .Where(database => database.ServerId == serverId)
+                    .OrderBy(database => database.Name)
                     .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
             );
         }

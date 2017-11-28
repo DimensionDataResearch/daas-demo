@@ -43,6 +43,11 @@ export class App {
             moduleId: PLATFORM.moduleName('../servers/detail'),
             title: 'Server'
         }, {
+            route: 'servers/:serverId/databases',
+            name: 'serverDatabases',
+            moduleId: PLATFORM.moduleName('../databases/list-for-server'),
+            title: 'Databases (server)'
+        }, {
             route: 'databases',
             name: 'databases',
             settings: { icon: 'database' },

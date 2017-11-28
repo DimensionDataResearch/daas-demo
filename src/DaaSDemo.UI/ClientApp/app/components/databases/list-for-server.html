@@ -16,6 +16,9 @@
             <button class="ui icon button" click.delegate="showCreateDatabaseForm()">
                 <i class="add circle icon"></i> Add
             </button>
+            <a class="ui icon button" route-href="route: server; params.bind: { id: server.id }">
+                <i class="server circle icon"></i> Go to server
+            </a>
             <button class="ui right floated circular icon button" click.delegate="refreshDatabaseList()">
                 <i class="refresh icon"></i>
             </button>

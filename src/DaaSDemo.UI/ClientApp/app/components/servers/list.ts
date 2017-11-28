@@ -132,8 +132,8 @@ export class ServerList {
      */
     public showDatabases(server: Server): void {
         // Cheat, for now.
-        this.router.navigateToRoute('tenantDatabases', {
-            id: server.tenantId
+        this.router.navigateToRoute('serverDatabases', {
+            serverId: server.id
         });
     }
 

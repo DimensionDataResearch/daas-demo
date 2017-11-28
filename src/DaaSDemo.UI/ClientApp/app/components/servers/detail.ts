@@ -68,9 +68,8 @@ export class ServerDetail {
         if (!this.server)
             return;
 
-        // Cheat, for now.
-        this.router.navigateToRoute('tenantDatabases', {
-            id: this.server.tenantId
+        this.router.navigateToRoute('serverDatabases', {
+            serverId: this.server.id
         });
     }
 
@@ -98,7 +97,7 @@ export class ServerDetail {
             return;
         }
 
-        this.router.navigate('servers');
+        this.router.navigateToRoute('servers');
     }
 
     /**
