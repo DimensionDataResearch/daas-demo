@@ -3,7 +3,7 @@ Param(
     [string] $Repo,
 
     [Parameter()]
-    [string] $OnlyComponent = $null,
+    [string[]] $OnlyComponents = $null,
 
     [Parameter()]
     [string] $Version = '1.0.0-dev',
@@ -12,11 +12,8 @@ Param(
     [switch] $Deploy
 )
 
-If ($OnlyComponent) {
-    $Components = @(
-        $OnlyComponent
-    )
-} Else {
+$Components = $OnlyComponents
+If (!$Components) {
     $Components = @(
         'api',
         'database-proxy',
