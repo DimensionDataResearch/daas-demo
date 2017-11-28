@@ -4,7 +4,6 @@ import { Tenant, Server } from '../../../api/daas-api';
 
 export class ServerActions
 {
-    @bindable public tenant: Tenant;
     @bindable public server: Server;
 
     @bindable public destroyServerClicked: () => void;

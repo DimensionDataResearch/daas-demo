@@ -2,7 +2,7 @@
 
 import { inject, factory, transient, computedFrom, bindable } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
-import { RouteConfig } from 'aurelia-router';
+import { Router, RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import * as $ from 'jquery';
@@ -14,7 +14,7 @@ import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning
 /**
  * Component for the Server detail view.
  */
-@inject(DaaSAPI, NewInstance.of(ValidationController))
+@inject(Router, DaaSAPI, NewInstance.of(ValidationController))
 export class ServerDetail {
     private routeConfig: RouteConfig;
     private serverId: string;
@@ -29,9 +29,11 @@ export class ServerDetail {
     /**
      * Create a new Server detail view model.
      * 
+     * @param router The router service.
      * @param api The DaaS API client.
+     * @param validationController The validation controller for the current context.
      */
-    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
+    constructor(private router: Router, private api: DaaSAPI, public validationController: ValidationController) { }
 
     /**
      * Has an error occurred?
@@ -113,6 +115,12 @@ export class ServerDetail {
 
             if (this.server === null)
             {
+                if (isReload) {
+                    this.router.navigate('servers');
+
+                    return;
+                }
+
                 this.routeConfig.title = 'Server not found';
                 this.errorMessage = `Server not found with Id ${this.serverId}.`;
             }
@@ -121,7 +129,7 @@ export class ServerDetail {
                 this.routeConfig.title = this.server.name;
                 if (this.server.action != ProvisioningAction.None)
                 {
-                    this.pollHandle = window.setTimeout(() => this.load(false), 2000);
+                    this.pollHandle = window.setTimeout(() => this.load(true), 2000);
 
                     if (this.progressBar)
                         this.progressBar.update();

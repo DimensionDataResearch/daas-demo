@@ -49,8 +49,14 @@
             </table>
         </div>
 
-        <div if.bind="hasNoServers" class="ui info message">
-            No servers found.
+        <div if.bind="hasNoServers">
+            <button class="ui icon button" disabled="disabled">
+                <i class="add circle icon"></i> Add Server
+            </button>
+
+            <div class="ui info message">
+                No servers found.
+            </div>
         </div>
 
         <div if.bind="hasError" class="ui error message">

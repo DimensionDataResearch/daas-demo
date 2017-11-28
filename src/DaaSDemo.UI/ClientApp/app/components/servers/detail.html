@@ -1,4 +1,6 @@
 <template>
+    <require from="./elements/detail/server-actions"></require>
+    <require from="../progress/server-provisioning-phase"></require>
     <require from="../status/server-provisioning-status"></require>
 
     <div class="ui segment" style="min-height: 10.0rem;">
@@ -35,10 +37,8 @@
                     Connection details are not currently available for this server.
                 </div>
 
-                <div if.bind="isServerReady" style="margin-top: 20px;">
-                    <a class="ui button" route-href="route: tenantDatabases; params.bind: { id: server.tenantId }">
-                        <i class="database icon"></i> Show Databases
-                    </a>
+                <div style="margin-top: 0.5rem;">
+                    <server-actions server.bind="server" destroy-server-clicked.call="destroyServer()"></server-actions>
                 </div>
             </div>
 
