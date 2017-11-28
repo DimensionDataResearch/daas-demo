@@ -25,6 +25,12 @@ namespace DaaSDemo.Models.DatabaseProxy
         public string DatabaseId { get; set; }
 
         /// <summary>
+        ///     Stop processing statements if an error is encountered?
+        /// </summary>
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+        public bool StopOnError { get; set; }
+
+        /// <summary>
         ///     T-SQL parameters (if any) for the request.
         /// </summary>
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]

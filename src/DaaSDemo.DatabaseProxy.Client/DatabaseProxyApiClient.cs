@@ -67,13 +67,16 @@ namespace DaaSDemo.DatabaseProxy.Client
         /// <param name="executeAsAdminUser">
         ///     Execute the command as the server's admin user ("sa")?
         /// </param>
+        /// <param name="stopOnError">
+        ///     Stop executing statements as soon as an error is encountered?
+        /// </param>
         /// <param name="cancellationToken">
         ///     A <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
         ///     The command result.
         /// </returns>
-        public async Task<CommandResult> ExecuteCommand(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
+        public async Task<CommandResult> ExecuteCommand(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, bool stopOnError = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));
@@ -82,7 +85,8 @@ namespace DaaSDemo.DatabaseProxy.Client
             {
                 ServerId = serverId,
                 DatabaseId = databaseId,
-                ExecuteAsAdminUser = executeAsAdminUser
+                ExecuteAsAdminUser = executeAsAdminUser,
+                StopOnError = stopOnError
             };
             command.Sql.AddRange(sql);
             if (parameters != null)
@@ -114,13 +118,16 @@ namespace DaaSDemo.DatabaseProxy.Client
         /// <param name="executeAsAdminUser">
         ///     Execute the query as the server's admin user ("sa")?
         /// </param>
+        /// <param name="stopOnError">
+        ///     Stop executing statements as soon as an error is encountered?
+        /// </param>
         /// <param name="cancellationToken">
         ///     A <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
         ///     The query result.
         /// </returns>
-        public async Task<QueryResult> ExecuteQuery(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, CancellationToken cancellationToken = default)
+        public async Task<QueryResult> ExecuteQuery(string serverId, string databaseId, IEnumerable<string> sql, IEnumerable<Parameter> parameters = null, bool executeAsAdminUser = false, bool stopOnError = false, CancellationToken cancellationToken = default)
         {
             if (sql == null)
                 throw new ArgumentNullException(nameof(sql));
@@ -129,7 +136,8 @@ namespace DaaSDemo.DatabaseProxy.Client
             {
                 ServerId = serverId,
                 DatabaseId = databaseId,
-                ExecuteAsAdminUser = executeAsAdminUser
+                ExecuteAsAdminUser = executeAsAdminUser,
+                StopOnError = stopOnError
             };
             query.Sql.AddRange(sql);
             if (parameters != null)

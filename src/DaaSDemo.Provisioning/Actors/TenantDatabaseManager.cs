@@ -247,7 +247,8 @@ namespace DaaSDemo.Provisioning.Actors
                 parameters: ManagementSql.Parameters.CheckDatabaseExists(
                     databaseName: CurrentState.Name
                 ),
-                executeAsAdminUser: true
+                executeAsAdminUser: true,
+                stopOnError: true
             );
 
             return result.ResultSets[0].Rows.Count == 1;
@@ -277,7 +278,8 @@ namespace DaaSDemo.Provisioning.Actors
                     maxPrimaryFileSizeMB: CurrentState.Storage.SizeMB,
                     maxLogFileSizeMB: (int)(0.2 * CurrentState.Storage.SizeMB) // Reserve an additional 20% of storage for transaction logs.
                 ),
-                executeAsAdminUser: true
+                executeAsAdminUser: true,
+                stopOnError: true
             );
 
             for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)
@@ -332,7 +334,8 @@ namespace DaaSDemo.Provisioning.Actors
                 serverId: CurrentState.ServerId,
                 databaseId: DatabaseProxyApiClient.MasterDatabaseId,
                 sql: ManagementSql.DropDatabase(CurrentState.Name),
-                executeAsAdminUser: true
+                executeAsAdminUser: true,
+                stopOnError: true
             );
 
             for (int messageIndex = 0; messageIndex < commandResult.Messages.Count; messageIndex++)

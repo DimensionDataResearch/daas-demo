@@ -167,6 +167,13 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                                     }
                                 )
                             );
+
+                            if (command.StopOnError)
+                            {
+                                Log.LogInformation("Terminating command processing because the request was configured to stop on the first error encountered.");
+
+                                break;
+                            }
                         }
                         catch (Exception unexpectedException)
                         {
@@ -178,6 +185,13 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                                 Kind = SqlErrorKind.Infrastructure,
                                 Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
                             });
+
+                            if (command.StopOnError)
+                            {
+                                Log.LogInformation("Terminating command processing because the request was configured to stop on the first error encountered.");
+
+                                break;
+                            }
                         }
                     }
 
@@ -279,6 +293,13 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                                     }
                                 )
                             );
+
+                            if (query.StopOnError)
+                            {
+                                Log.LogInformation("Terminating query processing because the request was configured to stop on the first error encountered.");
+
+                                break;
+                            }
                         }
                         catch (Exception unexpectedException)
                         {
@@ -290,6 +311,13 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                                 Kind = SqlErrorKind.Infrastructure,
                                 Message = $"Unexpected error while executing T-SQL: {unexpectedException.Message}"
                             });
+
+                            if (query.StopOnError)
+                            {
+                                Log.LogInformation("Terminating query processing because the request was configured to stop on the first error encountered.");
+
+                                break;
+                            }
                         }
                     }
 
