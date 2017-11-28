@@ -766,7 +766,7 @@ namespace DaaSDemo.Provisioning.Actors
             int? externalPort = await Provisioner.GetPublicPort();
             if (externalPort != null)
             {
-                string serverFQDN = $"database.{KubeOptions.ClusterPublicFQDN}";
+                string serverFQDN = $"{Provisioner.State.Name}.database.{KubeOptions.ClusterPublicFQDN}";
                 if (serverFQDN != Provisioner.State.PublicFQDN || externalPort != Provisioner.State.PublicPort)
                 {
                     Log.Info("Server {ServerName} is accessible at {ClusterPublicFQDN}:{PublicPortPort}",
