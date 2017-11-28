@@ -1,19 +1,22 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
-import { RouteConfig } from 'aurelia-router';
+import { Router, RouteConfig } from 'aurelia-router';
 
 import { DaaSAPI, Server, ProvisioningAction } from '../api/daas-api';
+import { ConfirmDialog } from '../dialogs/confirm';
 import { sortByName } from '../../utilities/sorting';
 
-@inject(DaaSAPI)
+@inject(DaaSAPI, Router)
 export class ServerList {
     private routeConfig: RouteConfig;
     private pollHandle: number = 0;
 
     @bindable public servers: Server[] = [];
     @bindable public errorMessage: string | null = null;
-    public isLoading: boolean = false;
+    @bindable public isLoading: boolean = false;
 
-    constructor(private api: DaaSAPI) { }
+    @bindable private confirmDialog: ConfirmDialog
+
+    constructor(private api: DaaSAPI, private router: Router) { }
 
     /**
      * Are there no servers defined in the system?
@@ -101,9 +104,37 @@ export class ServerList {
      * 
      * @param server The server to repair.
      */
-    public async repairServer(serverId: string): Promise<void> {
-        await this.api.reconfigureServer(serverId);
+    public async repairServer(server: Server): Promise<void> {
+        this.clearError();
+        
+        try {
+            const confirm = await this.confirmDialog.show('Repair Server',
+                `Repair server "${server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.reconfigureServer(server.id);
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
         await this.load(true);
+    }
+
+    /**
+     * Show a server's databases.
+     * 
+     * @param server The target server.
+     */
+    public showDatabases(server: Server): void {
+        // Cheat, for now.
+        this.router.navigateToRoute('tenantDatabases', {
+            id: server.tenantId
+        });
     }
 
     /**
@@ -112,7 +143,23 @@ export class ServerList {
      * @param server The server to destroy.
      */
     public async destroyServer(server: Server): Promise<void> {
-        await this.api.destroyServer(server.id);
+        this.clearError();
+        
+        try {
+            const confirm = await this.confirmDialog.show('Destroy Server',
+                `Destroy server "${server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.destroyServer(server.id);
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
         await this.load(true);
     }
 

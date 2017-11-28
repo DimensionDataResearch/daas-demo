@@ -1,7 +1,8 @@
 <template>
-    <require from="./elements/detail/server-actions"></require>
-    
+    <require from="./connectivity"></require>
+
     <require from="../dialogs/confirm"></require>
+    <require from="../menus/actions/server"></require>
     <require from="../progress/server-provisioning-phase"></require>
     <require from="../status/server-provisioning-status"></require>
 
@@ -13,8 +14,8 @@
         <div if.bind="!hasError">
             <div if.bind="hasServer">
                 <h1 class="ui header">${ server.name }</h1>
-
-                <strong>Status</strong>: <server-provisioning-status server.bind="server"></server-provisioning-status>
+                
+                <server-provisioning-status server.bind="server"></server-provisioning-status>
                 <br/>
                 <div if.bind="server.action != 'None'">
                     <strong>Requested Action</strong>: ${ server.action }
@@ -28,19 +29,21 @@
                 </div>
                 <br/>
 
-                <h4 class="ui dividing header">Connectivity</h4>
-                <div if.bind="server.publicFQDN">
-                    <strong>Host</strong>: ${ server.publicFQDN }
-                    <br/>
-                    <strong>Port</strong>: ${ server.publicPort }
-                    <br/>
-                </div>
-                <div if.bind="!server.publicFQDN" class="well">
-                    Connection details are not currently available for this server.
-                </div>
+                <server-connectivity server.bind="server"></server-connectivity>
 
-                <div style="margin-top: 1.0rem;">
-                    <server-actions server.bind="server" destroy-server-clicked.call="destroyServer()"></server-actions>
+                <div class="ui grid">
+                    <div class="thirteen wide column"></div>
+                    <div class="three wide column">
+                        <server-actions-menu server.bind="server"
+                            label="Actions"
+                            disabled.bind="!isServerReady"
+                            
+                            destroy-clicked.call="destroyServer()"
+                            repair-clicked.call="repairServer()"
+                            show-databases-clicked.call="showDatabases()"
+                        >
+                        </server-actions>
+                    </div>
                 </div>
             </div>
 

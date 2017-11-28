@@ -1,6 +1,6 @@
 import { inject, factory, transient, computedFrom } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
-import { RouteConfig } from 'aurelia-router';
+import { Router, RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
@@ -12,7 +12,7 @@ import { sortByName } from '../../utilities/sorting';
 /**
  * Component for the Tenant detail view.
  */
-@inject(DaaSAPI, NewInstance.of(ValidationController))
+@inject(DaaSAPI, Router, NewInstance.of(ValidationController))
 export class TenantDetail {
     private routeConfig: RouteConfig;
     private tenantId: string;
@@ -32,7 +32,7 @@ export class TenantDetail {
      * 
      * @param api The DaaS API client.
      */
-    constructor(private api: DaaSAPI, public validationController: ValidationController) { }
+    constructor(private api: DaaSAPI, private router: Router, public validationController: ValidationController) { }
 
     /**
      * Has an error occurred?
@@ -107,8 +107,6 @@ export class TenantDetail {
      * Request creation of a new server.
      */
     public async createServer(): Promise<void> {
-        console.log('createServer');
-
         if (this.hasValidationErrors)
             return;
 
@@ -143,11 +141,7 @@ export class TenantDetail {
                 }
             }
             
-            this.ensureUpToDate = true;
-            await this.load(false);
-
-            this.hideCreateServerForm();
-
+            this.router.navigateToRoute('server', { id: serverId });
         } catch (error) {
             this.showError(error as Error);
         }
@@ -296,10 +290,16 @@ export class NewServer {
 }
 
 ValidationRules
-    .ensure('name').displayName('Database name')
+    .ensure<NewServer, string>('name').displayName('Database name')
         .required()
         .minLength(5)
-    .ensure('password').displayName('Administrator password')
+    .ensure<string>('adminPassword').displayName('Administrator password')
+        .satisfies((adminPassword, newServer) => {
+            if (!newServer || newServer.kind !== DatabaseServerKind.SqlServer)
+                return true;
+            
+            return !!adminPassword;
+        }).withMessage('Administrator password is required for SQL Server')
         .minLength(6)
     .on(NewServer);
 

@@ -3,7 +3,7 @@
 
     <form class="ui form">
         <div class="required field" validation-errors.bind="serverIdErrors" class.bind="serverIdErrors.length ? 'error' : ''">
-            <select value.bind="newDatabase.serverId">
+            <select value.bind="newDatabase.serverId & validate">
                 <option value="" selected="selected">Select a server</option>
                 <option repeat.for="server of servers" value.bind="server.id">${server.name}</option>
             </select>

@@ -1,8 +1,16 @@
 <template>
-    <div class="ui dropdown blue icon button" element.ref="rootElement">
-        <i class="setting icon"></i> <i class="angle down icon"></i>
+    <div class="ui ${ disabled ? 'disabled' : '' } dropdown blue icon button" element.ref="rootElement">
+        <i class="setting icon"></i>
+        <span if.bind="label">${ label }</span>
+        <i class="angle down icon"></i>
 
         <div class="menu">
+            <div class="item" class.bind="!canShowDatabases ? 'disabled' : ''">
+                <a click.delegate="showDatabasesClicked()">
+                    <i class="blue database icon"></i> Databases
+                </a>
+            </div>
+            <div class="divider"></div>
             <div class="item" class.bind="!canRepair ? 'disabled' : ''">
                 <a click.delegate="repairClicked()">
                     <i class="blue refresh icon"></i> Repair

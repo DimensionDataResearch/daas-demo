@@ -9,7 +9,7 @@ import * as $ from 'jquery';
 import 'semantic';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus  } from '../api/daas-api';
+import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
@@ -62,7 +62,20 @@ export class ServerDetail {
     }
 
     /**
-     * Destroy a server.
+     * Show the server's databases.
+     */
+    public showDatabases(): void {
+        if (!this.server)
+            return;
+
+        // Cheat, for now.
+        this.router.navigateToRoute('tenantDatabases', {
+            id: this.server.tenantId
+        });
+    }
+
+    /**
+     * Destroy the server.
      */
     public async destroyServer(): Promise<void> {
         if (this.server === null)
@@ -86,6 +99,33 @@ export class ServerDetail {
         }
 
         this.router.navigate('servers');
+    }
+
+    /**
+     * Repair the server.
+     */
+    public async repairServer(): Promise<void> {
+        if (this.server === null)
+            return;
+
+        this.clearError();
+        
+        try {
+            const confirm = await this.confirmDialog.show('Repair Server',
+                `Repair server "${this.server.name}"?`
+            );
+            if (!confirm)
+                return;
+
+            await this.api.reconfigureServer(this.server.id);
+        }
+        catch (error) {
+            this.showError(error as Error);
+
+            return;
+        }
+
+        await this.load(true);
     }
 
     /**
@@ -184,16 +224,6 @@ export class ServerDetail {
                 this.loading = false;
         }
     }
-
-    /**
-     * Start polling the DaaS API to keep the server status up-to-date.
-     */
-    private startPolling(): void {
-        if (this.pollHandle !== 0)
-            return;
-
-        this.pollHandle = window.setInterval(() => this.load(true), 4000);
-    }
 }
 
 /**
@@ -201,22 +231,32 @@ export class ServerDetail {
  */
 export class NewServer {
     /**
-     * The server's name.
+     * The server name.
      */
     name: string | null = null;
 
     /**
-     * The server's administrator ("sa") password.
+     * The kind of server to create.
+     */
+    kind: DatabaseServerKind;
+
+    /**
+     * The server administrative password.
      */
     adminPassword: string | null = null;
 }
 
 ValidationRules
-    .ensure('name').displayName('Database name')
+    .ensure<NewServer, string>('name').displayName('Database name')
         .required()
         .minLength(5)
-    .ensure('password').displayName('Administrator password')
-        .required()
+    .ensure<string>('adminPassword').displayName('Administrator password')
+        .satisfies((adminPassword, newServer) => {
+            if (!newServer || newServer.kind !== DatabaseServerKind.SqlServer)
+                return true;
+            
+            return !!adminPassword;
+        }).withMessage('Administrator password is required for SQL Server')
         .minLength(6)
     .on(NewServer);
 

@@ -1,0 +1,17 @@
+<template>
+    <h4 class="ui dividing header">Connectivity</h4>
+    
+    <div if.bind="isServerExternallyAccessible">
+        <div if.bind="isSqlServer">
+            <strong>Host</strong>: ${ server.publicFQDN }:${ server.publicPort }
+        </div>
+        <div if.bind="isRavenDB">
+            <strong>Host</strong>: <a href="http://${ server.publicFQDN }:${ server.publicPort }/" target="_blank">http://${ server.publicFQDN }:${ server.publicPort }</a>
+        </div>
+        <br/>
+        <br/>
+    </div>
+    <div if.bind="!isServerExternallyAccessible" class="well">
+        Connection details are not currently available for this server.
+    </div>
+</template>
