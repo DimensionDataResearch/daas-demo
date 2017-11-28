@@ -91,6 +91,8 @@ namespace DaaSDemo.Provisioning
             // AF: It sucks, but CREATE LOGIN doesn't allow you to pass a parameter or variable for the password.
             password = password.Replace("'", "''");
             
+            int growthFactor = (int)(maxPrimaryFileSizeMB * 0.2);
+
             yield return $@"
                 Create Database [{databaseName}]
                 On Primary
@@ -98,7 +100,7 @@ namespace DaaSDemo.Provisioning
                     Name = N'{databaseName}',
                     FileName = N'/var/opt/mssql/data/{databaseName}.mdf',
                     Size = 8192KB,
-                    FileGrowth = 65536KB,
+                    FileGrowth = {growthFactor}MB,
                     MaxSize = {maxPrimaryFileSizeMB}MB
                 )
                 Log On
@@ -106,7 +108,7 @@ namespace DaaSDemo.Provisioning
                     Name = N'{databaseName}_log',
                     FileName = N'/var/opt/mssql/data/{databaseName}_log.ldf',
                     Size = 8192KB,
-                    FileGrowth = 65536KB,
+                    FileGrowth = {growthFactor}MB,
                     MaxSize = {maxLogFileSizeMB}MB
                 )
             ";
