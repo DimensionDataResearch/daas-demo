@@ -27,11 +27,18 @@ $docker = Get-Command docker
 Write-Host 'Building images...'
 ForEach ($Component in $Components) {
     & $docker build -t "${Repo}/${Component}:${Version}" -f Dockerfile.${Component} .
+    If ($LASTEXITCODE) {
+        Return $LASTEXITCODE
+    }
 }
 
 Write-Host 'Pushing images...'
 ForEach ($Component in $Components) {
     & $docker push "${Repo}/${Component}:${Version}"
+
+    If ($LASTEXITCODE) {
+        Return $LASTEXITCODE
+    }
 }
 
 If ($Deploy) {
@@ -43,6 +50,11 @@ If ($Deploy) {
         $manifestFile = Join-Path $manifestDirectory "daas-$Component.yml"
 
         & $kubectl delete -f $manifestFile
+        # It's fine if the target doesn't exist before we try to delete it
+
         & $kubectl create -f $manifestFile
+        If ($LASTEXITCODE) {
+            Return $LASTEXITCODE
+        }
     }
 }

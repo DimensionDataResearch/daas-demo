@@ -22,24 +22,15 @@ namespace DaaSDemo.Provisioning.Provisioners
         /// <param name="databaseProxyClient">
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
-        protected DatabaseProvisioner(ILogger<DatabaseProvisioner> logger, DatabaseProxyApiClient databaseProxyClient)
+        protected DatabaseProvisioner(ILogger<DatabaseProvisioner> logger)
             : base(logger)
         {
-            if (databaseProxyClient == null)
-                throw new ArgumentNullException(nameof(databaseProxyClient));
-            
-            DatabaseProxyClient = databaseProxyClient;
         }
 
         /// <summary>
         ///     A <see cref="DatabaseInstance"/> representing the database's target state.
         /// </summary>
         public DatabaseInstance State { get; set; }
-
-        /// <summary>
-        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
-        /// </summary>
-        protected DatabaseProxyApiClient DatabaseProxyClient { get; }
 
         /// <summary>
         ///     Determine whether the provisioner supports the specified server type.

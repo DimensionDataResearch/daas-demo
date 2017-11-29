@@ -25,9 +25,18 @@ namespace DaaSDemo.Provisioning.Provisioners
         ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
         /// </param>
         public SqlServerDatabaseProvisioner(ILogger<DatabaseProvisioner> logger, DatabaseProxyApiClient databaseProxyClient)
-            : base(logger, databaseProxyClient)
+            : base(logger)
         {
+            if (databaseProxyClient == null)
+                throw new ArgumentNullException(nameof(databaseProxyClient));
+            
+            DatabaseProxyClient = databaseProxyClient;
         }
+
+        /// <summary>
+        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
+        /// </summary>
+        DatabaseProxyApiClient DatabaseProxyClient { get; }
 
         /// <summary>
         ///     Determine whether the provisioner supports the specified server type.

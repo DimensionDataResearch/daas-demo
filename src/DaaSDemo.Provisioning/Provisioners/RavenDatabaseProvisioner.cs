@@ -1,9 +1,14 @@
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DaaSDemo.Provisioning.Provisioners
 {
+    using Data;
     using DatabaseProxy.Client;
     using Exceptions;
     using Models.Data;
@@ -21,13 +26,22 @@ namespace DaaSDemo.Provisioning.Provisioners
         /// <param name="logger">
         ///     The provisioner's logger.
         /// </param>
-        /// <param name="databaseProxyClient">
-        ///     The <see cref="DatabaseProxyApiClient"/> used to communicate with the Database Proxy API.
+        /// <param name="documentStore">
+        ///     The RavenDB document store.
         /// </param>
-        public RavenDatabaseProvisioner(ILogger<DatabaseProvisioner> logger, DatabaseProxyApiClient databaseProxyClient)
-            : base(logger, databaseProxyClient)
+        public RavenDatabaseProvisioner(ILogger<DatabaseProvisioner> logger, IDocumentStore documentStore)
+            : base(logger)
         {
+            if (documentStore == null)
+                throw new ArgumentNullException(nameof(documentStore));
+            
+            DocumentStore = documentStore;
         }
+
+        /// <summary>
+        ///     The RavenDB document store.
+        /// </summary>
+        IDocumentStore DocumentStore { get; }
 
         /// <summary>
         ///     Determine whether the provisioner supports the specified server type.
@@ -50,9 +64,18 @@ namespace DaaSDemo.Provisioning.Provisioners
         {
             RequireState();
 
-            // TODO: Implement.
+            const int pageSize = 50;
+            
+            int start = 1;
+            string[] databaseNames;
+            do
+            {
+                databaseNames = await DocumentStore.Admin.Server.GetDatabaseNames(start, pageSize);
+                if (databaseNames.Contains(State.Name))
+                    return true;
 
-            await Task.Yield();
+                start += pageSize;
+            } while (databaseNames.Length > 0);
 
             return false;
         }
@@ -63,7 +86,7 @@ namespace DaaSDemo.Provisioning.Provisioners
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        public override Task CreateDatabase()
+        public override async Task CreateDatabase()
         {
             RequireState();
 
@@ -73,21 +96,19 @@ namespace DaaSDemo.Provisioning.Provisioners
                 State.ServerId
             );
 
-            // TODO: Implement.
+            await DocumentStore.Admin.Server.CreateDatabase(State.Name);
 
             Log.LogInformation("Created database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}.",
                 State.Name,
                 State.Id,
                 State.ServerId
             );
-
-            return Task.CompletedTask;
         }
 
         /// <summary>
         ///     Drop the database.
         /// </summary>
-        public override Task DropDatabase()
+        public override async Task DropDatabase()
         {
             RequireState();
 
@@ -97,15 +118,13 @@ namespace DaaSDemo.Provisioning.Provisioners
                 State.ServerId
             );
 
-            // TODO: Implement.
+            await DocumentStore.Admin.Server.DeleteDatabase(State.Name, hardDelete: true);
 
             Log.LogInformation("Dropped database {DatabaseName} (Id:{DatabaseId}) on server {ServerId}.",
                 State.Name,
                 State.Id,
                 State.ServerId
             );
-
-            return Task.CompletedTask;
         }
     }
 }
