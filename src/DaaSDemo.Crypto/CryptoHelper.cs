@@ -65,18 +65,18 @@ namespace DaaSDemo.Crypto
             if (String.IsNullOrWhiteSpace(password))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'password'.", nameof(password));
 
-            X509CertificateEntry[] chain = new X509CertificateEntry[1];
+            List<X509CertificateEntry> chain = new List<X509CertificateEntry>();
             AsymmetricCipherKeyPair privateKey = null;
 
-            foreach (object pemObject in EnumeratePemObjects(password, certificateCredentials.CertificateContent, certificateCredentials.PrivateKey))
+            foreach (object pemObject in EnumeratePemObjects(password, certificateCredentials.CertificateContent, certificateCredentials.PrivateKey, certificateCredentials.IssuingCACertificateContent))
             {
                 if (pemObject is X509Certificate certificate)
-                    chain[0] = new X509CertificateEntry(certificate);
+                    chain.Add(new X509CertificateEntry(certificate));
                 else if (pemObject is AsymmetricCipherKeyPair keyPair)
                     privateKey = keyPair;
             }
 
-            if (chain[0] == null)
+            if (chain.Count == 0)
                 throw new CryptographicException("Cannot find X.509 certificate in PEM data.");
 
             if (privateKey == null)
@@ -85,7 +85,7 @@ namespace DaaSDemo.Crypto
             string certificateSubject = chain[0].Certificate.SubjectDN.ToString();
 
             Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-            store.SetKeyEntry(certificateSubject, new AsymmetricKeyEntry(privateKey.Private), chain);
+            store.SetKeyEntry(certificateSubject, new AsymmetricKeyEntry(privateKey.Private), chain.ToArray());
 
             using (MemoryStream pfxData = new MemoryStream())
             {
