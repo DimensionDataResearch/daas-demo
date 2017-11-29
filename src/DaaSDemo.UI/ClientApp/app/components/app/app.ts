@@ -49,7 +49,7 @@ export class App {
             title: 'Databases (server)'
         }, {
             route: 'servers/:serverId/events',
-            name: 'serverDatabases',
+            name: 'serverEvents',
             moduleId: PLATFORM.moduleName('../servers/events'),
             title: 'Events (server)'
         }, {
