@@ -6,6 +6,17 @@
             <div class="ui active loader"></div>
         </div>
 
+        <h1 class="ui dividing header">Tenants</h1>
+        
+        <div if.bind="!addingTenant" style="margin-bottom: 0.5rem;">
+            <button class="ui icon button" click.delegate="showCreateTenantForm()">
+                <i class="add circle icon"></i> Add
+            </button>
+            <button class="ui right floated circular icon button" click.delegate="load(true)">
+                <i class="refresh icon"></i>
+            </button>
+        </div>
+
         <div if.bind="addingTenant">
             <new-tenant-form new-tenant.bind="newTenant"
                 create-clicked.call="createTenant()"
@@ -14,15 +25,6 @@
         </div>
         
         <div if.bind="hasTenant && !addingTenant">
-            <h1 class="ui dividing header">Tenants</h1>
-
-            <button class="ui icon button" click.delegate="showCreateTenantForm()">
-                <i class="add circle icon"></i> Add
-            </button>
-            <button class="ui right floated circular icon button" click.delegate="load(true)">
-                <i class="refresh icon"></i>
-            </button>
-
             <table class="ui striped celled compact table">
                 <thead>
                     <tr>
