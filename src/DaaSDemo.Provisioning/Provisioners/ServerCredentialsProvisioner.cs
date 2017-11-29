@@ -233,7 +233,7 @@ namespace DaaSDemo.Provisioning.Provisioners
             );
 
             var credentials = await VaultClient.PKIGenerateDynamicCredentialsAsync(
-                VaultOptions.CertificatePolicyName,
+                VaultOptions.CertificatePolicies.DatabaseServer,
                 new CertificateCredentialsRequestOptions
                 {
                     CertificateFormat = CertificateFormat.pem,

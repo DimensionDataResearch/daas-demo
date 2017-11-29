@@ -25,9 +25,9 @@ namespace DaaSDemo.Common.Options
         public string PkiBasePath { get; set; }
 
         /// <summary>
-        ///     The name of the default issuance policy for certificate credentials.
+        ///     Well-known Vault certificate policies.
         /// </summary>
-        public string CertificatePolicyName { get; set; }
+        public VaultCertificatePolicyOptions CertificatePolicies { get; set; } = new VaultCertificatePolicyOptions();
 
         /// <summary>
         ///     Load <see cref="VaultOptions"/> from configuration.
@@ -42,5 +42,21 @@ namespace DaaSDemo.Common.Options
         ///     The <see cref="VaultOptions"/>.
         /// </returns>
         public static VaultOptions From(IConfiguration configuration, string key = "Vault") => Load<VaultOptions>(configuration, key);
+    }
+
+    /// <summary>
+    ///     Well-known Vault certificate policies for the DaaS demo system.
+    /// </summary>
+    public class VaultCertificatePolicyOptions
+    {
+        /// <summary>
+        ///     The name of the Vault certificate policy for database servers.
+        /// </summary>
+        public string DatabaseServer { get; set; }
+
+        /// <summary>
+        ///     The name of the Vault certificate policy for database users.
+        /// </summary>
+        public string DatabaseUser { get; set; }
     }
 }

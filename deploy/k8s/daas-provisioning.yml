@@ -80,7 +80,7 @@ spec:
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: endpoint_vault
+                key: vault_endpoint
           - name: DAAS_Vault__Token # TODO: Get this from a Secret instead.
             valueFrom:
               configMapKeyRef:
@@ -90,12 +90,17 @@ spec:
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: vault_pki_base_path
-          - name: DAAS_Vault__CertificatePolicyName
+                key: vault-pki_base_path
+          - name: DAAS_Vault__CertificatePolicies__DatabaseServer
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: vault_certificate_policy_name
+                key: vault_certificate_policy_database_server
+          - name: DAAS_Vault__CertificatePolicies__DatabaseUser
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: vault_certificate_policy_database_user
         ports:
           - containerPort: 5000
       
