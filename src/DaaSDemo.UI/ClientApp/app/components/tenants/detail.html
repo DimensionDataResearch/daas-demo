@@ -5,7 +5,7 @@
     <require from="../status/server-provisioning-status"></require>
 
     <div class="ui segment" style="min-height: 10.0rem;">
-        <div class="ui active dimmer" if.bind="loading">
+        <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
         </div>
 
@@ -15,10 +15,10 @@
             <h3 class="ui dividing header">Servers</h3>
 
             <div if.bind="hasServer && !addingServer">
-                <button class="ui icon button" click.delegate="showCreateServerForm()">
+                <button class="ui icon button" click.delegate="showCreateServerForm()" disabled.bind="isBusy">
                     <i class="add circle icon"></i> Add Server
                 </button>
-                <button class="ui right floated circular icon button" click.delegate="load(true)">
+                <button class="ui right floated circular icon button" click.delegate="refreshServerList()" disabled.bind="isBusy">
                     <i class="refresh icon"></i>
                 </button>
     

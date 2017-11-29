@@ -8,18 +8,16 @@ import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Tenant, DatabaseServer, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 import { sortByName } from '../../utilities/sorting';
+import { ViewModel } from '../common/view-model';
 
 /**
  * Component for the Tenant detail view.
  */
 @inject(DaaSAPI, Router, NewInstance.of(ValidationController))
-export class TenantDetail {
-    private routeConfig: RouteConfig;
+export class TenantDetail extends ViewModel {
     private tenantId: string;
-    private pollHandle: number = 0;
     private ensureUpToDate: boolean = false;
-    
-    @bindable public loading: boolean = false;
+
     @bindable public tenant: Tenant | null = null;
     @bindable public servers: DatabaseServer[] = [];
     @bindable public errorMessage: string | null = null;
@@ -32,7 +30,9 @@ export class TenantDetail {
      * 
      * @param api The DaaS API client.
      */
-    constructor(private api: DaaSAPI, private router: Router, public validationController: ValidationController) { }
+    constructor(private api: DaaSAPI, private router: Router, public validationController: ValidationController) {
+        super();
+    }
 
     /**
      * Has an error occurred?
@@ -84,8 +84,18 @@ export class TenantDetail {
     /**
      * Should the password field be displayed?
      */
+    @computedFrom('newServer')
     public get showPasswordField(): boolean {
         return this.newServer !== null && this.newServer.kind == DatabaseServerKind.SqlServer;
+    }
+
+    /**
+     * Refresh the list of servers.
+     */
+    public async refreshServerList(): Promise<void> {
+        await this.runBusy(
+            () => this.load()
+        );
     }
 
     /**
@@ -180,7 +190,9 @@ export class TenantDetail {
         }
 
         this.ensureUpToDate = true;
-        await this.load(true);
+        await this.runBusyAsync(
+            () => this.load()
+        );
     }
 
     /**
@@ -205,25 +217,9 @@ export class TenantDetail {
         }
 
         this.ensureUpToDate = true;
-        await this.load(true);
-    }
-
-    /**
-     * Clear the current error message (if any).
-     */
-    public clearError(): void {
-        this.errorMessage = null;
-    }
-
-    /**
-     * Show an error message.
-     * 
-     * @param error The error to show.
-     */
-    public showError(error: Error): void {
-        console.log(error);
-        
-        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
+        await this.runBusyAsync(
+            () => this.load()
+        );
     }
 
     /**
@@ -233,33 +229,21 @@ export class TenantDetail {
      * @param routeConfig The configuration for the currently-active route.
      */
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
-        this.routeConfig = routeConfig;
+        super.activate(params, routeConfig);
+        
         this.tenantId = params.id;
         
-        this.load(false);
-    }
-
-    /**
-     * Called when the component is deactivated.
-     */
-    public deactivate(): void {
-        if (this.pollHandle != 0) {
-            window.clearTimeout(this.pollHandle);
-            this.pollHandle = 0;
-        }
+        this.runLoadingAsync(
+            () => this.load()
+        );
     }
 
     /**
      * Load tenant and server details.
      */
-    private async load(isReload: boolean): Promise<void> {
+    private async load(): Promise<void> {
         this.clearError();
         
-        if (isReload)
-            this.pollHandle = 0;
-        else
-            this.loading = true;
-
         try {
             const tenantRequest = this.api.getTenant(this.tenantId);
             const serversRequest = this.api.getTenantServers(this.tenantId, this.ensureUpToDate);
@@ -277,15 +261,9 @@ export class TenantDetail {
             }
 
             if (this.areServerActionsInProgress) {
-                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
+                this.pollHandle = window.setTimeout(() => this.load(), 2000);
             }
-        } catch (error) {
-            this.showError(error as Error);
-        }
-        finally {
-            if (!isReload)
-                this.loading = false;
-
+        } finally {
             this.ensureUpToDate = false;
         }
     }
