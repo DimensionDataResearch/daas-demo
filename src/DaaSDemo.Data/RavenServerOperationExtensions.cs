@@ -116,7 +116,7 @@ namespace DaaSDemo.Data
         /// <param name="serverOperations">
         ///     The server operations client.
         /// </param>
-        /// <param name="principalName">
+        /// <param name="subjectName">
         ///     The name of the security principal that the certificate will represent.
         /// </param>
         /// <param name="protectedWithPassword">
@@ -134,17 +134,17 @@ namespace DaaSDemo.Data
         /// <returns>
         ///     A byte array containing the PKCS12-encoded (i.e. PFX) certificate and private key.
         /// </returns>
-        public static async Task<byte[]> CreateClientCertificate(this ServerOperationExecutor serverOperations, string principalName, string protectedWithPassword, SecurityClearance clearance, Dictionary<string, DatabaseAccess> permissions = null, CancellationToken cancellationToken = default)
+        public static async Task<byte[]> CreateClientCertificate(this ServerOperationExecutor serverOperations, string subjectName, string protectedWithPassword, SecurityClearance clearance, Dictionary<string, DatabaseAccess> permissions = null, CancellationToken cancellationToken = default)
         {
             if (serverOperations == null)
                 throw new ArgumentNullException(nameof(serverOperations));
             
-            if (String.IsNullOrWhiteSpace(principalName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userName'.", nameof(principalName));
+            if (String.IsNullOrWhiteSpace(subjectName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userName'.", nameof(subjectName));
             
             CertificateRawData clientCertificatePfx = await serverOperations.SendAsync(
                 new CreateClientCertificateOperation(
-                    principalName,
+                    subjectName,
                     permissions ?? new Dictionary<string, DatabaseAccess>(),
                     clearance,
                     protectedWithPassword
