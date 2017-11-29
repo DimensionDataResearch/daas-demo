@@ -38,13 +38,13 @@
                             <database-actions-menu database.bind="database" destroy-clicked.call="destroyDatabase(database)"></database-actions-menu>
                         </td>
                         <td class="center aligned">
-                            <a route-href="route: database; params.bind: { id: database.id }">${ database.name }</a>
+                            <a route-href="route: database; params.bind: { databaseId: database.id }">${ database.name }</a>
                         </td>
                         <td class="center aligned">
-                            <a route-href="route: server; params.bind: { id: database.serverId }">${ database.serverName }</a>
+                            <a route-href="route: server; params.bind: { serverId: database.serverId }">${ database.serverName }</a>
                         </td>
                         <td class="center aligned">
-                            <a route-href="route: tenant; params.bind: { id: database.tenantId }">${ database.tenantName }</a>
+                            <a route-href="route: tenant; params.bind: { tenantId: database.tenantId }">${ database.tenantName }</a>
                         </td>
                         <td class="collapsing center aligned">
                             <database-provisioning-status database.bind="database"></database-provisioning-status>

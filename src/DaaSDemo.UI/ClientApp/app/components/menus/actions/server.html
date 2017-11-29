@@ -5,6 +5,11 @@
         <i class="angle down icon"></i>
 
         <div class="menu">
+            <div class="item" class.bind="!canShowEvents ? 'disabled' : ''">
+                <a click.delegate="showEventsClicked()">
+                    <i class="blue feed icon"></i> Events
+                </a>
+            </div>
             <div class="item" class.bind="!canShowDatabases ? 'disabled' : ''">
                 <a click.delegate="showDatabasesClicked()">
                     <i class="blue database icon"></i> Databases

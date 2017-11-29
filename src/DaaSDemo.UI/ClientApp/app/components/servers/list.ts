@@ -100,6 +100,28 @@ export class ServerList {
     }
 
     /**
+     * Show a server's databases.
+     * 
+     * @param server The target server.
+     */
+    public showDatabases(server: DatabaseServer): void {
+        this.router.navigateToRoute('serverDatabases', {
+            serverId: server.id
+        });
+    }
+
+    /**
+     * Show a server's events.
+     * 
+     * @param server The target server.
+     */
+    public showEvents(server: DatabaseServer): void {
+        this.router.navigateToRoute('serverEvents', {
+            serverId: server.id
+        });
+    }
+
+    /**
      * Repair a server.
      * 
      * @param server The server to repair.
@@ -123,18 +145,6 @@ export class ServerList {
         }
 
         await this.load(true);
-    }
-
-    /**
-     * Show a server's databases.
-     * 
-     * @param server The target server.
-     */
-    public showDatabases(server: DatabaseServer): void {
-        // Cheat, for now.
-        this.router.navigateToRoute('serverDatabases', {
-            serverId: server.id
-        });
     }
 
     /**

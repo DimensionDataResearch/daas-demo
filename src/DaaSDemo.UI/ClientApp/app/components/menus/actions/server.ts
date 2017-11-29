@@ -14,8 +14,9 @@ export class ServerActionsMenu {
     @bindable public label: string | null = null;
     @bindable public disabled: boolean = false;
     @bindable public server: DatabaseServer | null = null;
-    @bindable public repairClicked: () => void = noAction;
     @bindable public showDatabasesClicked: () => void = noAction;
+    @bindable public showEventsClicked: () => void = noAction;
+    @bindable public repairClicked: () => void = noAction;
     @bindable public destroyClicked: () => void = noAction;
 
     constructor() {}
@@ -38,6 +39,13 @@ export class ServerActionsMenu {
             return false;
 
         return this.showDatabasesClicked !== noAction;
+    }
+
+    public get canShowEvents(): boolean {
+        if (!this.server)
+            return false;
+
+        return this.showEventsClicked !== noAction;
     }
 
     public get canRepair(): boolean {

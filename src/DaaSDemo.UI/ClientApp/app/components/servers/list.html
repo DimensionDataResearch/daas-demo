@@ -33,17 +33,18 @@
                     <tr repeat.for="server of servers">
                         <td class="collapsing center aligned">
                             <server-actions-menu server.bind="server"
+                                show-databases-clicked.call="showDatabases(server)"
+                                show-events-clicked.call="showEvents(server)"
                                 destroy-clicked.call="destroyServer(server)"
                                 repair-clicked.call="repairServer(server)"
-                                show-databases-clicked.call="showDatabases(server)"
                             >
                             </server-actions-menu>
                         </td>
                         <td class="center aligned">
-                            <a route-href="route: server; params.bind: { id: server.id }">${ server.name }</a>
+                            <a route-href="route: server; params.bind: { serverId: server.id }">${ server.name }</a>
                         </td>
                         <td class="center aligned">
-                            <a route-href="route: tenant; params.bind: { id: server.tenantId }">${ server.tenantName }</a>
+                            <a route-href="route: tenant; params.bind: { tenantId: server.tenantId }">${ server.tenantName }</a>
                         </td>
                         <td class="center aligned">${ server.publicFQDN }</td>
                         <td class="center aligned">${ server.publicPort }</td>

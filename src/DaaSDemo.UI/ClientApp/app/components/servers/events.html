@@ -1,7 +1,7 @@
 <template>
     <h1 class="ui dividing header">Event stream for ${ server.name }</h1>
 
-    <a class="ui icon button" route-href="route: server; params.bind: { id: server.id }">
+    <a class="ui icon button" route-href="route: server; params.bind: { serverId: server.id }">
         <i class="server icon"></i> Go to server
     </a>
     <button class="ui right floated circular icon button" click.delegate="load(true)" disabled.bind="isRefreshing">

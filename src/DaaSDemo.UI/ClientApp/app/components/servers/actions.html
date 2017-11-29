@@ -1,5 +1,5 @@
 <template>
-    <a class="ui icon button" route-href="route: tenantDatabases; params.bind: { id: server.tenantId }">
+    <a class="ui icon button" route-href="route: tenantDatabases; params.bind: { tenantId: server.tenantId }">
         <i class="database icon"></i> Show Databases
     </a>
     <a class="ui right floated red icon button" disable.bind="canDestroyServer" click.delegate="onDestroyServerClicked()">

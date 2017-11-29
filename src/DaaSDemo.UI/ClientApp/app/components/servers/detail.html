@@ -38,9 +38,10 @@
                             label="Actions"
                             disabled.bind="!isServerReady"
                             
+                            show-databases-clicked.call="showDatabases()"
+                            show-events-clicked.call="showEvents()"
                             destroy-clicked.call="destroyServer()"
                             repair-clicked.call="repairServer()"
-                            show-databases-clicked.call="showDatabases()"
                         >
                         </server-actions>
                     </div>

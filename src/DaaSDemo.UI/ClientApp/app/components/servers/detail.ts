@@ -74,6 +74,18 @@ export class ServerDetail {
     }
 
     /**
+     * Show the server's events.
+     */
+    public showEvents(): void {
+        if (!this.server)
+            return;
+
+        this.router.navigateToRoute('serverEvents', {
+            serverId: this.server.id
+        });
+    }
+
+    /**
      * Destroy the server.
      */
     public async destroyServer(): Promise<void> {
