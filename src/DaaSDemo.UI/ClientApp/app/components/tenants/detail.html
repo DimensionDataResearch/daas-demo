@@ -27,7 +27,6 @@
                         <tr>
                             <th class="center aligned"></th>
                             <th class="center aligned">Name</th>
-                            <th class="center aligned">Tenant</th>
                             <th class="center aligned">Public FQDN</th>
                             <th class="center aligned">Public Port</th>
                             <th class="center aligned">Status</th>
@@ -46,9 +45,6 @@
                             </td>
                             <td class="center aligned">
                                 <a route-href="route: server; params.bind: { serverId: server.id }">${ server.name }</a>
-                            </td>
-                            <td class="center aligned">
-                                <a route-href="route: tenant; params.bind: { tenantId: server.tenantId }">${ server.tenantName }</a>
                             </td>
                             <td class="center aligned">${ server.publicFQDN }</td>
                             <td class="center aligned">${ server.publicPort }</td>
