@@ -4,7 +4,7 @@ import { bindable } from 'aurelia-framework';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { Server } from '../../api/daas-api';
+import { DatabaseServer } from '../../api/daas-api';
 
 const noAction = () => {};
 
@@ -13,7 +13,7 @@ export class ServerActionsMenu {
     
     @bindable public label: string | null = null;
     @bindable public disabled: boolean = false;
-    @bindable public server: Server | null = null;
+    @bindable public server: DatabaseServer | null = null;
     @bindable public repairClicked: () => void = noAction;
     @bindable public showDatabasesClicked: () => void = noAction;
     @bindable public destroyClicked: () => void = noAction;

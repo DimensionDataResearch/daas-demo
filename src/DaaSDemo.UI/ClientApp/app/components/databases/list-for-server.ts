@@ -2,7 +2,7 @@ import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { Router, RouteConfig } from 'aurelia-router';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Server, Database, ProvisioningAction } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, Database, ProvisioningAction } from '../api/daas-api';
 import { sortByName } from '../../utilities/sorting';
 
 import { NewDatabase } from './forms/new';
@@ -13,7 +13,7 @@ export class DatabaseListForServer {
     private serverId: string;
     private pollHandle: number = 0;
 
-    @bindable public server: Server;
+    @bindable public server: DatabaseServer;
     @bindable public databases: Database[] = [];
     @bindable public newDatabase: NewDatabase | null = null;
     @bindable public errorMessage: string | null = null;
@@ -33,7 +33,7 @@ export class DatabaseListForServer {
      * Servers for the add-database form.
      */
     @computedFrom('server')
-    public get servers(): Server[] {
+    public get servers(): DatabaseServer[] {
         return [ this.server ];
     }
 

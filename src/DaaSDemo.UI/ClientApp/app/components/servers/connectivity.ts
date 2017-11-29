@@ -1,10 +1,10 @@
 import { bindable } from 'aurelia-framework';
 
-import { Server, DatabaseServerKind } from '../api/daas-api';
+import { DatabaseServer, DatabaseServerKind } from '../api/daas-api';
 
 export class ServerConnectivity
 {
-    @bindable public server: Server | null;
+    @bindable public server: DatabaseServer | null;
 
     constructor() {}
 

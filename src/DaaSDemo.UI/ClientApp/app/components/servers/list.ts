@@ -1,7 +1,7 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { Router, RouteConfig } from 'aurelia-router';
 
-import { DaaSAPI, Server, ProvisioningAction } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, ProvisioningAction } from '../api/daas-api';
 import { ConfirmDialog } from '../dialogs/confirm';
 import { sortByName } from '../../utilities/sorting';
 
@@ -10,7 +10,7 @@ export class ServerList {
     private routeConfig: RouteConfig;
     private pollHandle: number = 0;
 
-    @bindable public servers: Server[] = [];
+    @bindable public servers: DatabaseServer[] = [];
     @bindable public errorMessage: string | null = null;
     @bindable public isLoading: boolean = false;
 
@@ -104,7 +104,7 @@ export class ServerList {
      * 
      * @param server The server to repair.
      */
-    public async repairServer(server: Server): Promise<void> {
+    public async repairServer(server: DatabaseServer): Promise<void> {
         this.clearError();
         
         try {
@@ -130,7 +130,7 @@ export class ServerList {
      * 
      * @param server The target server.
      */
-    public showDatabases(server: Server): void {
+    public showDatabases(server: DatabaseServer): void {
         // Cheat, for now.
         this.router.navigateToRoute('serverDatabases', {
             serverId: server.id
@@ -142,7 +142,7 @@ export class ServerList {
      * 
      * @param server The server to destroy.
      */
-    public async destroyServer(server: Server): Promise<void> {
+    public async destroyServer(server: DatabaseServer): Promise<void> {
         this.clearError();
         
         try {

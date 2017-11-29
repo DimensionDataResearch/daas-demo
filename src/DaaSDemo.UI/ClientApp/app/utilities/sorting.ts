@@ -1,4 +1,4 @@
-import { Server } from '../components/api/daas-api';
+import { DatabaseServer } from '../components/api/daas-api';
 
 /**
  * Represents a named item.

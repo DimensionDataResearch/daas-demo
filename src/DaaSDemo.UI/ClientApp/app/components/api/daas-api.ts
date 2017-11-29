@@ -1,5 +1,6 @@
 import { inject, singleton } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
+import { ServerProvisioningStatus } from '../status/server-provisioning-status';
 
 /**
  * Client for the Database-as-a-Service API.
@@ -39,13 +40,13 @@ export class DaaSAPI
      * 
      * @returns The tenants, sorted by name.
      */
-    public async getServers(): Promise<Server[]> {
+    public async getServers(): Promise<DatabaseServer[]> {
         await this.configured;
 
         const response = await this.http.fetch('servers');
         const body = await response.json();
 
-        return body as Server[];
+        return body as DatabaseServer[];
     }
 
     /**
@@ -126,14 +127,14 @@ export class DaaSAPI
      * @param serverId The server Id.
      * @returns The server, or null if no server exists with the specified Id.
      */
-    public async getServer(serverId: string): Promise<Server | null> {
+    public async getServer(serverId: string): Promise<DatabaseServer | null> {
         await this.configured;
 
         const response = await this.http.fetch(`servers/${serverId}`);
         const body = await response.json();
 
         if (response.ok)
-            return body as Server;
+            return body as DatabaseServer;
 
         if (response.status === 404)
         {
@@ -146,6 +147,36 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to retrieve details for server with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Get the event stream for a specific database server.
+     * 
+     * @param serverId The server Id.
+     * 
+     * @returns The server events.
+     */
+    public async getServerEvents(serverId: string): Promise<DatabaseServerEvent[]> {
+        await this.configured;
+
+        const response = await this.http.fetch(`servers/${serverId}/events`);
+        const body = await response.json();
+
+        if (response.ok)
+            return body as DatabaseServerEvent[];
+
+        if (response.status === 404)
+        {
+            const notFound = body as NotFoundResponse;
+            if (notFound.entityType == 'DatabaseServer')
+                throw new Error(`Server not found with Id ${serverId}.`);
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to retrieve events for server with Id ${serverId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -185,7 +216,7 @@ export class DaaSAPI
      * 
      * @returns The servers.
      */
-    public async getTenantServers(tenantId: string, ensureUpToDate: boolean = false): Promise<Server[]> {
+    public async getTenantServers(tenantId: string, ensureUpToDate: boolean = false): Promise<DatabaseServer[]> {
         await this.configured;
 
         let requestURI = `tenants/${tenantId}/servers`;
@@ -196,7 +227,7 @@ export class DaaSAPI
         const body = await response.json();
 
         if (response.ok) {
-            return body as Server[];
+            return body as DatabaseServer[];
         }
 
         const errorResponse = body as ApiResponse;
@@ -517,7 +548,7 @@ export interface Tenant
 /**
  * Represents a DaaS SQL Server instance.
  */
-export interface Server
+export interface DatabaseServer
 {
     /**
      * The server Id.
@@ -770,6 +801,76 @@ export enum DatabaseServerKind
      * RavenDB.
      */
     RavenDB = 'RavenDB'
+}
+
+/**
+ * Represents an event relating to a DatabaseServer.
+ */
+export interface DatabaseServerEvent {
+    /**
+     * The date / time that the event occurred.
+     */
+    timestamp: string;
+
+    /**
+     * The kind of event represented by the DatabaseServerEvent.
+     */
+    kind: DatabaseServerEventKind;
+
+    /**
+     * Messages (if any) associated with the event.
+     */
+    messages: string[];
+}
+
+/**
+ * Represents a provisioning event relating to a DatabaseServer.
+ */
+export interface DatabaseServerProvisioningEvent extends DatabaseServerEvent {
+    /**
+     * The requested action.
+     */
+    action: ProvisioningAction;
+
+    /**
+     * The server's current provisioning phase (if any) when the event was raised.
+     */
+    phase: ServerProvisioningPhase;
+
+    /**
+     * The server's current status when the event was raised.
+     */
+    status: ServerProvisioningStatus;
+}
+
+/**
+ * Represents an event indicating that a DatabaseServer's ingress details have changed.
+ */
+export interface DatabaseServerIngressChangedEvent extends DatabaseServerEvent {
+    /**
+     * The server's current fully-qualified public domain name (if any) when the event was raised.
+     */
+    publicFQDN: string | null;
+
+    /**
+     * The server's current public TCP port (if any) when the event was raised.
+     */
+    publicPort: number | null;
+}
+
+/**
+ * A well-known kind of DatabaseServerEvent.
+ */
+export enum DatabaseServerEventKind {
+    /**
+     * A provisioning-related event.
+     */
+    Provisioning = 'Provisioning',
+
+    /**
+     * Event indicating that a server's ingress details have changed.
+     */
+    IngressChanged = 'IngressChanged'
 }
 
 /**

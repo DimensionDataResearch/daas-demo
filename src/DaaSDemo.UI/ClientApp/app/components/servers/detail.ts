@@ -9,7 +9,7 @@ import * as $ from 'jquery';
 import 'semantic';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Server, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
@@ -22,7 +22,7 @@ export class ServerDetail {
     private pollHandle: number = 0;
     
     public loading: boolean = false;
-    public server: Server | null = null;
+    public server: DatabaseServer | null = null;
     public errorMessage: string | null = null;
 
     @bindable private progressBar: ServerProvisioningPhaseProgress

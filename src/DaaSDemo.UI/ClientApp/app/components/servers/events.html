@@ -1,0 +1,70 @@
+<template>
+    <h1 class="ui dividing header">Event stream for ${ server.name }</h1>
+
+    <a class="ui icon button" route-href="route: server; params.bind: { id: server.id }">
+        <i class="server icon"></i> Go to server
+    </a>
+    <button class="ui right floated circular icon button" click.delegate="load(true)" disabled.bind="isRefreshing">
+        <i class="refresh icon"></i>
+    </button>
+
+    <div class="ui segment" style="min-height: 10.0rem;">
+        <div class="ui active dimmer" if.bind="isLoading">
+            <div class="ui active loader"></div>
+        </div>
+
+        <div if.bind="hasEvents">
+            <div class="ui feed">
+                <div class="event" repeat.for="event of events">
+                    <div class="label" if.bind="event.kind == 'Provisioning'">
+                        <i class="cube icon"></i>
+                    </div>
+                    <div class="label" if.bind="event.kind == 'IngressChanged'">
+                        <i class="share alternate icon"></i>
+                    </div>
+
+                    <div class="content">
+                        <div class="summary" if.bind="event.kind == 'Provisioning'">
+                            <span if.bind="event.phase == 'None'">
+                                ${ event.status }
+                            </span>
+
+                            <span if.bind="event.phase != 'None'">
+                                ${ event.status } (${ event.phase.toLowerCase() })
+                            </span>
+                            
+
+                            <div class="date">
+                                ${ formatTimestamp(event) }
+                            </div>
+                        </div>
+                        <div class="summary" if.bind="event.kind == 'IngressChanged'">
+                            Server's external address has changed.
+
+                            <div class="date">
+                                ${ formatTimestamp(event) }
+                            </div>
+                        </div>
+
+                        <div class="meta" if.bind="event.messages.length">
+                            ${ event.messages }
+                        </div>
+                        <div class="meta" if.bind="!event.messages.length">
+                            Requested action: ${ event.action }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div if.bind="!hasEvents">
+            <div class="ui info message">
+                No events found.
+            </div>
+        </div>
+
+        <div if.bind="hasError" class="ui error message">
+            <p innerhtml.bind="errorMessage | sanitizeHTML"></p>
+        </div>
+    </div>
+</template>

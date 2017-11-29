@@ -2,7 +2,7 @@ import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Server, Database } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, Database } from '../api/daas-api';
 import { sortByName } from '../../utilities/sorting';
 
 import { NewDatabase } from './forms/new';
@@ -11,7 +11,7 @@ import { NewDatabase } from './forms/new';
 export class DatabaseList {
     private routeConfig: RouteConfig;
     
-    @bindable public servers: Server[] = [];
+    @bindable public servers: DatabaseServer[] = [];
     @bindable public databases: Database[] = [];
     @bindable public newDatabase: NewDatabase | null = null;
     @bindable public errorMessage: string | null = null;

@@ -4,12 +4,12 @@ import { bindable, inject, computedFrom } from 'aurelia-framework';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { Server, ServerProvisioningPhase } from '../api/daas-api';
+import { DatabaseServer, ServerProvisioningPhase } from '../api/daas-api';
 
 export class ServerProvisioningPhaseProgress {
     @bindable private progressBarElement: Element
     
-    @bindable public server: Server | null;
+    @bindable public server: DatabaseServer | null;
 
     /**
      * Called when the server has been updated.
@@ -17,7 +17,7 @@ export class ServerProvisioningPhaseProgress {
      * @param oldValue The old value of the "server" field.
      * @param newValue The new value of the "server" field.
      */
-    public serverChanged(oldValue: Server, newValue: Server): void {
+    public serverChanged(oldValue: DatabaseServer, newValue: DatabaseServer): void {
         this.update();
     }
 

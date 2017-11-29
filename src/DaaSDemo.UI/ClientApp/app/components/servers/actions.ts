@@ -1,11 +1,11 @@
 import { bindable } from 'aurelia-framework';
 
-import { Tenant, Server, ProvisioningStatus } from '../api/daas-api';
+import { Tenant, DatabaseServer, ProvisioningStatus } from '../api/daas-api';
 import { computedFrom } from 'aurelia-binding';
 
 export class ServerActions
 {
-    @bindable public server: Server;
+    @bindable public server: DatabaseServer;
 
     @bindable public destroyServerClicked: () => void;
 

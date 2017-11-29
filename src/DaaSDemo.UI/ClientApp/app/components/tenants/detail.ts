@@ -5,7 +5,7 @@ import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Tenant, Server, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
+import { DaaSAPI, Tenant, DatabaseServer, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 import { sortByName } from '../../utilities/sorting';
 
@@ -21,7 +21,7 @@ export class TenantDetail {
     
     @bindable public loading: boolean = false;
     @bindable public tenant: Tenant | null = null;
-    @bindable public servers: Server[] = [];
+    @bindable public servers: DatabaseServer[] = [];
     @bindable public errorMessage: string | null = null;
     @bindable public newServer: NewServer | null = null;
 
@@ -152,7 +152,7 @@ export class TenantDetail {
      * 
      * @param server The target server.
      */
-    public showDatabases(server: Server): void {
+    public showDatabases(server: DatabaseServer): void {
         this.router.navigateToRoute('serverDatabases', {
             serverId: server.id
         });
@@ -161,7 +161,7 @@ export class TenantDetail {
     /**
      * Reconfigure / repair a server.
      */
-    public async reconfigureServer(server: Server): Promise<void> {
+    public async reconfigureServer(server: DatabaseServer): Promise<void> {
         this.clearError();
         
         try {
@@ -186,7 +186,7 @@ export class TenantDetail {
     /**
      * Destroy a server.
      */
-    public async destroyServer(server: Server): Promise<void> {
+    public async destroyServer(server: DatabaseServer): Promise<void> {
         this.clearError();
         
         try {

@@ -230,7 +230,7 @@ namespace DaaSDemo.Models.Data
         public ProvisioningAction Action { get; set; }
 
         /// <summary>
-        ///     The current phase (if any).
+        ///     The current provisioning phase (if any).
         /// </summary>
         public ServerProvisioningPhase Phase { get; set; }
 

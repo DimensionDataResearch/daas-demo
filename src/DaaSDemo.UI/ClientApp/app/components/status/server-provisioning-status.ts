@@ -1,8 +1,8 @@
 import { bindable } from 'aurelia-framework';
-import { Server, ProvisioningAction, ProvisioningStatus } from '../api/daas-api';
+import { DatabaseServer, ProvisioningAction, ProvisioningStatus } from '../api/daas-api';
 
 export class ServerProvisioningStatus {
-    @bindable public server: Server;
+    @bindable public server: DatabaseServer;
 
     constructor() {}
 

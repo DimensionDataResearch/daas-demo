@@ -3,7 +3,7 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, Server, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
+import { DaaSAPI, DatabaseServer, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
 import { ConfirmDialog } from '../../dialogs/confirm';
 import { NewDatabase } from './forms/new';
 
@@ -17,7 +17,7 @@ export class TenantDatabaseList {
 
     @bindable public isLoading: boolean = false;
     @bindable public tenant: Tenant | null = null;
-    @bindable public servers: Server[] = [];
+    @bindable public servers: DatabaseServer[] = [];
     @bindable public databases: Database[] | null = null;
     @bindable public newDatabase: NewDatabase | null = null;
     @bindable public errorMessage: string | null = null;
