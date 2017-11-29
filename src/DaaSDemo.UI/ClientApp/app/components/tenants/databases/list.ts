@@ -166,7 +166,7 @@ export class TenantDatabaseList {
      */
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
-        this.tenantId = params.id;
+        this.tenantId = params.tenantId;
 
         this.load(false);
     }
@@ -262,5 +262,5 @@ interface RouteParams
     /**
      * The tenant Id.
      */
-    id: string;
+    tenantId: string;
 }

@@ -73,7 +73,7 @@ export class DatabaseDetail {
      */
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
-        this.databaseId = params.id;
+        this.databaseId = params.databaseId;
         
         this.load(false);
     }
@@ -148,5 +148,5 @@ interface RouteParams
     /**
      * The database Id.
      */
-    id: string;
+    databaseId: string;
 }

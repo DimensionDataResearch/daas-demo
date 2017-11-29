@@ -21,12 +21,12 @@ export class App {
             nav: true,
             title: 'Tenants'
         }, {
-            route: 'tenants/:id',
+            route: 'tenants/:tenantId',
             name: 'tenant',
             moduleId: PLATFORM.moduleName('../tenants/detail'),
             title: 'Tenant'
         }, {
-            route: 'tenants/:id/databases',
+            route: 'tenants/:tenantId/databases',
             name: 'tenantDatabases',
             moduleId: PLATFORM.moduleName('../tenants/databases/list'),
             title: 'Databases'
@@ -38,7 +38,7 @@ export class App {
             nav: true,
             title: 'Servers'
         }, {
-            route: 'servers/:id',
+            route: 'servers/:serverId',
             name: 'server',
             moduleId: PLATFORM.moduleName('../servers/detail'),
             title: 'Server'
@@ -60,7 +60,7 @@ export class App {
             nav: true,
             title: 'Databases'
         }, {
-            route: 'databases/:id',
+            route: 'databases/:databaseId',
             name: 'database',
             settings: { icon: 'database' },
             moduleId: PLATFORM.moduleName('../databases/detail'),

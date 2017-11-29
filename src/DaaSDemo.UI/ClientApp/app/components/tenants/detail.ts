@@ -231,7 +231,7 @@ export class TenantDetail extends ViewModel {
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
         super.activate(params, routeConfig);
         
-        this.tenantId = params.id;
+        this.tenantId = params.tenantId;
         
         this.runLoadingAsync(
             () => this.load()
@@ -300,5 +300,5 @@ interface RouteParams
     /**
      * The tenant Id.
      */
-    id: string;
+    tenantId: string;
 }

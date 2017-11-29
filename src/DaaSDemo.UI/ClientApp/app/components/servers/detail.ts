@@ -135,7 +135,7 @@ export class ServerDetail {
      */
     public activate(params: RouteParams, routeConfig: RouteConfig): void {
         this.routeConfig = routeConfig;
-        this.serverId = params.id;
+        this.serverId = params.serverId;
         
         this.load(false);
     }
@@ -267,5 +267,5 @@ interface RouteParams
     /**
      * The server Id.
      */
-    id: string;
+    serverId: string;
 }
