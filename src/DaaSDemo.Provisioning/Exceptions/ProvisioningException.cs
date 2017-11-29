@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace DaaSDemo.Provisioning.Exceptions
 {
-    using System.Text;
     using Models.DatabaseProxy;
 
     /// <summary>
@@ -33,6 +33,38 @@ namespace DaaSDemo.Provisioning.Exceptions
         ///     The exception that caused this exception to be raised.
         /// </param>
         public ProvisioningException(string message, System.Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
+    /// <summary>
+    ///     Exception raised when a fatal error is encountered while provisioning.
+    /// </summary>
+    public class FatalProvisioningException
+        : ProvisioningException
+    {
+        /// <summary>
+        ///     Create a new <see cref="FatalProvisioningException"/>.
+        /// </summary>
+        /// <param name="message">
+        ///     The exception message.
+        /// </param>
+        public FatalProvisioningException(string message)
+            : base(message)
+        {
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="FatalProvisioningException"/>.
+        /// </summary>
+        /// <param name="message">
+        ///     The exception message.
+        /// </param>
+        /// <param name="innerException">
+        ///     The exception that caused this exception to be raised.
+        /// </param>
+        public FatalProvisioningException(string message, System.Exception innerException)
             : base(message, innerException)
         {
         }

@@ -475,7 +475,8 @@ namespace DaaSDemo.Provisioning.Actors
             if (!_databaseManagers.TryGetValue(database.Id, out databaseManager))
             {
                 databaseManager = Context.ActorOf(
-                    Context.DI().Props<TenantDatabaseManager>(),
+                    Context.DI().Props<TenantDatabaseManager>()
+                        .WithSupervisorStrategy(StandardSupervision.Default),
                     name: TenantDatabaseManager.ActorName(database.Id)
                 );
                 Context.Watch(databaseManager);
@@ -484,6 +485,7 @@ namespace DaaSDemo.Provisioning.Actors
                 databaseManager.Tell(new TenantDatabaseManager.Initialize(
                     serverManager: Self,
                     dataAccess: DataAccess,
+                    server: Provisioner.State.Clone(),
                     initialState: database
                 ));
 

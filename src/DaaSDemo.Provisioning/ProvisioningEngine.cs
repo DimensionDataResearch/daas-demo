@@ -119,7 +119,8 @@ namespace DaaSDemo.Provisioning
             _actorSystem = Boot.Up(_scopeFactory);
 
             DataAccess = _actorSystem.ActorOf(
-                _actorSystem.DI().Props<Actors.DataAccess>(),
+                _actorSystem.DI().Props<Actors.DataAccess>()
+                    .WithSupervisorStrategy(StandardSupervision.Default),
                 name: Actors.DataAccess.ActorName
             );
         }

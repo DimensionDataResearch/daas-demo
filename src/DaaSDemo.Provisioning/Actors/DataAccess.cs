@@ -14,6 +14,7 @@ namespace DaaSDemo.Provisioning.Actors
 {
     using Common.Options;
     using Data;
+    using Exceptions;
     using Messages;
     using Models.Data;
 
@@ -129,7 +130,8 @@ namespace DaaSDemo.Provisioning.Actors
                     if (!_serverManagers.TryGetValue(server.Id, out serverManager))
                     {
                         serverManager = Context.ActorOf(
-                            Context.DI().Props<TenantServerManager>(),
+                            Context.DI().Props<TenantServerManager>()
+                                .WithSupervisorStrategy(StandardSupervision.Default),
                             name: TenantServerManager.ActorName(server.Id)
                         );
                         Context.Watch(serverManager);

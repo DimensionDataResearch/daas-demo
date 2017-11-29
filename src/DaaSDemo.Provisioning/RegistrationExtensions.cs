@@ -27,8 +27,10 @@ namespace DaaSDemo.Provisioning
             services.AddTransient<KubeSpecs>();
             services.AddTransient<KubeResources>();
 
-            services.AddTransient<DatabaseServerProvisioner>();
             services.AddTransient<ServerCredentialsProvisioner>();
+            services.AddTransient<DatabaseServerProvisioner>();
+            services.AddTransient<DatabaseProvisioner, RavenDatabaseProvisioner>();
+            services.AddTransient<DatabaseProvisioner, SqlServerDatabaseProvisioner>();
 
             services.AddTransient<Actors.DataAccess>();
             services.AddTransient<Actors.TenantServerManager>();
