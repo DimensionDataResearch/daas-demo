@@ -34,7 +34,7 @@
                 <tbody>
                     <tr repeat.for="tenant of tenants">
                         <td class="collapsing left aligned">
-                            <a route-href="route: tenant; params.bind: {id: tenant.id}">
+                            <a route-href="route: tenant; params.bind: { tenantId: tenant.id }">
                                 <i class="large user icon"></i> ${ tenant.name }
                             </a>
                         </td>
