@@ -6,6 +6,7 @@ using System;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DaaSDemo.Data
 {
@@ -153,6 +154,52 @@ namespace DaaSDemo.Data
             );
 
             return clientCertificatePfx.RawData;
+        }
+
+        /// <summary>
+        ///     Register a client certificate for the specified user.
+        /// </summary>
+        /// <param name="serverOperations">
+        ///     The server operations client.
+        /// </param>
+        /// <param name="subjectName">
+        ///     The name of the security principal that the certificate will represent.
+        /// </param>
+        /// <param name="certificate">
+        ///     The client certificate to register.
+        /// </param>
+        /// <param name="clearance">
+        ///     Rights assigned to the user.
+        /// </param>
+        /// <param name="permissions">
+        ///     Database-level permissions assigned to the user.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        public static async Task PutClientCertificate(this ServerOperationExecutor serverOperations, string subjectName, X509Certificate2 certificate, SecurityClearance clearance, Dictionary<string, DatabaseAccess> permissions = null, CancellationToken cancellationToken = default)
+        {
+            if (serverOperations == null)
+                throw new ArgumentNullException(nameof(serverOperations));
+            
+            if (String.IsNullOrWhiteSpace(subjectName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userName'.", nameof(subjectName));
+
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
+            
+            await serverOperations.SendAsync(
+                new PutClientCertificateOperation(
+                    subjectName,
+                    certificate,
+                    permissions ?? new Dictionary<string, DatabaseAccess>(),
+                    clearance
+                ),
+                cancellationToken
+            );
         }
 
         /// <summary>
