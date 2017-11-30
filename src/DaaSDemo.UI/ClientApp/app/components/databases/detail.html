@@ -1,5 +1,6 @@
 <template>
     <require from="../dialogs/confirm"></require>
+    <require from="../menus/actions/database"></require>
     <require from="../status/database-provisioning-status"></require>
 
     <div class="ui segment" style="min-height: 10.0rem;">
@@ -18,13 +19,26 @@
                 <strong>Name</strong>: ${ database.name }
                 <br/>
                 <br/>
-                <strong>Status</strong>:
-                <database-provisioning-status database.bind="database"></database-provisioning-status>
+                <strong>Status</strong>: <database-provisioning-status database.bind="database"></database-provisioning-status>
                 <br/>
                 <br/>
                 <div if.bind="isDatabaseReady">
                     <h3 class="ui dividing header">Connectivity</h3>
-                    <strong>Connection String</strong>: ${database.connectionString}
+
+                    <strong>Connection String</strong>: ${ connectionString }
+                </div>
+
+                <div class="ui grid">
+                    <div class="thirteen wide column"></div>
+                    <div class="three wide column">
+                        <database-actions-menu database.bind="database"
+                            label="Actions"
+                            disabled.bind="!isBusy && !isDatabaseReady"
+                            
+                            destroy-clicked.call="destroyDatabase()"
+                        >
+                        </database-actions-menu>
+                    </div>
                 </div>
             </div>
         </div>
@@ -35,4 +49,6 @@
             </p>
         </div>
     </div>
+
+    <confirm-dialog view-model.ref="confirmDialog"></confirm-dialog>
 </template>

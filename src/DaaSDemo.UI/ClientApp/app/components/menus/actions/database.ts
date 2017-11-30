@@ -12,6 +12,8 @@ export class DatabaseActionsMenu {
     @bindable private rootElement: Element | null = null;
     
     @bindable public database: Database | null = null;
+    @bindable public label: string | null = null;
+    @bindable public disabled: boolean = false;
     @bindable public destroyClicked: () => void = noAction;
 
     constructor() {}
@@ -23,6 +25,9 @@ export class DatabaseActionsMenu {
     }
 
     public get canDestroy(): boolean {
+        if (this.destroyClicked === noAction)
+            return false; // No handler.
+
         if (!this.database)
             return false;
 

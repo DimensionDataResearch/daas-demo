@@ -1,30 +1,31 @@
 import { inject, factory, computedFrom } from 'aurelia-framework';
-import { RouteConfig } from 'aurelia-router';
+import { Router, RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
 import { DaaSAPI, Database, ProvisioningAction, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
+import { ViewModel } from '../common/view-model';
 
 /**
  * Component for the Database detail view.
  */
-@inject(DaaSAPI)
-export class DatabaseDetail {
-    private routeConfig: RouteConfig;
+@inject(DaaSAPI, Router)
+export class DatabaseDetail extends ViewModel {
     private databaseId: string;
-    private pollHandle: number = 0;
 
-    @bindable public loading: boolean = false;
     @bindable public database: Database | null = null;
-    @bindable public errorMessage: string | null = null;
+    @bindable public confirmDialog: ConfirmDialog;
 
     /**
      * Create a new Database detail view model.
      * 
      * @param api The DaaS API client.
+     * @param router The Aurelia router service.
      */
-    constructor(private api: DaaSAPI) { }
+    constructor(private api: DaaSAPI, private router: Router) {
+        super()
+    }
 
     /**
      * Does the database exist?
@@ -66,6 +67,30 @@ export class DatabaseDetail {
     }
 
     /**
+     * Delete the database.
+     */
+    public async destroyDatabase(): Promise<void> {
+        if (!this.database)
+            return;
+
+        const confirmed = await this.confirmDialog.show('Delete database',
+            `Delete database '${this.database.name}'?`
+        );
+        if (!confirmed)
+            return;
+
+        const tenantId = this.database.tenantId;
+
+        await this.runBusy(async () => {
+            await this.api.deleteDatabase(this.databaseId);
+
+            this.router.navigateToRoute('tenantDatabases', {
+                tenantId: tenantId
+            });
+        });
+    }
+
+    /**
      * Called when the component is activated.
      * 
      * @param params Route parameters.
@@ -92,51 +117,18 @@ export class DatabaseDetail {
      * Load tenant and server details.
      */
     private async load(isReload: boolean): Promise<void> {
-        this.clearError();
+        this.database = await this.api.getDatabase(this.databaseId);
         
-        if (isReload)
-            this.pollHandle = 0;
-        else
-            this.loading = true;
-
-        try {
-            this.database = await this.api.getDatabase(this.databaseId);
-            
-            if (!this.database) {
-                this.routeConfig.title = 'Database not found';
-                this.errorMessage = `Database not found with Id ${this.databaseId}.`;
-            } else {
-                this.routeConfig.title = this.database.name;
-            }
-
-            if (this.database && this.database.action !== ProvisioningAction.None) {
-                this.pollHandle = window.setTimeout(() => this.load(true), 2000);
-            }
-        } catch (error) {
-            this.showError(error as Error);
+        if (!this.database) {
+            this.routeConfig.title = 'Database not found';
+            this.errorMessage = `Database not found with Id ${this.databaseId}.`;
+        } else {
+            this.routeConfig.title = this.database.name;
         }
-        finally {
-            if (!isReload)
-                this.loading = false;
+
+        if (this.database && this.database.action !== ProvisioningAction.None) {
+            this.pollHandle = window.setTimeout(() => this.load(true), 2000);
         }
-    }
-
-    /**
-     * Clear the current error message (if any).
-     */
-    private clearError(): void {
-        this.errorMessage = null;
-    }
-
-    /**
-     * Show an error message.
-     * 
-     * @param error The error to show.
-     */
-    private showError(error: Error): void {
-        console.log(error);
-        
-        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
 }
 
