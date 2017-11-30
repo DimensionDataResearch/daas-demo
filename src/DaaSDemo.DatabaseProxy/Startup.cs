@@ -15,6 +15,7 @@ namespace DaaSDemo.DatabaseProxy
 {
     using Common.Options;
     using Data;
+    using Filters;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo T-SQL proxy API.
@@ -68,7 +69,13 @@ namespace DaaSDemo.DatabaseProxy
 
             services.AddDaaSDataAccess();
 
-            services.AddMvc()
+            services
+                .AddMvc(mvc =>
+                {
+                    mvc.Filters.Add(
+                        new RespondWithFilter()
+                    );
+                })
                 .AddJsonOptions(json =>
                 {
                     json.SerializerSettings.Converters.Add(

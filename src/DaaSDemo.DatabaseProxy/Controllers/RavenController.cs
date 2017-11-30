@@ -8,6 +8,8 @@ using Raven.Client.Documents.Session;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DaaSDemo.DatabaseProxy.Controllers
@@ -18,15 +20,13 @@ namespace DaaSDemo.DatabaseProxy.Controllers
     using KubeClient;
     using KubeClient.Models;
     using Models.DatabaseProxy;
-    using System.Net.Http;
-    using System.Threading;
 
     /// <summary>
     ///     Controller for the RavenDB proxy API.
     /// </summary>
     [Route("api/v1/raven")]
     public class RavenController
-        : Controller
+        : DatabaseProxyController
     {
         /// <summary>
         ///     The database Id representing the "master" database in any RavenDB server.
@@ -112,53 +112,19 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             if (String.IsNullOrWhiteSpace(serverId))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
 
-            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
-            if (targetServer == null)
-            {
-                Log.LogWarning("Cannot determine connection string for server {ServerId} (server not found).",
-                    serverId
-                );
-
-                return NotFound(new
-                {
-                    Reason = "NotFound",
-                    Id = serverId,
-                    EntityType = "DatabaseServer",
-                    Message = $"Database Server not found with Id '{serverId}'."
-                });
-            }
-
-            if (targetServer.Kind != DatabaseServerKind.RavenDB)
-            {
-                Log.LogWarning("Target server {ServerId} is not a RavenDB server (actual server type is {ServerKind}).",
-                    serverId,
-                    targetServer.Kind
-                );
-
-                return BadRequest(new
-                {
-                    Reason = "ServerTypeIncompatible",
-                    Id = serverId,
-                    EntityType = "DatabaseServer",
-                    RequiredServerKind = DatabaseServerKind.RavenDB,
-                    ActualServerKind = targetServer.Kind,
-                    Message = $"Database Server '{serverId}' is not a RavenDB server."
-                });
-            }
-
             Log.LogInformation("Initialising configuration for server {ServerId}...", serverId);
+            
+            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
 
             using (CancellationTokenSource cancellationSource = new CancellationTokenSource())
             {
-                Uri baseAddress = await GetServerBaseAddress(targetServer);
-                if (baseAddress == null)
-                    return NotFound($"Cannot determine base address for server '{serverId}'.");
+                Uri baseAddress = await GetServerBaseAddress(serverId);
 
                 cancellationSource.CancelAfter(
                     TimeSpan.FromSeconds(30)
                 );
                 
-                Log.LogInformation("Using (deliberately) insecure mode for server {ServerId}...", serverId);
+                Log.LogInformation("Using (deliberately) insecure setup mode for server {ServerId}...", serverId);
 
                 HttpResponseMessage response = await HttpClient.PostAsJsonAsync(
                     Requests.StartUnsecuredSetup.WithBaseUri(baseAddress),
@@ -238,41 +204,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             if (String.IsNullOrWhiteSpace(serverId))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
 
-            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
-            if (targetServer == null)
-            {
-                Log.LogWarning("Cannot determine connection string for server {ServerId} (server not found).",
-                    serverId
-                );
-
-                return NotFound(new
-                {
-                    Reason = "NotFound",
-                    Id = serverId,
-                    EntityType = "DatabaseServer",
-                    Message = $"Database Server not found with Id '{serverId}'."
-                });
-            }
-
-            if (targetServer.Kind != DatabaseServerKind.RavenDB)
-            {
-                Log.LogWarning("Target server {ServerId} is not a RavenDB server (actual server type is {ServerKind}).",
-                    serverId,
-                    targetServer.Kind
-                );
-
-                return BadRequest(new
-                {
-                    Reason = "ServerTypeIncompatible",
-                    Id = serverId,
-                    EntityType = "DatabaseServer",
-                    RequiredServerKind = DatabaseServerKind.RavenDB,
-                    ActualServerKind = targetServer.Kind,
-                    Message = $"Database Server '{serverId}' is not a RavenDB server."
-                });
-            }
-
-            using (IDocumentStore documentStore = await CreateDocumentStore(targetServer))
+            using (IDocumentStore documentStore = await CreateDocumentStore(serverId))
             {
                 if (documentStore == null)
                     return NotFound($"Cannot determine base address for server '{serverId}'.");
@@ -293,21 +225,19 @@ namespace DaaSDemo.DatabaseProxy.Controllers
         /// <summary>
         ///     Create an <see cref="IDocumentStore"/> for the specified server.
         /// </summary>
-        /// <param name="targetServer">
-        ///     The target server.
+        /// <param name="serverId">
+        ///     The Id of the target server.
         /// </param>
         /// <returns>
         ///     The document store, or <c>null</c> if the server's connection details could not be determined.
         /// </returns>
-        async Task<IDocumentStore> CreateDocumentStore(DatabaseServer targetServer)
+        async Task<IDocumentStore> CreateDocumentStore(string serverId)
         {
-            if (targetServer == null)
-                throw new ArgumentNullException(nameof(targetServer));
+            if (String.IsNullOrWhiteSpace(serverId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
             
-            Uri serverBaseAddress = await GetServerBaseAddress(targetServer);
-            if (serverBaseAddress == null)
-                return null;
-
+            Uri serverBaseAddress = await GetServerBaseAddress(serverId);
+            
             var documentStore = new DocumentStore
             {
                 Urls = new[] { serverBaseAddress.AbsoluteUri }
@@ -323,28 +253,36 @@ namespace DaaSDemo.DatabaseProxy.Controllers
         ///     The Id of the target server.
         /// </param>
         /// <returns>
-        ///     The base URL, or <c>null</c> if the connection string could not be determined.
+        ///     The base UR.
         /// </returns>
-        async Task<Uri> GetServerBaseAddress(DatabaseServer targetServer)
+        async Task<Uri> GetServerBaseAddress(string serverId)
         {
-            if (targetServer == null)
-                throw new ArgumentNullException(nameof(targetServer));
-
+            if (String.IsNullOrWhiteSpace(serverId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
+            
             Log.LogInformation("Determining connection string for server {ServerId}...",
-                targetServer.Id
+                serverId
             );
 
+            DatabaseServer targetServer = await GetServer(serverId);
+
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
-                labelSelector: $"cloud.dimensiondata.daas.server-id = {targetServer.Id},cloud.dimensiondata.daas.service-type = internal",
+                labelSelector: $"cloud.dimensiondata.daas.server-id = {serverId},cloud.dimensiondata.daas.service-type = internal",
                 kubeNamespace: KubeOptions.KubeNamespace
             );
             if (matchingServices.Count == 0)
             {
                 Log.LogWarning("Cannot determine connection string for server {ServerId} (server's associated Kubernetes Service not found).",
-                    targetServer.Id
+                    serverId
                 );
 
-                return null;
+                throw RespondWith(NotFound(new
+                {
+                    Reason = "EndPointNotFound",
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    Message = $"Cannot determine base address for server '{targetServer.Id}'."
+                }));
             }
 
             ServiceV1 serverService = matchingServices[matchingServices.Count - 1];
@@ -354,6 +292,57 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             Log.LogInformation("Database proxy will connect to RavenDB server '{ServerFQDN}' on {ServerPort}.", serverFQDN, serverPort);
 
             return new Uri($"http://{serverFQDN}:{serverPort}");
+        }
+
+        /// <summary>
+        ///     Retrieve and validate the target database server.
+        /// </summary>
+        /// <param name="serverId">
+        ///     The target server Id.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="DatabaseServer"/> representing the database server.
+        /// </returns>
+        async Task<DatabaseServer> GetServer(string serverId)
+        {
+            if (String.IsNullOrWhiteSpace(serverId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
+            
+            DatabaseServer targetServer = await DocumentSession.LoadAsync<DatabaseServer>(serverId);
+            if (targetServer == null)
+            {
+                Log.LogWarning("Cannot determine connection string for server {ServerId} (server not found).",
+                    serverId
+                );
+
+                throw RespondWith(NotFound(new
+                {
+                    Reason = "NotFound",
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    Message = $"Database Server not found with Id '{serverId}'."
+                }));
+            }
+
+            if (targetServer.Kind != DatabaseServerKind.RavenDB)
+            {
+                Log.LogWarning("Target server {ServerId} is not a RavenDB server (actual server type is {ServerKind}).",
+                    serverId,
+                    targetServer.Kind
+                );
+
+                throw RespondWith(BadRequest(new
+                {
+                    Reason = "NotSupported",
+                    Id = serverId,
+                    EntityType = "DatabaseServer",
+                    RequiredServerKind = DatabaseServerKind.RavenDB,
+                    ActualServerKind = targetServer.Kind,
+                    Message = $"Database Server '{serverId}' is not a RavenDB server."
+                }));
+            }
+
+            return targetServer;
         }
 
         public static class Requests

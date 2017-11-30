@@ -25,7 +25,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
     /// </summary>
     [Route("api/v1/sql")]
     public class SqlController
-        : Controller
+        : DatabaseProxyController
     {
         /// <summary>
         ///     The database Id representing the master database in any server.
@@ -99,21 +99,9 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = new CommandResult();
-
             string connectionString = await GetConnectionString(command);
-            if (connectionString == null)
-            {
-                result.ResultCode = -1;
-                result.Errors.Add(new SqlError
-                {
-                    Kind = SqlErrorKind.Infrastructure,
-                    Message = $"Unable to determine connection settings for database {command.DatabaseId} in server {command.ServerId}."
-                });
-
-                return Ok(result);
-            }
-
+            
+            var result = new CommandResult();
             using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))
             {
                 await sqlConnection.OpenAsync();
@@ -217,21 +205,9 @@ namespace DaaSDemo.DatabaseProxy.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var queryResult = new QueryResult();
-
             string connectionString = await GetConnectionString(query);
-            if (connectionString == null)
-            {
-                queryResult.ResultCode = -1;
-                queryResult.Errors.Add(new SqlError
-                {
-                    Kind = SqlErrorKind.Infrastructure,
-                    Message = $"Unable to determine connection settings for database {query.DatabaseId} in server {query.ServerId}."
-                });
 
-                return Ok(queryResult);
-            }
-
+            var queryResult = new QueryResult();
             using (SqlClient.SqlConnection sqlConnection = new SqlClient.SqlConnection(connectionString))
             {
                 await sqlConnection.OpenAsync();
@@ -338,7 +314,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
         ///     The <see cref="SqlRequest"/> being executed.
         /// </param>
         /// <returns>
-        ///     The connection string, or <c>null</c> if the connection string could not be determined.
+        ///     The connection string.
         /// </returns>
         async Task<string> GetConnectionString(SqlRequest request)
         {
@@ -358,7 +334,18 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                     request.ServerId
                 );
 
-                return null;
+                throw RespondWith(Ok(new SqlResult
+                {
+                    ResultCode = -1,
+                    Errors =
+                    {
+                        new SqlError
+                        {
+                            Kind = SqlErrorKind.Infrastructure,
+                            Message = $"Unable to determine connection settings for database {request.DatabaseId} in server {request.ServerId} (server not found)."
+                        }
+                    }
+                }));
             }
 
             List<ServiceV1> matchingServices = await KubeClient.ServicesV1().List(
@@ -372,12 +359,42 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                     request.ServerId
                 );
 
-                return null;
+                throw RespondWith(Ok(new SqlResult
+                {
+                    ResultCode = -1,
+                    Errors =
+                    {
+                        new SqlError
+                        {
+                            Kind = SqlErrorKind.Infrastructure,
+                            Message = $"Unable to determine connection settings for database {request.DatabaseId} in server {request.ServerId} (server's associated Kubernetes Service not found)."
+                        }
+                    }
+                }));
             }
 
             ServiceV1 serverService = matchingServices[matchingServices.Count - 1];
-            string serverFQDN = $"{serverService.Metadata.Name}.{serverService.Metadata.Namespace}.svc.cluster.local";
-            int serverPort = serverService.Spec.Ports[0].Port;
+            (string serverFQDN, int? serverPort) = serverService.GetHostAndPort(portName: "sql-server");
+            if (serverPort == null)
+            {
+                Log.LogWarning("Cannot determine connection string for database {DatabaseId} in server {ServerId} (cannot find the port named 'sql-server' on server's associated Kubernetes Service).",
+                    request.DatabaseId,
+                    request.ServerId
+                );
+
+                throw RespondWith(Ok(new SqlResult
+                {
+                    ResultCode = -1,
+                    Errors =
+                    {
+                        new SqlError
+                        {
+                            Kind = SqlErrorKind.Infrastructure,
+                            Message = $"Unable to determine connection settings for database {request.DatabaseId} in server {request.ServerId} (cannot find the port named 'sql-server' on server's associated Kubernetes Service)."
+                        }
+                    }
+                }));
+            }
 
             Log.LogInformation("Database proxy will connect to SQL Server '{ServerFQDN}' on {ServerPort}.", serverFQDN, serverPort);
 
@@ -396,7 +413,18 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                         request.ServerId
                     );
 
-                    return null;
+                    throw RespondWith(Ok(new SqlResult
+                    {
+                        ResultCode = -1,
+                        Errors =
+                        {
+                            new SqlError
+                            {
+                                Kind = SqlErrorKind.Infrastructure,
+                                Message = $"Unable to determine connection settings for database {request.DatabaseId} in server {request.ServerId} (database not found)."
+                            }
+                        }
+                    }));
                 }
                     
                 connectionStringBuilder.InitialCatalog = targetDatabase.Name;
