@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace DaaSDemo.Models.Data
 {
@@ -81,6 +83,67 @@ namespace DaaSDemo.Models.Data
                 ingressChangedEvent.Messages.Add($"Server is externally-accessible on '{ingressChangedEvent.PublicFQDN}:{ingressChangedEvent.PublicPort}'.");
 
             server.Events.Add(ingressChangedEvent);
+        }
+
+        /// <summary>
+        ///     Add a password as a credential for the user.
+        /// </summary>
+        /// <param name="user">
+        ///     The database user.
+        /// </param>
+        /// <param name="password">
+        ///     The password.
+        /// </param>
+        public static void AddPassword(this DatabaseUser user, string password)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            if (String.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'password'.", nameof(password));
+            
+            user.Credentials.Add(new DatabaseUserPassword
+            {
+                Password = password
+            });
+        }
+
+        /// <summary>
+        ///     Add a client certificate as a credential for the user.
+        /// </summary>
+        /// <param name="user">
+        ///     The database user.
+        /// </param>
+        /// <param name="certificate">
+        ///     The X.509 certificate to add.
+        /// </param>
+        public static void AddClientCertificate(this DatabaseUser user, X509Certificate2 certificate)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            if (certificate == null)
+                throw new ArgumentNullException(nameof(certificate));
+            
+            if (!certificate.HasPrivateKey)
+                throw new ArgumentException($"Cannot use certificate '' as a database user credential as the certificate does not have an associated private key.", nameof(certificate));
+
+            string certificatePassword;
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                var passwordBytes = new byte[16];
+                rng.GetBytes(passwordBytes);
+
+                certificatePassword = Convert.ToBase64String(passwordBytes);
+            }
+
+            user.Credentials.Add(new DatabaseUserClientCertificate
+            {
+                Subject = certificate.Subject,
+                Thumbprint = certificate.Thumbprint,
+                CertificatePkcs12 = certificate.Export(X509ContentType.Pkcs12, certificatePassword),
+                CertificatePassword = certificatePassword
+            });
         }
     }
 }

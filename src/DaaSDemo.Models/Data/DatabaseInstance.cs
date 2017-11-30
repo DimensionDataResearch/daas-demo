@@ -8,7 +8,7 @@ namespace DaaSDemo.Models.Data
     /// <summary>
     ///     A database instance owned by a tenant.
     /// </summary>
-    [Table("DatabaseInstance")]
+    [EntitySet("DatabaseInstance")]
     public class DatabaseInstance
         : IDeepCloneable<DatabaseInstance>
     {

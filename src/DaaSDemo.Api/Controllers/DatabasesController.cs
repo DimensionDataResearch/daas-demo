@@ -217,6 +217,22 @@ namespace DaaSDemo.Api.Controllers
             DocumentSession.Store(database);
             targetServer.DatabaseIds.Add(database.Id);
 
+            var user = new DatabaseUser
+            {
+                Name = database.DatabaseUser,
+
+                DatabaseId = database.Id,
+                ServerId = database.ServerId,
+                TenantId = database.TenantId,
+            };
+            
+            if (targetServer.Kind == DatabaseServerKind.SqlServer)
+                user.AddPassword(database.DatabasePassword);
+
+            // TODO: Request client certificate from Vault and store it as a user credential.
+
+            DocumentSession.Store(user);
+
             DocumentSession.SaveChanges();
 
             return StatusCode(StatusCodes.Status202Accepted, new
