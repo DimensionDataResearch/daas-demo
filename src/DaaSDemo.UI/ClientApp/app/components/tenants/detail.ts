@@ -151,7 +151,7 @@ export class TenantDetail extends ViewModel {
                 }
             }
             
-            this.router.navigateToRoute('server', { id: serverId });
+            this.router.navigateToRoute('server', { serverId: serverId });
         } catch (error) {
             this.showError(error as Error);
         }

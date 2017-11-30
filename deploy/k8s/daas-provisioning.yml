@@ -90,7 +90,7 @@ spec:
             valueFrom:
               configMapKeyRef:
                 name: daas
-                key: vault-pki_base_path
+                key: vault_pki_base_path
           - name: DAAS_Vault__CertificatePolicies__DatabaseServer
             valueFrom:
               configMapKeyRef:
