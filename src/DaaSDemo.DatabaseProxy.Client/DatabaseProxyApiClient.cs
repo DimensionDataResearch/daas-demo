@@ -122,7 +122,7 @@ namespace DaaSDemo.DatabaseProxy.Client
         ///     Stop executing statements as soon as an error is encountered?
         /// </param>
         /// <param name="cancellationToken">
-        ///     A <see cref="CancellationToken"/> that can be used to cancel the request.
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
         ///     The query result.
@@ -149,6 +149,34 @@ namespace DaaSDemo.DatabaseProxy.Client
                     cancellationToken: cancellationToken
                 )
                 .ReadContentAsAsync<QueryResult, JObject>();
+        }
+
+        /// <summary>
+        ///     Get the names of all databases present on the specified server.
+        /// </summary>
+        /// <param name="serverId">
+        ///     The Id of the target server.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
+        /// </param>
+        /// <returns>
+        ///     The database names.
+        /// </returns>
+        public async Task<string[]> GetRavenServerDatabaseNames(string serverId, CancellationToken cancellationToken = default)
+        {
+            if (String.IsNullOrWhiteSpace(serverId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'serverId'.", nameof(serverId));
+            
+            return await
+                Http.GetAsync(
+                    Requests.RavenGetDatabaseNames.WithTemplateParameters(new
+                    {
+                        ServerId = serverId
+                    }),
+                    cancellationToken: cancellationToken
+                )
+                .ReadContentAsAsync<string[]>();
         }
 
         /// <summary>
@@ -224,6 +252,11 @@ namespace DaaSDemo.DatabaseProxy.Client
             ///     The base request definition for the RavenDB proxy API.
             /// </summary>
             public static HttpRequest RavenApi = HttpRequest.Factory.Json("api/v1/raven");
+
+            /// <summary>
+            ///     Get the names of all databases present on a RavenDB server.
+            /// </summary>
+            public static HttpRequest RavenGetDatabaseNames = RavenApi.WithRelativeUri("{ServerId}/database-names");
 
             /// <summary>
             ///     Initialize RavenDB server configuration.
