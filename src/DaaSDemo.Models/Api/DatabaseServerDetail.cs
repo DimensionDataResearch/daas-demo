@@ -43,7 +43,7 @@ namespace DaaSDemo.Models.Api
             PublicFQDN = server.PublicFQDN;
             PublicPort = server.PublicPort;
             
-            StorageMB = server.Storage.SizeMB;
+            StorageMB = server.Settings.Storage.SizeMB;
             
             Action = server.Action;
             Phase = server.Phase;

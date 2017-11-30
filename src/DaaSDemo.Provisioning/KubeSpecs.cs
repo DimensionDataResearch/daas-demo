@@ -81,7 +81,7 @@ namespace DaaSDemo.Provisioning
                 {
                     Requests = new Dictionary<string, string>
                     {
-                        ["storage"] = $"{server.Storage.SizeMB}Mi"
+                        ["storage"] = $"{server.Settings.Storage.SizeMB}Mi"
                     }
                 }
             };

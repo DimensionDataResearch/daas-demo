@@ -403,6 +403,8 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                 DataSource = $"tcp:{serverFQDN},{serverPort}",
             };
 
+            var serverSettings = targetServer.GetSettings<SqlServerSettings>();
+            
             if (request.DatabaseId != MasterDatabaseId)
             {
                 DatabaseInstance targetDatabase = await DocumentSession.LoadAsync<DatabaseInstance>(request.DatabaseId);
@@ -432,7 +434,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                 if (request.ExecuteAsAdminUser)
                 {
                     connectionStringBuilder.UserID = "sa";
-                    connectionStringBuilder.Password = targetServer.AdminPassword;
+                    connectionStringBuilder.Password = serverSettings.AdminPassword;
                 }
                 else
                 {
@@ -445,7 +447,7 @@ namespace DaaSDemo.DatabaseProxy.Controllers
                 connectionStringBuilder.InitialCatalog = "master";
                 
                 connectionStringBuilder.UserID = "sa";
-                connectionStringBuilder.Password = targetServer.AdminPassword;
+                connectionStringBuilder.Password = serverSettings.AdminPassword;
             }
 
             Log.LogInformation("Successfully determined connection string for database {DatabaseId} ({DatabaseName}) in server {ServerId} ({ServerSqlName}).",

@@ -168,10 +168,13 @@ namespace DaaSDemo.Api.Controllers
             {
                 Name = newDatabaseServer.Name,
                 Kind = DatabaseServerKind.SqlServer,
-                AdminPassword = newDatabaseServer.AdminPassword,
-                Storage =
+                Settings = new SqlServerSettings
                 {
-                    SizeMB = newDatabaseServer.SizeMB
+                    AdminPassword = newDatabaseServer.AdminPassword,
+                    Storage =
+                    {
+                        SizeMB = newDatabaseServer.SizeMB
+                    }
                 },
                 TenantId = tenant.Id,
                 Action = ProvisioningAction.Provision,
@@ -228,9 +231,12 @@ namespace DaaSDemo.Api.Controllers
             {
                 Name = newDatabaseServer.Name,
                 Kind = DatabaseServerKind.RavenDB,
-                Storage =
+                Settings = new RavenServerSettings
                 {
-                    SizeMB = newDatabaseServer.SizeMB
+                    Storage =
+                    {
+                        SizeMB = newDatabaseServer.SizeMB
+                    }
                 },
                 TenantId = tenant.Id,
                 Action = ProvisioningAction.Provision,

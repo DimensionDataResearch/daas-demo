@@ -115,10 +115,10 @@ namespace DaaSDemo.Provisioning
                 Encoding.ASCII.GetBytes(pfxPassword)
             );
 
-            if (!String.IsNullOrWhiteSpace(server.AdminPassword))
+            if (server.Settings is SqlServerSettings sqlServerSettings && !String.IsNullOrWhiteSpace(sqlServerSettings.AdminPassword))
             {
                 secretData["sa-password"] = Convert.ToBase64String(
-                    Encoding.ASCII.GetBytes(server.AdminPassword)
+                    Encoding.ASCII.GetBytes(sqlServerSettings.AdminPassword)
                 );
             }
 

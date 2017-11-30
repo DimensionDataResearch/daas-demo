@@ -26,7 +26,7 @@ namespace DaaSDemo.Data.Indexes
                     Name = server.Name,
                     Kind = server.Kind,
 
-                    StorageMB = server.Storage.SizeMB,
+                    StorageMB = server.Settings.Storage.SizeMB,
 
                     PublicFQDN = server.PublicFQDN,
                     PublicPort = server.PublicPort,
