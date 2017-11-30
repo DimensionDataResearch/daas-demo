@@ -37,9 +37,10 @@
                             <td class="collapsing center aligned">
                                 <server-actions-menu
                                     server.bind="server"
+                                    show-databases-clicked.call="showDatabases(server)"
+                                    show-events-clicked.call="showEvents(server)"
                                     destroy-clicked.call="destroyServer(server)"
                                     repair-clicked.call="reconfigureServer(server)"
-                                    show-databases-clicked.call="showDatabases(server)"
                                 >
                                 </server-actions-menu>
                             </td>

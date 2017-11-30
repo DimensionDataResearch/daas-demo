@@ -169,6 +169,17 @@ export class TenantDetail extends ViewModel {
     }
 
     /**
+     * Show the server's event stream.
+     * 
+     * @param server The target server.
+     */
+    public showEvents(server: DatabaseServer): void {
+        this.router.navigateToRoute('serverEvents', {
+            serverId: server.id
+        });
+    }
+
+    /**
      * Reconfigure / repair a server.
      */
     public async reconfigureServer(server: DatabaseServer): Promise<void> {
