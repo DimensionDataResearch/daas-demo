@@ -219,17 +219,11 @@ namespace DaaSDemo.Provisioning.Provisioners
         {
             RequireCurrentState();
 
-            string subjectName = $"database.{KubeOptions.ClusterPublicFQDN}";
-            string[] subjectAlternativeNames = new string[]
-            {
-                $"{State.Name}.database.{KubeOptions.ClusterPublicFQDN}"
-                // TODO: Add SAN for server's internal Service FQDN'.
-            };
-
-            Log.LogInformation("Requesting server certificate for {ServerId} (Subject = {SubjectName} , SANs = {@SubjectAlternativeNames}).",
+            string subjectName = $"{State.Name}.database.{KubeOptions.ClusterPublicFQDN}";
+            
+            Log.LogInformation("Requesting server certificate for {ServerId} (Subject = {SubjectName}).",
                 State.Id,
-                subjectName,
-                subjectAlternativeNames
+                subjectName
             );
 
             var credentials = await VaultClient.PKIGenerateDynamicCredentialsAsync(
@@ -238,7 +232,6 @@ namespace DaaSDemo.Provisioning.Provisioners
                 {
                     CertificateFormat = CertificateFormat.pem,
                     CommonName = subjectName,
-                    SubjectAlternativeNames = String.Join(",", subjectAlternativeNames),
                     TimeToLive = "672h"
                 },
                 VaultOptions.PkiBasePath
