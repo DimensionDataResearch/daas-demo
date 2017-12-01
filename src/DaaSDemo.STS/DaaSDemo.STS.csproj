@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+
+    <UserSecretsId>DaaS.Demo</UserSecretsId>
+    
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <TypeScriptToolsVersion>Latest</TypeScriptToolsVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <Import Project="..\Common.props" />
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Logging\DaaSDemo.Logging.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.0.5" />
+    <PackageReference Include="HTTPlease" Version="1.0.0-rc1-0232" />
+    <PackageReference Include="IdentityServer4" Version="2.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="Serilog" Version="2.5.0" />
+    <PackageReference Include="Serilog.Enrichers.Demystify" Version="0.1.0-dev-00011" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="1.0.0" />
+    <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="Microsoft.Extensions.SecretManager.Tools" Version="2.0.0" />
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
+  </ItemGroup>
+</Project>

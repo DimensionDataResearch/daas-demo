@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -66,6 +67,28 @@ namespace DaaSDemo.UI
             {
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
+
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+            SecurityOptions securityOptions = SecurityOptions.From(Configuration);
+
+            services
+                .AddAuthentication(options =>
+                {
+                    options.DefaultScheme = "Cookies";
+                    options.DefaultChallengeScheme = "oidc";
+                })
+                .AddCookie("Cookies")
+                .AddOpenIdConnect("oidc", oidc =>
+                {
+                    oidc.SignInScheme = "Cookies";
+
+                    oidc.Authority = securityOptions.IdentityServerBaseAddress;
+                    oidc.RequireHttpsMetadata = false;
+
+                    oidc.ClientId = "daas-ui-dev";
+                    oidc.SaveTokens = true;
+                });
         }
 
         /// <summary>
@@ -85,20 +108,20 @@ namespace DaaSDemo.UI
                 });
             }
             else
-                app.UseExceptionHandler("/Home/Error");
+                app.UseExceptionHandler("/error");
 
+            app.UseAuthentication();
             app.UseStaticFiles();
-
             app.UseMvc(routes =>
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}"
+                    template: "{controller=Home}/{action=App}/{id?}"
                 );
 
                 routes.MapSpaFallbackRoute(
                     name: "spa-fallback",
-                    defaults: new { controller = "Home", action = "Index" }
+                    defaults: new { controller = "Home", action = "App" }
                 );
             });
         }

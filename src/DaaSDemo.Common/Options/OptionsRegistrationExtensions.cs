@@ -44,6 +44,9 @@ namespace DaaSDemo.Common.Options
             services.Configure<ProvisioningOptions>(
                 configuration.GetSection("Provisioning")
             );
+            services.Configure<SecurityOptions>(
+                configuration.GetSection("Security")
+            );
             services.Configure<VaultOptions>(
                 configuration.GetSection("Vault")
             );

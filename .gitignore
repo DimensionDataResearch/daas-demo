@@ -328,3 +328,7 @@ OpenCover/
 ## Ansible
 
 *.retry
+
+## IdentityServer
+
+tempkey.rsa

@@ -130,8 +130,7 @@ export function createUserManager(authority: string, client_id: string, addition
 
     const scopes: string[] = [
         'openid',
-        'profile',
-        'email'
+        'profile'
     ];
     scopes.splice(0, 0, ...additionalScopes);
 
@@ -140,14 +139,14 @@ export function createUserManager(authority: string, client_id: string, addition
         client_id: client_id,
 
         // We use a pop-up window for the initial sign-in.
-        popup_redirect_uri: baseAddress + '/authx/popup',
-        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=1200,height=800,left=100,top=100;resizable=yes',        
+        popup_redirect_uri: baseAddress + '/oidc/signin/popup',
+        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=640,height=480,left=300,top=200;resizable=yes',        
         
         post_logout_redirect_uri: baseAddress + '/',
 
         // Automatically renew tokens before they expire using silent sign-in (hidden iframe).
         automaticSilentRenew: true,
-        silent_redirect_uri: window.location.protocol + '//' + window.location.host + '/authx/silent',
+        silent_redirect_uri: window.location.protocol + '//' + window.location.host + '/oidc/signin/silent',
     
         // Defaults needed for silent_renew
         response_type: 'id_token token',

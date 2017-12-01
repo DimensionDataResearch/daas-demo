@@ -11,6 +11,7 @@ namespace DaaSDemo.UI.Controllers
     /// <summary>
     ///     The default ("Home") controller.
     /// </summary>
+    [Route("")]
     public class HomeController
         : Controller
     {
@@ -36,7 +37,14 @@ namespace DaaSDemo.UI.Controllers
         /// <summary>
         ///     Display the main application page.
         /// </summary>
-        public IActionResult Index() => View();
+        [Route("")]
+        public IActionResult Index() => RedirectToAction("App");
+
+        /// <summary>
+        ///     Display the main application page.
+        /// </summary>
+        [Route("app")]
+        public IActionResult App() => View("Index");
 
         /// <summary>
         ///     Get configured API end-points.
@@ -50,9 +58,12 @@ namespace DaaSDemo.UI.Controllers
             });
         }
 
+        // TODO: Implement /end-points and return both API and STS base addresses.
+
         /// <summary>
         ///     Display the error page.
         /// </summary>
+        [Route("error")]
         public IActionResult Error()
         {
             ViewData["RequestId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
