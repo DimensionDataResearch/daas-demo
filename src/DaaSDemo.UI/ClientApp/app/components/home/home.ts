@@ -1,35 +1,77 @@
 import { inject, bindable } from 'aurelia-framework';
-import { createUserManager } from '../authx/authenticator';
+import { createUserManager, AuthXManager } from '../authx/authenticator';
 import { UserManager, User } from 'oidc-client';
+import { EventAggregator, Subscription } from 'aurelia-event-aggregator';
 
 /**
  * The view model for the default (home) view.
  */
+@inject(AuthXManager, EventAggregator)
 export class Home {
-    private userManager: UserManager
+    private subscriptions: Subscription[] = [];
 
+    @bindable public signedIn: boolean = false;
     @bindable public message: string;
     
     /**
      * Create a new Home view model.
      */
-    constructor() {
-        this.userManager = createUserManager(
+    constructor(private authxManager: AuthXManager, private eventAggregator: EventAggregator) {
+        this.authxManager.initialize(
             'http://localhost:5060',
             'daas-ui-dev',
             [ 'roles' ]
         );
-        this.userManager.events.addUserLoaded((user: User) => {
-            console.log('User loaded!', user);
 
-            this.message = 'OIDC profile: ' + JSON.stringify(user.profile);
-        });
+        this.subscriptions.push(
+            this.eventAggregator.subscribe('AuthX.UserLoaded', async () => {
+                console.log('User loaded.');
+
+                const userClaims = await this.authxManager.getUserClaims();
+                if (userClaims) {
+                    this.signedIn = true;
+                    this.message = 'OIDC profile: ' + JSON.stringify(userClaims, null, '  ');
+                }
+            }),
+            this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
+                console.log('User unloaded.');
+                
+                this.signedIn = false;
+                this.message = 'Not logged in.';
+            }),
+            this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
+                console.log('User signed out.');
+
+                this.signedIn = false;
+                this.message = 'Not logged in.';
+            })
+        );
+        
+        this.load();
     }
 
     /**
-     * Trigger login via pop-up.
+     * Trigger sign-in.
      */
-    public async login(): Promise<void> {
-        await this.userManager.signinPopup();
+    public async signin(): Promise<void> {
+        await this.authxManager.signin();
+    }
+
+    /**
+     * Trigger sign-out.
+     */
+    public async signout(): Promise<void> {
+        await this.authxManager.signout();
+    }
+
+    private async load(): Promise<void> {
+        const userClaims = await this.authxManager.getUserClaims();
+        if (userClaims) {
+            this.signedIn = true;
+            this.message = 'OIDC profile (cached): ' + JSON.stringify(userClaims, null, '  ');
+        } else {
+            this.signedIn = false;
+            this.message = 'Not logged in.';
+        }
     }
 }

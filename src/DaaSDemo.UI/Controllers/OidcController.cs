@@ -11,15 +11,22 @@ namespace DaaSDemo.UI.Controllers
         : Controller
     {
         /// <summary>
-        ///     Handle OIDC signin callback via in-browser popup.
+        ///     Handle OIDC sign-in callback via in-browser popup.
         /// </summary>
         [Route("signin/popup")]
         public IActionResult SigninPopupCallback() => View();
 
         /// <summary>
-        ///     Handle OIDC signin callback via iframe.
+        ///     Handle OIDC sign-in callback via in-browser popup.
+        /// </summary>
+        [Route("signout/popup")]
+        public IActionResult SignoutPopupCallback() => View();        
+
+        /// <summary>
+        ///     Handle OIDC silent sign-in callback via iframe.
         /// </summary>
         [Route("signin/silent")]
         public IActionResult SigninSilentCallback() => View();
+
     }
 }

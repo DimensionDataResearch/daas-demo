@@ -76,6 +76,8 @@ namespace DaaSDemo.STS
 
             SecurityOptions securityOptions = SecurityOptions.From(Configuration);
 
+            IdentityServer4.Quickstart.UI.AccountOptions.AutomaticRedirectAfterSignOut = true;
+
             services.AddIdentityServer()
                 .AddDeveloperSigningCredential()
                 .AddInMemoryApiResources(new []
@@ -115,7 +117,7 @@ namespace DaaSDemo.STS
                                 .SelectMany(
                                     baseAddress => new string[]
                                     {
-                                        $"{baseAddress}/oidc/signout",
+                                        $"{baseAddress}/oidc/signout/popup",
                                         $"{baseAddress}/signout-callback-oidc"
                                     }
                                 )

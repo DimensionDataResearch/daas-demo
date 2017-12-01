@@ -32,18 +32,23 @@ export class AuthXManager {
         this.userManager = createUserManager(authority, client_id, additionalScopes);
         
         this.userManager.events.addAccessTokenExpired(() => {
+            console.log('accessTokenExpired');
             this.eventAggregator.publish('AuthX.TokenExpired');
         });
         this.userManager.events.addSilentRenewError((error: Error) => {
+            console.log('silentRenewError');
             this.eventAggregator.publish('AuthX.SilentRenewError', error);
         });
-        this.userManager.events.addUserLoaded((user: User) => {
-            this.eventAggregator.publish('AuthX.UserLoaded', user);
+        this.userManager.events.addUserLoaded(() => {
+            console.log('userLoaded');
+            this.eventAggregator.publish('AuthX.UserLoaded');
         });
         this.userManager.events.addUserUnloaded(() => {
+            console.log('userUnloaded');
             this.eventAggregator.publish('AuthX.UserLoaded');
         });
         this.userManager.events.addUserSignedOut(() => {
+            console.log('userSignedOut');
             this.eventAggregator.publish('AuthX.UserSignedOut');
         });
     }
@@ -66,15 +71,44 @@ export class AuthXManager {
     /**
      * Get claims associated with the current user.
      */
-    public async getUserClaims(): Promise<UserClaims> {
+    public async getUserClaims(): Promise<UserClaims | null> {
         if (!this.userManager)
             throw new Error('AuthXManager has not been initialised.');
 
         const user = await this.userManager.getUser();
+        if (!user) {
+            return null;
+        }
         
         const userClaims: UserClaims = {};
-        
+
         return Object.assign(userClaims, user.profile); // Clone
+    }
+
+    /**
+     * Sign in.
+     * 
+     * @param silent Perform a silent sign-in, rather than using a pop-up?
+     */
+    public async signin(silent: boolean = false): Promise<void> {
+        if (!this.userManager)
+            throw new Error('AuthXManager has not been initialised.');
+
+        if (silent)
+            await this.userManager.signinSilent();
+        else
+            await this.userManager.signinPopup();
+    }
+
+    /**
+     * Sign out.
+     */
+    public async signout(): Promise<void> {
+        if (!this.userManager)
+            throw new Error('AuthXManager has not been initialised.');
+
+        await this.userManager.signoutPopup();
+        this.eventAggregator.publish('AuthX.UserSignedOut'); // AF: Shouldn't have to do this, but apparently we have to.
     }
 }
 
@@ -140,12 +174,12 @@ export function createUserManager(authority: string, client_id: string, addition
 
         // We use a pop-up window for the initial sign-in.
         popup_redirect_uri: baseAddress + '/oidc/signin/popup',
-        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=640,height=480,left=300,top=200;resizable=yes',        
-        
-        post_logout_redirect_uri: baseAddress + '/',
+        popup_post_logout_redirect_uri: baseAddress + '/oidc/signout/popup',
+        post_logout_redirect_uri: baseAddress + '/oidc/signout/popup',
+        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=700,height=933,left=300,top=200;resizable=yes',
 
         // Automatically renew tokens before they expire using silent sign-in (hidden iframe).
-        automaticSilentRenew: true,
+        // automaticSilentRenew: true,
         silent_redirect_uri: window.location.protocol + '//' + window.location.host + '/oidc/signin/silent',
     
         // Defaults needed for silent_renew
