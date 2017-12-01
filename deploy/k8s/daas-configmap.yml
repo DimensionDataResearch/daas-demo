@@ -22,7 +22,7 @@ data: # Example values and keys, customise as required
   cluster_fqdn: 'kr-cluster.tintoy.io'
 
   vault_endpoint:                             'http://daas-vault-external.default.svc.cluster.local:8200'
-  vault_token:                                'ee36db92-2019-9352-75a3-874e02e0dd0b'
+  vault_token:                                '464320de-0831-bfcf-62ad-bba874fd0cbf'
   vault_pki_base_path:                        '/daas/pki'
   vault_certificate_policy_database_server:   'daas.server.database'
   vault_certificate_policy_database_user:     'daas.user.database'
