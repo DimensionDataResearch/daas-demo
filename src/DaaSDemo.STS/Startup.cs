@@ -55,6 +55,7 @@ namespace DaaSDemo.STS
 
             services.AddOptions();
             services.AddDaaSOptions(Configuration);
+            services.AddDaaSDataAccess();
 
             services.AddDataProtection(dataProtection =>
             {
@@ -95,17 +96,10 @@ namespace DaaSDemo.STS
                         ClientName = "DaaS Portal (development)",
 
                         AllowedGrantTypes = GrantTypes.Implicit,
-
+                        RequireConsent = false,
+                        AllowOfflineAccess = true,
                         AllowAccessTokensViaBrowser = true,
 
-                        RequireConsent = false,
-
-                        ClientSecrets =
-                        {
-                            new Secret("secret".Sha256())
-                        },
-
-                        // where to redirect to after login
                         RedirectUris = securityOptions.PortalBaseAddresses
                             .SelectMany(
                                 baseAddress => new string[]
@@ -116,28 +110,23 @@ namespace DaaSDemo.STS
                                 }
                             )
                             .ToArray(),
-
-                        // where to redirect to after logout
                         PostLogoutRedirectUris = 
-                        securityOptions.PortalBaseAddresses
-                            .SelectMany(
-                                baseAddress => new string[]
-                                {
-                                    $"{baseAddress}/oidc/signout",
-                                    $"{baseAddress}/signout-callback-oidc"
-                                }
-                            )
-                            .ToArray(),
-
+                            securityOptions.PortalBaseAddresses
+                                .SelectMany(
+                                    baseAddress => new string[]
+                                    {
+                                        $"{baseAddress}/oidc/signout",
+                                        $"{baseAddress}/signout-callback-oidc"
+                                    }
+                                )
+                                .ToArray(),
                         AllowedScopes = new List<string>
                         {
                             IdentityServerConstants.StandardScopes.OpenId,
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
                             "daas_api_v1"
-                        },
-
-                        AllowOfflineAccess = true
+                        }
                     }
                 })
                 .AddTestUsers(new List<TestUser>
