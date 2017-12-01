@@ -16,11 +16,6 @@ namespace DaaSDemo.Common.Options
         public string IdentityServerBaseAddress { get; set; }
 
         /// <summary>
-        ///     The base addresses of the DaaS portal
-        /// </summary>
-        public List<string> PortalBaseAddresses { get; set; } = new List<string>();
-
-        /// <summary>
         ///     Load <see cref="SecurityOptions"/> from configuration.
         /// </summary>
         /// <param name="configuration">

@@ -10,11 +10,11 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DaaSDemo.STS
 {
-    using System.Security.Claims;
     using Common.Options;
     using Data;
 
@@ -35,12 +35,24 @@ namespace DaaSDemo.STS
                 throw new ArgumentNullException(nameof(configuration));
 
             Configuration = configuration;
+            CorsOptions = CorsOptions.From(Configuration);
+            SecurityOptions = SecurityOptions.From(Configuration);
         }
 
         /// <summary>
         ///     The application configuration.
         /// </summary>
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        ///     CORS-related options.
+        /// </summary>
+        public CorsOptions CorsOptions { get; }
+
+        /// <summary>
+        ///     Security-related options.
+        /// </summary>
+        public SecurityOptions SecurityOptions { get; }
 
         /// <summary>
         ///     Configure application services.
@@ -62,8 +74,6 @@ namespace DaaSDemo.STS
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
 
-            services.AddCors();
-
             services.AddMvc()
                 .AddJsonOptions(json =>
                 {
@@ -72,17 +82,17 @@ namespace DaaSDemo.STS
                     );
                 });
 
-            // TODO: Create or reuse RavenDB data stores for this information (consider using ASP.NET Core Identity if we can find a workable RavenDB backing store for it).
-
-            SecurityOptions securityOptions = SecurityOptions.From(Configuration);
-
             IdentityServer4.Quickstart.UI.AccountOptions.AutomaticRedirectAfterSignOut = true;
+
+            string[] portalBaseAddresses = (CorsOptions.UI ?? String.Empty).Split(';');
+            
+            // TODO: Create or reuse RavenDB data stores for some or all of this information (consider using ASP.NET Core Identity if we can find a workable RavenDB backing store for it).
 
             services.AddIdentityServer()
                 .AddDeveloperSigningCredential()
                 .AddInMemoryApiResources(new []
                 {
-                    new ApiResource("daas_api_v1", "DaaS API v1")
+                    new ApiResource("daas_api_v1", "DaaS API (v1)")
                 })
                 .AddInMemoryIdentityResources(new IdentityResource[]
                 {
@@ -102,33 +112,25 @@ namespace DaaSDemo.STS
                         AllowOfflineAccess = true,
                         AllowAccessTokensViaBrowser = true,
 
-                        RedirectUris = securityOptions.PortalBaseAddresses
-                            .SelectMany(
-                                baseAddress => new string[]
-                                {
-                                    $"{baseAddress}/oidc/signin/popup",
-                                    $"{baseAddress}/oidc/signin/silent",
-                                    $"{baseAddress}/signin-oidc"
-                                }
-                            )
-                            .ToArray(),
-                        PostLogoutRedirectUris = 
-                            securityOptions.PortalBaseAddresses
-                                .SelectMany(
-                                    baseAddress => new string[]
-                                    {
-                                        $"{baseAddress}/oidc/signout/popup",
-                                        $"{baseAddress}/signout-callback-oidc"
-                                    }
-                                )
-                                .ToArray(),
+                        RedirectUris = portalBaseAddresses.SelectMany(baseAddress => new string[]
+                        {
+                            $"{baseAddress}/oidc/signin/popup",
+                            $"{baseAddress}/oidc/signin/silent",
+                            $"{baseAddress}/signin-oidc"
+                        }).ToArray(),
+                        PostLogoutRedirectUris = portalBaseAddresses.SelectMany(baseAddress => new string[]
+                        {
+                            $"{baseAddress}/oidc/signout/popup",
+                            $"{baseAddress}/signout-callback-oidc"
+                        }).ToArray(),
                         AllowedScopes = new List<string>
                         {
                             IdentityServerConstants.StandardScopes.OpenId,
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
                             "daas_api_v1"
-                        }
+                        },
+                        AllowedCorsOrigins = portalBaseAddresses
                     }
                 })
                 .AddTestUsers(new List<TestUser>
@@ -140,8 +142,6 @@ namespace DaaSDemo.STS
                         Password = "woozle",
                         Claims =
                         {
-                            new Claim("name", "tintoy"),
-                            new Claim("email", "tintoy@tintoy.io"),
                             new Claim("roles", "admin"),
                             new Claim("roles", "user")
                         }
@@ -161,13 +161,6 @@ namespace DaaSDemo.STS
                 app.UseDeveloperExceptionPage();
             else
                 app.UseExceptionHandler("/Home/Error");
-
-            app.UseCors(cors =>
-            {
-                cors.AllowAnyHeader();
-                cors.AllowAnyMethod();
-                cors.AllowAnyOrigin();
-            });
 
             app.UseIdentityServer();
             app.UseStaticFiles();
