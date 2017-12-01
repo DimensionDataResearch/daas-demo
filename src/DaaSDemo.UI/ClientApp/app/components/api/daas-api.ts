@@ -515,7 +515,8 @@ export class DaaSAPI
             request.withBaseUrl(endPoints.default).withDefaults({
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-AuthX-Scope': 'daas_api' // Pseudo-header used to trigger automatic acquisition of access tokens
                 }
             })
         );
