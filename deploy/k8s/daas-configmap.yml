@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name:  daas
-data:
+data: # Example values and keys, customise as required
   endpoint_elasticsearch_logging: 'http://elasticsearch-logging.kube-system.svc.cluster.local:9200'
   endpoint_prometheus:            'http://prometheus.kr-cluster.tintoy.io:30900'
   
@@ -21,8 +21,8 @@ data:
 
   cluster_fqdn: 'kr-cluster.tintoy.io'
 
-  vault_endpoint:                             'http://daas-vault-vault.default.svc.cluster.local:8200'
-  vault_token:                                'c5be72ec-d70f-c410-f486-f910c77a5b69'
+  vault_endpoint:                             'http://daas-vault-external.default.svc.cluster.local:8200'
+  vault_token:                                'ee36db92-2019-9352-75a3-874e02e0dd0b'
   vault_pki_base_path:                        '/daas/pki'
   vault_certificate_policy_database_server:   'daas.server.database'
   vault_certificate_policy_database_user:     'daas.user.database'
