@@ -1,12 +1,17 @@
 import { inject, bindable } from 'aurelia-framework';
-import { createUserManager, AuthXManager } from '../authx/authenticator';
-import { UserManager, User } from 'oidc-client';
 import { EventAggregator, Subscription } from 'aurelia-event-aggregator';
+import { HttpClient } from 'aurelia-fetch-client';
+import { RouteConfig } from 'aurelia-router';
+
+import { UserManager, User } from 'oidc-client';
+
+import { EndPoints } from '../api/daas-api';
+import { createUserManager, AuthXManager } from '../authx/authenticator';
 
 /**
  * The view model for the default (home) view.
  */
-@inject(AuthXManager, EventAggregator)
+@inject(AuthXManager, EventAggregator, HttpClient)
 export class Home {
     private subscriptions: Subscription[] = [];
 
@@ -14,19 +19,40 @@ export class Home {
     @bindable public message: string;
     
     /**
-     * Create a new Home view model.
+     * Create a new home view model.
+     * 
+     * @param authxManager The authentication / authorisation service.
+     * @param eventAggregator The event-aggregator service.
+     * @param http An HTTP client.
      */
-    constructor(private authxManager: AuthXManager, private eventAggregator: EventAggregator) {
+    constructor(
+        private authxManager: AuthXManager,
+        private eventAggregator: EventAggregator,
+        private http: HttpClient
+    ) { }
+
+    /**
+     * Called when the component is activated.
+     * 
+     * @param params Route parameters.
+     * @param routeConfig The configuration for the currently-active route.
+     */
+    public async activate(params: any, routeConfig: RouteConfig): Promise<void> {
+        const endPointsResponse = await this.http.fetch('end-points');
+        if (!endPointsResponse.ok)
+            throw new Error('Failed to retrieve configuration for DaaS API end-points.');
+
+        const body = await endPointsResponse.json();
+        const endPoints = body as EndPoints;
+
         this.authxManager.initialize(
-            'http://localhost:5060',
-            'daas-ui-dev',
-            [ 'roles' ]
+            endPoints.identityServer,
+            'daas-ui-dev',  // Client Id
+            [ 'roles' ]     // Additional claims
         );
 
         this.subscriptions.push(
             this.eventAggregator.subscribe('AuthX.UserLoaded', async () => {
-                console.log('User loaded.');
-
                 const userClaims = await this.authxManager.getUserClaims();
                 if (userClaims) {
                     this.signedIn = true;
@@ -34,14 +60,10 @@ export class Home {
                 }
             }),
             this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
-                console.log('User unloaded.');
-                
                 this.signedIn = false;
                 this.message = 'Not logged in.';
             }),
             this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
-                console.log('User signed out.');
-
                 this.signedIn = false;
                 this.message = 'Not logged in.';
             })
@@ -64,6 +86,9 @@ export class Home {
         await this.authxManager.signout();
     }
 
+    /**
+     * Load initial AuthX state.
+     */
     private async load(): Promise<void> {
         const userClaims = await this.authxManager.getUserClaims();
         if (userClaims) {

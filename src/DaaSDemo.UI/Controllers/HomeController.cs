@@ -49,12 +49,13 @@ namespace DaaSDemo.UI.Controllers
         /// <summary>
         ///     Get configured API end-points.
         /// </summary>
-        [HttpGet("end-points/api")]
+        [HttpGet("end-points")]
         public IActionResult ApiEndPoints()
         {
             return Json(new
             {
-                Default = Configuration.GetValue<string>("API:EndPoint")
+                API = Configuration.GetValue<string>("API:EndPoint"),
+                STS = Configuration.GetValue<string>("Security:IdentityServerBaseAddress")
             });
         }
 

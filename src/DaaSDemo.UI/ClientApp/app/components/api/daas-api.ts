@@ -504,15 +504,15 @@ export class DaaSAPI
      * Configure the DaaS API client.
      */
     private async configure(): Promise<void> {
-        const endPointsResponse = await this.http.fetch('/end-points/api');
+        const endPointsResponse = await this.http.fetch('end-points');
         if (!endPointsResponse.ok)
             throw new Error('Failed to retrieve configuration for DaaS API end-points.');
 
         const body = await endPointsResponse.json();
-        const endPoints = body as ApiEndPoints;
+        const endPoints = body as EndPoints;
 
         this.http.configure(request =>
-            request.withBaseUrl(endPoints.default).withDefaults({
+            request.withBaseUrl(endPoints.api).withDefaults({
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -523,11 +523,19 @@ export class DaaSAPI
     }
 }
 
-interface ApiEndPoints {
+/**
+ * End-point configuration for the DaaS UI.
+ */
+export interface EndPoints {
     /**
-     * The default API end-point.
+     * The DaaS API end-point.
      */
-    default: string;
+    api: string;
+
+    /**
+     * The identity server (STS) base address.
+     */
+    identityServer: string;
 }
 
 /**
