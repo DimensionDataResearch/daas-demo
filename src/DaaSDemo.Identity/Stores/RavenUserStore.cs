@@ -13,7 +13,7 @@ namespace DaaSDemo.Identity.Stores
     using Models.Data;
 
     public class RavenUserStore
-        : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>
+        : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>, IUserStore<AppUser>, IUserAuthenticationTokenStore<AppUser>, IUserAuthenticatorKeyStore<AppUser>, IUserClaimStore<AppUser>, IUserEmailStore<AppUser>, IUserLockoutStore<AppUser>, IUserLoginStore<AppUser>, IUserPasswordStore<AppUser>, IUserPhoneNumberStore<AppUser>, IUserSecurityStampStore<AppUser>
     {
         public RavenUserStore(IAsyncDocumentSession documentSession)
             : base(new IdentityErrorDescriber())
@@ -36,19 +36,32 @@ namespace DaaSDemo.Identity.Stores
             return await DocumentSession.LoadAsync<AppUser>(userId, cancellationToken);
         }
 
-        public override Task<AppUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
+        public override async Task<AppUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            if (String.IsNullOrWhiteSpace(userId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userId'.", nameof(userId));
+
+            return await DocumentSession.LoadAsync<AppUser>(userId, cancellationToken);
         }
 
-        public override Task<AppUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
+        public override async Task<AppUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            if (String.IsNullOrWhiteSpace(normalizedUserName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedUserName'.", nameof(normalizedUserName));
+            
+            return await DocumentSession.Query<AppUser>().FirstOrDefaultAsync(
+                user => user.NormalizedUserName == normalizedUserName
+            );
         }
 
-        public override Task<AppUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default)
+        public override async Task<AppUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            if (String.IsNullOrWhiteSpace(normalizedEmail))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedEmail'.", nameof(normalizedEmail));
+            
+            return await DocumentSession.Query<AppUser>().FirstOrDefaultAsync(
+                user => user.NormalizedEmail == normalizedEmail
+            );
         }
 
         public override async Task<IdentityResult> CreateAsync(AppUser user, CancellationToken cancellationToken = default)

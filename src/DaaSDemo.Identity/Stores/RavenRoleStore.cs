@@ -15,7 +15,7 @@ namespace DaaSDemo.Identity.Stores
     // TODO: Tidy this up.
 
     public class RavenRoleStore
-        : RoleStoreBase<AppRole, string, IdentityUserRole<string>, AppRoleClaim>
+        : RoleStoreBase<AppRole, string, IdentityUserRole<string>, AppRoleClaim>, IRoleStore<AppRole>
     {
         public RavenRoleStore(IAsyncDocumentSession documentSession)
             : base(new IdentityErrorDescriber())

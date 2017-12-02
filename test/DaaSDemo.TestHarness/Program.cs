@@ -1,6 +1,10 @@
 ﻿using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Configuration;
 using HTTPlease;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -15,9 +19,12 @@ using Serilog;
 
 namespace DaaSDemo.TestHarness
 {
-    using Akka.Configuration;
+    using Common.Options;
+    using Data;
+    using Identity.Stores;
     using KubeClient;
     using KubeClient.Models;
+    using Models.Data;
     using Provisioning.Actors;
     using Provisioning.Filters;
     using Provisioning.Messages;
@@ -35,55 +42,93 @@ namespace DaaSDemo.TestHarness
         /// </returns>
         static async Task AsyncMain()
         {
-            Uri endPointUri = new Uri(
-                Environment.GetEnvironmentVariable("KUBE_API_ENDPOINT")
-            );
-            string accessToken = Environment.GetEnvironmentVariable("KUBE_API_TOKEN");
+            var user = new AppUser
+            {
+                UserName = "testuser"
+            };
 
-            using (KubeApiClient kubeClient = KubeApiClient.Create(endPointUri, accessToken))
-            {   
-                Config config = ConfigurationFactory.ParseString(@"
-                    akka {
-                        loglevel = INFO,
-                        loggers = [""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""],
-                        suppress-json-serializer-warning = true
-                    }
-                ");
-                using (ActorSystem system = ActorSystem.Create("test-harness", config))
+            Log.Information("Building...");
+            IServiceProvider serviceProvider = BuildServiceProvider();
+
+            using (var scope = serviceProvider.CreateScope())
+            {
+                Log.Information("Resolving...");
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+
+                Log.Information("Creating...");
+                IdentityResult result = await userManager.CreateAsync(user);
+                if (!result.Succeeded)
                 {
-                    IActorRef eventBusActor = system.ActorOf(Props.Create(
-                        () => new ReplicationControllerEvents(kubeClient)
-                    ));
+                    Log.Information("CreateResult: {@Result}", result);
                     
-                    IActorRef listener = system.ActorOf(actor =>
-                    {
-                        actor.OnPreStart = context =>
-                        {
-                            Log.Information("Subscribing...");
+                    return;
+                }
 
-                            eventBusActor.Tell(SubscribeResourceEvents.Create(
-                                filter: ResourceEventFilter.Empty
-                            ));
-
-                            Log.Information("Subscribed.");
-                        };
-
-                        actor.Receive<ResourceEventV1<ReplicationControllerV1>>((resourceEvent, context) =>
-                        {
-                            Log.Information("Recieved {EventType} event for ReplicationController {ResourceName}.",
-                                resourceEvent.EventType,
-                                resourceEvent.Resource?.Metadata?.Name
-                            );
-                        });
-                    });
-
-                    Log.Information("Running; press enter to terminate.");
-
-                    Console.ReadLine();
-
-                    await system.Terminate();
+                Log.Information("Adding password...");
+                result = await userManager.AddPasswordAsync(user, "potato3s!");
+                if (!result.Succeeded)
+                {
+                    Log.Information("AddPasswordResult: {@Result}", result);
+                    
+                    return;
                 }
             }
+
+            using (var scope = serviceProvider.CreateScope())
+            {
+                Log.Information("Resolving...");
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+                IPasswordValidator<AppUser> passwordValidator = scope.ServiceProvider.GetRequiredService<IPasswordValidator<AppUser>>();
+
+                Log.Information("Validating password...");
+                IdentityResult result = await passwordValidator.ValidateAsync(userManager, user, "potato3s!");
+                if (!result.Succeeded)
+                {
+                    Log.Information("ValidateResult: {@Result}", result);
+                    
+                    return;
+                }
+            }
+
+            Log.Information("Done...");
+        }
+
+        /// <summary>
+        ///     Build a service provider for use in the test harness.
+        /// </summary>
+        /// <returns>
+        ///     The service provider.
+        /// </returns>
+        static IServiceProvider BuildServiceProvider()
+        {
+            IConfiguration configuration = new ConfigurationBuilder()
+                .AddJsonFile(
+                    Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json")
+                )
+                .Build();
+
+            IServiceCollection services = new ServiceCollection();
+
+            services.AddDaaSOptions(configuration);
+            services.AddDaaSDataAccess();
+
+            services.AddLogging(logging =>
+            {
+                logging.AddSerilog(Log.Logger);
+            });
+
+            services
+                .AddIdentity<AppUser, AppRole>(identity =>
+                {
+                    identity.Password.RequireUppercase = false;
+                    identity.Password.RequireLowercase = false;
+                    identity.Password.RequireDigit = false;
+                    identity.Password.RequireNonAlphanumeric = false;
+                })
+                .AddUserStore<RavenUserStore>()
+                .AddRoleStore<RavenRoleStore>();
+
+            return services.BuildServiceProvider();
         }
 
         /// <summary>
