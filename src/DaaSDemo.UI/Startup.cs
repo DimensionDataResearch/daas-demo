@@ -14,6 +14,8 @@ namespace DaaSDemo.UI
 {
     using Common.Options;
     using Data;
+    using Identity;
+    using Models.Data;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo UI.
@@ -67,6 +69,15 @@ namespace DaaSDemo.UI
             {
                 dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
+
+            services
+                .AddIdentity<AppUser, AppRole>(identity =>
+                {
+                    identity.ClaimsIdentity.UserIdClaimType = "sub";
+                    identity.ClaimsIdentity.UserNameClaimType = "name";
+                    identity.ClaimsIdentity.RoleClaimType = "role";
+                })
+                .AddDaaSIdentityStores();
 
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 

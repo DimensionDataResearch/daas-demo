@@ -10,6 +10,7 @@ COPY src/DaaSDemo.Crypto/*.csproj /build/src/DaaSDemo.Crypto/
 COPY src/DaaSDemo.Data/*.csproj /build/src/DaaSDemo.Data/
 COPY src/DaaSDemo.DatabaseProxy/*.csproj /build/src/DaaSDemo.DatabaseProxy/
 COPY src/DaaSDemo.DatabaseProxy.Client/*.csproj /build/src/DaaSDemo.DatabaseProxy.Client/
+COPY src/DaaSDemo.Identity/*.csproj /build/src/DaaSDemo.Identity/
 COPY src/DaaSDemo.KubeClient/*.csproj /build/src/DaaSDemo.KubeClient/
 COPY src/DaaSDemo.Logging/*.csproj /build/src/DaaSDemo.Logging/
 COPY src/DaaSDemo.Models/*.csproj /build/src/DaaSDemo.Models/

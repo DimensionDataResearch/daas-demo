@@ -85,7 +85,13 @@ namespace DaaSDemo.STS
                     );
                 });
 
-            services.AddIdentity<AppUser, AppRole>()
+            services
+                .AddIdentity<AppUser, AppRole>(identity =>
+                {
+                    identity.ClaimsIdentity.UserIdClaimType = "sub";
+                    identity.ClaimsIdentity.UserNameClaimType = "name";
+                    identity.ClaimsIdentity.RoleClaimType = "role";
+                })
                 .AddDaaSIdentityStores()
                 .AddDefaultTokenProviders();
 
