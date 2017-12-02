@@ -232,8 +232,9 @@ namespace DaaSDemo.Api.Controllers
             // TODO: Request client certificate from Vault and store it as a user credential.
 
             DocumentSession.Store(user);
-
             DocumentSession.SaveChanges();
+
+            SetEtagHeader(database);
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -315,6 +316,8 @@ namespace DaaSDemo.Api.Controllers
             targetDatabase.Action = ProvisioningAction.Deprovision;
             targetDatabase.Status = ProvisioningStatus.Pending;
             DocumentSession.SaveChanges();
+
+            SetEtagHeader(targetDatabase);
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -398,6 +401,8 @@ namespace DaaSDemo.Api.Controllers
             targetDatabase.Status = ProvisioningStatus.Pending;
             DocumentSession.SaveChanges();
 
+            SetEtagHeader(targetDatabase);
+
             return StatusCode(StatusCodes.Status202Accepted, new
             {
                 Id = targetDatabase.Id,
@@ -405,6 +410,24 @@ namespace DaaSDemo.Api.Controllers
                 EntityType = "Database",
                 Message = $"Database '{targetDatabase.Name}' queued for reconfiguration on server '{targetServer.Name}'."
             });
+        }
+
+        /// <summary>
+        ///     Populate the "ETag" header using the specified entity's ETag.
+        /// </summary>
+        /// <param name="entity">
+        ///     The target entity.
+        /// </param>
+        void SetEtagHeader<TEntity>(TEntity entity)
+            where TEntity: class
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            long etag = DocumentSession.Advanced.GetEtagFor(entity);
+            Response.Headers.Add("ETag",
+                $"\"{etag}\""
+            );
         }
     }
 }

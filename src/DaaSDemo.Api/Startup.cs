@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,7 +15,8 @@ namespace DaaSDemo.Api
 {
     using Common.Options;
     using Data;
-    using Serilog;
+    using Identity;
+    using Models.Data;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo API.
@@ -67,6 +69,9 @@ namespace DaaSDemo.Api
             services.AddDaaSOptions(Configuration);
 
             services.AddDaaSDataAccess();
+
+            services.AddIdentity<AppUser, AppRole>()
+                .AddDaaSIdentityStores();
 
             services.AddCors(cors =>
             {

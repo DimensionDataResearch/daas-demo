@@ -112,6 +112,8 @@ namespace DaaSDemo.Api.Controllers
             DocumentSession.Store(tenant);
             DocumentSession.SaveChanges();
 
+            SetEtagHeader(tenant);
+
             return Json(tenant);
         }
 
@@ -195,6 +197,24 @@ namespace DaaSDemo.Api.Controllers
                     database => database.TenantId == tenantId
                 )
                 .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
+            );
+        }
+
+        /// <summary>
+        ///     Populate the "ETag" header using the specified entity's ETag.
+        /// </summary>
+        /// <param name="entity">
+        ///     The target entity.
+        /// </param>
+        void SetEtagHeader<TEntity>(TEntity entity)
+            where TEntity: class
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            long etag = DocumentSession.Advanced.GetEtagFor(entity);
+            Response.Headers.Add("ETag",
+                $"\"{etag}\""
             );
         }
     }

@@ -186,6 +186,11 @@ namespace DaaSDemo.Api.Controllers
 
             DocumentSession.SaveChanges();
 
+            long etag = DocumentSession.Advanced.GetEtagFor(databaseServer);
+            Response.Headers.Add("ETag",
+                $"\"{etag}\""
+            );
+
             return StatusCode(StatusCodes.Status202Accepted, new
             {
                 Id = databaseServer.Id,
@@ -227,7 +232,7 @@ namespace DaaSDemo.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var databaseServer = new DatabaseServer
+            var server = new DatabaseServer
             {
                 Name = newDatabaseServer.Name,
                 Kind = DatabaseServerKind.RavenDB,
@@ -242,17 +247,19 @@ namespace DaaSDemo.Api.Controllers
                 Action = ProvisioningAction.Provision,
                 Status = ProvisioningStatus.Pending,
             };
-            DocumentSession.Store(databaseServer);
+            DocumentSession.Store(server);
 
-            databaseServer.AddProvisioningEvent($"Provisioning requested for '${databaseServer.Id}'.");
+            server.AddProvisioningEvent($"Provisioning requested for '${server.Id}'.");
 
             DocumentSession.SaveChanges();
 
+            SetEtagHeader(server);
+
             return StatusCode(StatusCodes.Status202Accepted, new
             {
-                Id = databaseServer.Id,
-                Name = databaseServer.Name,
-                Message = $"RavenDB instance {databaseServer.Id} queued for creation."
+                Id = server.Id,
+                Name = server.Name,
+                Message = $"RavenDB instance {server.Id} queued for creation."
             });
         }
 
@@ -295,6 +302,8 @@ namespace DaaSDemo.Api.Controllers
             targetServer.AddProvisioningEvent($"Reconfiguration requested for '${targetServer.Id}'.");
 
             DocumentSession.SaveChanges();
+
+            SetEtagHeader(targetServer);
 
             return StatusCode(StatusCodes.Status202Accepted, new
             {
@@ -357,6 +366,8 @@ namespace DaaSDemo.Api.Controllers
             targetServer.AddProvisioningEvent($"De-provisioning requested for '${targetServer.Id}'.");
             DocumentSession.SaveChanges();
 
+            SetEtagHeader(targetServer);
+
             return StatusCode(StatusCodes.Status202Accepted, new
             {
                 Id = serverId,
@@ -379,6 +390,24 @@ namespace DaaSDemo.Api.Controllers
                     .Where(database => database.ServerId == serverId)
                     .OrderBy(database => database.Name)
                     .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
+            );
+        }
+
+        /// <summary>
+        ///     Populate the "ETag" header using the specified entity's ETag.
+        /// </summary>
+        /// <param name="entity">
+        ///     The target entity.
+        /// </param>
+        void SetEtagHeader<TEntity>(TEntity entity)
+            where TEntity: class
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            long etag = DocumentSession.Advanced.GetEtagFor(entity);
+            Response.Headers.Add("ETag",
+                $"\"{etag}\""
             );
         }
     }

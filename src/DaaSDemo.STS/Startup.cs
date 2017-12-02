@@ -4,6 +4,7 @@ using IdentityServer4.Models;
 using IdentityServer4.Test;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Converters;
@@ -17,6 +18,8 @@ namespace DaaSDemo.STS
 {
     using Common.Options;
     using Data;
+    using Models.Data;
+    using Identity;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo UI.
@@ -82,6 +85,10 @@ namespace DaaSDemo.STS
                     );
                 });
 
+            services.AddIdentity<AppUser, AppRole>()
+                .AddDaaSIdentityStores()
+                .AddDefaultTokenProviders();
+
             IdentityServer4.Quickstart.UI.AccountOptions.AutomaticRedirectAfterSignOut = true;
 
             string[] portalBaseAddresses = (CorsOptions.UI ?? String.Empty).Split(';');
@@ -133,20 +140,7 @@ namespace DaaSDemo.STS
                         AllowedCorsOrigins = portalBaseAddresses
                     }
                 })
-                .AddTestUsers(new List<TestUser>
-                {
-                    new TestUser
-                    {
-                        SubjectId = "User/1",
-                        Username = "tintoy",
-                        Password = "woozle",
-                        Claims =
-                        {
-                            new Claim("roles", "admin"),
-                            new Claim("roles", "user")
-                        }
-                    }
-                });
+                .AddAspNetIdentity<AppUser>();
         }
 
         /// <summary>

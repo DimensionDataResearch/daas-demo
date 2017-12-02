@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DaaSDemo.Common\DaaSDemo.Common.csproj" />
     <ProjectReference Include="..\DaaSDemo.Data\DaaSDemo.Data.csproj" />
+    <ProjectReference Include="..\DaaSDemo.Identity\DaaSDemo.Identity.csproj" />
     <ProjectReference Include="..\DaaSDemo.Logging\DaaSDemo.Logging.csproj" />
     <ProjectReference Include="..\DaaSDemo.Models\DaaSDemo.Models.csproj" />
   </ItemGroup>
@@ -27,6 +28,7 @@
     <PackageReference Include="Ben.Demystifier" Version="0.0.5" />
     <PackageReference Include="HTTPlease" Version="1.0.0-rc1-0232" />
     <PackageReference Include="IdentityServer4" Version="2.0.4" />
+    <PackageReference Include="IdentityServer4.AspNetIdentity" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Serilog" Version="2.5.0" />

@@ -157,5 +157,27 @@ namespace DaaSDemo.Data
                 .OrderBy(database => database.Name)
                 .AsEnumerable();
         }
+
+        public static long GetEtagFor<T>(this IAdvancedDocumentSessionOperations advancedOperations, T entity)
+        {
+            if (advancedOperations == null)
+                throw new ArgumentNullException(nameof(advancedOperations));
+
+            string changeVector = advancedOperations.GetChangeVectorFor(entity);
+            if (String.IsNullOrWhiteSpace(changeVector))
+                return -1;
+
+            // Example: A:23-O/BmFGCx40OTFnjpUhmy2A
+            //            ^^
+            //            ETag
+
+            string[] changeVectorComponents = changeVector.Split(':', '-');
+            if (changeVectorComponents.Length != 3)
+                throw new FormatException($"Invalid change-vector format: '{changeVector}'.");
+        
+            return Int64.Parse(
+                changeVectorComponents[1]
+            );
+        }
     }
 }
