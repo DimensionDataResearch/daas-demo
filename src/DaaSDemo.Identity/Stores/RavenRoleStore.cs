@@ -7,110 +7,119 @@ using System.Threading.Tasks;
 
 namespace DaaSDemo.Identity.Stores
 {
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Security.Claims;
     using Models.Data;
 
     // TODO: Tidy this up.
 
     public class RavenRoleStore
-        : IRoleStore<AppRole>
+        : RoleStoreBase<AppRole, string, IdentityUserRole<string>, AppRoleClaim>
     {
-        public RavenRoleStore(IDocumentStore documentStore)
+        public RavenRoleStore(IAsyncDocumentSession documentSession)
+            : base(new IdentityErrorDescriber())
         {
-            if (documentStore == null)
-                throw new ArgumentNullException(nameof(documentStore));
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
             
-            DocumentStore = documentStore;
+            DocumentSession = documentSession;
         }
 
-        IDocumentStore DocumentStore { get; }
+        IAsyncDocumentSession DocumentSession { get; }
 
-        public async Task<IdentityResult> CreateAsync(AppRole role, CancellationToken cancellationToken)
+        public override IQueryable<AppRole> Roles => DocumentSession.Query<AppRole>();
+
+        public override async Task<IdentityResult> CreateAsync(AppRole role, CancellationToken cancellationToken = default)
         {
             if (role == null)
                 throw new ArgumentNullException(nameof(role));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                await session.StoreAsync(role, cancellationToken);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
+
+            await DocumentSession.StoreAsync(role, cancellationToken);
+            await DocumentSession.SaveChangesAsync(cancellationToken);
 
             return IdentityResult.Success;
         }
 
-        public async Task<IdentityResult> UpdateAsync(AppRole role, CancellationToken cancellationToken)
+        public override async Task<IdentityResult> DeleteAsync(AppRole role, CancellationToken cancellationToken = default)
         {
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                await session.StoreAsync(role, cancellationToken);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
+            DocumentSession.Delete(role);
+            await DocumentSession.SaveChangesAsync(cancellationToken);
 
             return IdentityResult.Success;
         }
 
-        public async Task<IdentityResult> DeleteAsync(AppRole role, CancellationToken cancellationToken)
+        public override async Task<AppRole> FindByIdAsync(string id, CancellationToken cancellationToken = default)
         {
-            if (role == null)
-                throw new ArgumentNullException(nameof(role));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                session.Delete(role.Id);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
+            if (String.IsNullOrWhiteSpace(id))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'id'.", nameof(id));
 
-            return IdentityResult.Success;
+            return await DocumentSession.LoadAsync<AppRole>(id);
         }
 
-        public async Task<AppRole> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+        public override async Task<AppRole> FindByNameAsync(string normalizedName, CancellationToken cancellationToken = default)
         {
-            if (String.IsNullOrWhiteSpace(roleId))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'roleId'.", nameof(roleId));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                return await session.LoadAsync<AppRole>(roleId);
-            }
+            if (String.IsNullOrWhiteSpace(normalizedName))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedName'.", nameof(normalizedName));
+
+            return await DocumentSession.Query<AppRole>().FirstOrDefaultAsync(
+                role => role.Name == normalizedName
+            );
         }
 
-        public async Task<AppRole> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+        public override Task<IList<Claim>> GetClaimsAsync(AppRole role, CancellationToken cancellationToken = default)
         {
-            if (String.IsNullOrWhiteSpace(normalizedRoleName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedRoleName'.", nameof(normalizedRoleName));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                return await session.Query<AppRole>().FirstOrDefaultAsync(
-                    role => role.Name == normalizedRoleName
-                );
-            }
+            return Task.FromResult<IList<Claim>>(
+                role.Claims
+                    .Select(
+                        claim => new Claim(claim.ClaimType, claim.ClaimValue)
+                    )
+                    .ToList()
+            );
         }
-        
-        public Task<string> GetRoleIdAsync(AppRole role, CancellationToken cancellationToken) => Task.FromResult(role.Id);
 
-        public Task<string> GetNormalizedRoleNameAsync(AppRole role, CancellationToken cancellationToken) => Task.FromResult(role.Name);
-        public Task SetNormalizedRoleNameAsync(AppRole role, string normalizedName, CancellationToken cancellationToken)
+        public override Task AddClaimAsync(AppRole role, Claim claim, CancellationToken cancellationToken = default)
         {
-            role.Name = normalizedName;
+            role.Claims.Add(new AppRoleClaim
+            {
+                ClaimType = claim.Type,
+                ClaimValue = claim.Value
+            });
 
             return Task.CompletedTask;
         }
 
-
-        public Task<string> GetRoleNameAsync(AppRole role, CancellationToken cancellationToken) => Task.FromResult(role.DisplayName);
-        public Task SetRoleNameAsync(AppRole role, string roleName, CancellationToken cancellationToken)
+        public override Task RemoveClaimAsync(AppRole role, Claim claim, CancellationToken cancellationToken = default)
         {
-            role.DisplayName = roleName;
-
+            if (role == null)
+                throw new ArgumentNullException(nameof(role));
+            
+            if (claim == null)
+                throw new ArgumentNullException(nameof(claim));
+            
+            AppRoleClaim existingRoleClaim = role.Claims.FirstOrDefault(
+                roleClaim => roleClaim.ClaimType == claim.Type && roleClaim.ClaimValue == claim.Value
+            );
+            if (existingRoleClaim != null)
+                role.Claims.Remove(existingRoleClaim);
+            
             return Task.CompletedTask;
         }
 
-        public void Dispose()
+        public override async Task<IdentityResult> UpdateAsync(AppRole role, CancellationToken cancellationToken = default)
         {
+            if (role == null)
+                throw new ArgumentNullException(nameof(role));
+            
+            if (DocumentSession.Advanced.HasChanged(role))
+            {
+                role.ConcurrencyStamp = Guid.NewGuid().ToString("N");
+                await DocumentSession.StoreAsync(role, cancellationToken);
+
+                await DocumentSession.SaveChangesAsync(cancellationToken);
+            }
+
+            return IdentityResult.Success;
         }
     }
 }

@@ -28,16 +28,16 @@ namespace DaaSDemo.Data
                 {
                     session.Store(new AppRole
                     {
-                        Name = "admin",
-                        DisplayName = "Administrator"
+                        Name = "Administrator",
+                        NormalizedName = "admin"
                     });
                 }
                 if (session.Load<AppRole>(AppRole.MakeId("user")) == null)
                 {
                     session.Store(new AppRole
                     {
-                        Name = "user",
-                        DisplayName = "User"
+                        Name = "User",
+                        NormalizedName = "user"
                     });
                 }
 

@@ -12,512 +12,277 @@ namespace DaaSDemo.Identity.Stores
 {
     using Models.Data;
 
-    // TODO: Tidy this up.
-
     public class RavenUserStore
-        : IUserStore<AppUser>, IUserRoleStore<AppUser>, IUserPasswordStore<AppUser>, IUserSecurityStampStore<AppUser>, IUserEmailStore<AppUser>, IUserLockoutStore<AppUser>, IUserClaimStore<AppUser>
+        : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>
     {
-        public RavenUserStore(IDocumentStore documentStore)
+        public RavenUserStore(IAsyncDocumentSession documentSession)
+            : base(new IdentityErrorDescriber())
         {
-            if (documentStore == null)
-                throw new ArgumentNullException(nameof(documentStore));
-            
-            DocumentStore = documentStore;
-        }
-        
-        IDocumentStore DocumentStore { get; }
+            if (documentSession == null)
+                throw new ArgumentNullException(nameof(documentSession));
 
-        public async Task<IdentityResult> CreateAsync(AppUser user, CancellationToken cancellationToken)
+            DocumentSession = documentSession;
+        }
+
+        IAsyncDocumentSession DocumentSession { get; }
+
+        public override IQueryable<AppUser> Users => DocumentSession.Query<AppUser>();
+
+        protected override async Task<AppUser> FindUserAsync(string userId, CancellationToken cancellationToken)
+        {
+            if (String.IsNullOrWhiteSpace(userId))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userId'.", nameof(userId));
+
+            return await DocumentSession.LoadAsync<AppUser>(userId, cancellationToken);
+        }
+
+        public override Task<AppUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task<AppUser> FindByIdAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task<AppUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override async Task<IdentityResult> CreateAsync(AppUser user, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            await DocumentSession.StoreAsync(user, cancellationToken);
+            await DocumentSession.SaveChangesAsync(cancellationToken);
+
+            return IdentityResult.Success;
+        }
+
+        public override async Task<IdentityResult> UpdateAsync(AppUser user, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            await DocumentSession.StoreAsync(user, cancellationToken);
+            await DocumentSession.SaveChangesAsync(cancellationToken);
+
+            return IdentityResult.Success;
+        }
+
+        public override async Task<IdentityResult> DeleteAsync(AppUser user, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            DocumentSession.Delete(user);
+            await DocumentSession.SaveChangesAsync(cancellationToken);
+
+            return IdentityResult.Success;
+        }
+
+        public override Task<IList<Claim>> GetClaimsAsync(AppUser user, CancellationToken cancellationToken = default)
         {
             if (user == null)
                 throw new ArgumentNullException(nameof(user));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                await session.StoreAsync(user, cancellationToken);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
-
-            return IdentityResult.Success;
+            return Task.FromResult<IList<Claim>>(
+                user.Claims.Select(
+                    claim => new Claim(claim.ClaimType, claim.ClaimValue)
+                )
+                .ToList()
+            );
         }
 
-        public async Task<IdentityResult> UpdateAsync(AppUser user, CancellationToken cancellationToken)
+        public override async Task<IList<AppUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken = default)
         {
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                await session.StoreAsync(user, cancellationToken);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
-
-            return IdentityResult.Success;
+            if (claim == null)
+                throw new ArgumentNullException(nameof(claim));
+            
+            return await DocumentSession.Query<AppUser>()
+                .Where(user => user.Claims.Any(
+                    userClaim => userClaim.ClaimType == claim.Type && userClaim.ClaimValue == claim.Value
+                ))
+                .ToListAsync();
         }
 
-        public async Task<IdentityResult> DeleteAsync(AppUser user, CancellationToken cancellationToken)
+        public override Task AddClaimsAsync(AppUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default)
+        {
+            foreach (Claim claim in claims)
+            {
+                user.Claims.Add(new AppUserClaim
+                {
+                    UserId = user.Id,
+                    ClaimType = claim.Type,
+                    ClaimValue = claim.Value
+                });
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public override Task ReplaceClaimAsync(AppUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken = default)
         {
             if (user == null)
                 throw new ArgumentNullException(nameof(user));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                session.Delete(user.Id);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
+            if (claim == null)
+                throw new ArgumentNullException(nameof(claim));
+            
+            if (newClaim == null)
+                throw new ArgumentNullException(nameof(newClaim));
+            
+            AppUserClaim existingUserClaim = user.Claims.FirstOrDefault(
+                userClaim => userClaim.ClaimType == claim.Type && userClaim.ClaimValue == claim.Value
+            );
+            if (existingUserClaim != null)
+                user.Claims.Remove(existingUserClaim);
 
-            return IdentityResult.Success;
+            user.Claims.Add(new AppUserClaim
+            {
+                UserId = user.Id,
+                ClaimType = newClaim.Type,
+                ClaimValue = newClaim.Value
+            });
+
+
+            return Task.CompletedTask;
         }
 
-        public async Task<AppUser> FindByIdAsync(string userId, CancellationToken cancellationToken)
+        public override Task RemoveClaimsAsync(AppUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            if (claims == null)
+                throw new ArgumentNullException(nameof(claims));
+
+            foreach (Claim claim in claims)
+            {
+                AppUserClaim existingUserClaim = user.Claims.FirstOrDefault(
+                    userClaim => userClaim.ClaimType == claim.Type && userClaim.ClaimValue == claim.Value
+                );
+                if (existingUserClaim != null)
+                    user.Claims.Remove(existingUserClaim);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        protected override async Task<AppUserLogin> FindUserLoginAsync(string userId, string loginProvider, string providerKey, CancellationToken cancellationToken)
         {
             if (String.IsNullOrWhiteSpace(userId))
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'userId'.", nameof(userId));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                return await session.LoadAsync<AppUser>(userId, cancellationToken);
-            }
-        }
-
-        public async Task<AppUser> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
-        {
-            if (String.IsNullOrWhiteSpace(normalizedUserName))
-                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedUserName'.", nameof(normalizedUserName));
+            if (String.IsNullOrWhiteSpace(loginProvider))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'loginProvider'.", nameof(loginProvider));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                return await session.Query<AppUser>().FirstOrDefaultAsync(
-                    user => user.Name == normalizedUserName,
-                    cancellationToken
-                );
-            }
-        }
-        
-        public Task<string> GetUserIdAsync(AppUser user, CancellationToken cancellationToken) => Task.FromResult(user.Id);
+            if (String.IsNullOrWhiteSpace(providerKey))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'providerKey'.", nameof(providerKey));
+            
+            AppUser user = await DocumentSession.LoadAsync<AppUser>(userId, cancellationToken);
+            if (user == null)
+                return null;
 
-        public Task<string> GetNormalizedUserNameAsync(AppUser user, CancellationToken cancellationToken) => Task.FromResult(user.Name);
-        public Task SetNormalizedUserNameAsync(AppUser user, string normalizedName, CancellationToken cancellationToken)
+            return user.UserLogins.FirstOrDefault(
+                login => login.LoginProvider == loginProvider && login.ProviderKey == providerKey
+            );
+        }
+
+        protected override async Task<AppUserLogin> FindUserLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
         {
-            user.Name = normalizedName;
+            if (String.IsNullOrWhiteSpace(loginProvider))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'loginProvider'.", nameof(loginProvider));
+            
+            if (String.IsNullOrWhiteSpace(providerKey))
+                throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'providerKey'.", nameof(providerKey));
+            
+            AppUser userWithLogin = await DocumentSession.Query<AppUser>().FirstOrDefaultAsync(
+                user => user.UserLogins.Any(
+                    login => login.LoginProvider == loginProvider && login.ProviderKey == providerKey
+                )
+            );
+            if (userWithLogin == null)
+                return null;
+
+            return userWithLogin.UserLogins.FirstOrDefault(
+                login => login.LoginProvider == loginProvider && login.ProviderKey == providerKey
+            );
+        }
+
+        public override Task<IList<UserLoginInfo>> GetLoginsAsync(AppUser user, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            return Task.FromResult<IList<UserLoginInfo>>(
+                user.Logins.ToList()
+            );
+        }
+
+        public override Task AddLoginAsync(AppUser user, UserLoginInfo login, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            user.Logins.Add(login);
+            
+            return Task.CompletedTask;
+        }
+
+        public override Task RemoveLoginAsync(AppUser user, string loginProvider, string providerKey, CancellationToken cancellationToken = default)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            UserLoginInfo existingLogin = user.Logins.FirstOrDefault(
+                login => login.LoginProvider == loginProvider && login.ProviderKey == providerKey
+            );
+            if (existingLogin != null)
+                user.Logins.Remove(existingLogin);
 
             return Task.CompletedTask;
         }
 
-
-        public Task<string> GetUserNameAsync(AppUser user, CancellationToken cancellationToken) => Task.FromResult(user.DisplayName);
-        public Task SetUserNameAsync(AppUser user, string userName, CancellationToken cancellationToken)
-        {
-            user.DisplayName = userName;
-
-            return Task.CompletedTask;
-        }
-
-        public void Dispose()
-        {
-            // AF: Research the life-cycle of store components to see if their are typically resolved from components that are, themselves, scoped.
-        }
-
-        public async Task AddToRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-                
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                AppRole targetRole = await session.Query<AppRole>().FirstOrDefaultAsync(
-                    role => role.Name == roleName,
-                    cancellationToken
-                );
-
-                // TODO: Throw if null.
-
-                targetUser.RoleIds.Add(targetRole.Id);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public async Task RemoveFromRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                AppRole targetRole = await session.Query<AppRole>().FirstOrDefaultAsync(
-                    role => role.Name == roleName,
-                    cancellationToken
-                );
-
-                // TODO: Throw if null.
-
-                targetUser.RoleIds.Remove(targetRole.Id);
-                
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public async Task<IList<string>> GetRolesAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return targetUser.RoleIds.ToList();
-            }
-        }
-
-        public async Task<bool> IsInRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                AppRole targetRole = await session.Query<AppRole>().FirstOrDefaultAsync(
-                    role => role.Name == roleName,
-                    cancellationToken
-                );
-
-                // TODO: Throw if null.
-
-                return targetUser.RoleIds.Contains(targetRole.Id);
-            }
-        }
-
-        public async Task<IList<AppUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
-        {
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppRole targetRole = await session.Query<AppRole>().FirstOrDefaultAsync(
-                    role => role.Name == roleName,
-                    cancellationToken
-                );
-
-                // TODO: Throw if null.
-
-                return await session.Query<AppUser>()
-                    .Where(
-                        user => user.RoleIds.Contains(targetRole.Id)
-                    )
-                    .ToListAsync(cancellationToken);
-            }
-        }
-
-        public async Task<bool> HasPasswordAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                    if (targetUser == null)
-                        throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return !String.IsNullOrWhiteSpace(user.PasswordHash);
-            }
-        }
-
-        public async Task<string> GetPasswordHashAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                    if (targetUser == null)
-                        throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return user.PasswordHash;
-            }
-        }
-
-        public async Task SetPasswordHashAsync(AppUser user, string passwordHash, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.PasswordHash = passwordHash;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public async Task SetSecurityStampAsync(AppUser user, string stamp, CancellationToken cancellationToken)
+        protected override Task<AppUserToken> FindTokenAsync(AppUser user, string loginProvider, string name, CancellationToken cancellationToken)
         {
             if (user == null)
                 throw new ArgumentNullException(nameof(user));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.SecurityStamp = stamp;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
+            return Task.FromResult(
+                user.Tokens.FirstOrDefault(token => token.LoginProvider == loginProvider && token.Name == name)
+            );
         }
 
-        public async Task<string> GetSecurityStampAsync(AppUser user, CancellationToken cancellationToken)
+        protected override async Task AddUserTokenAsync(AppUserToken token)
         {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
+            if (token == null)
+                throw new ArgumentNullException(nameof(token));
             
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return targetUser.SecurityStamp;
-            }
-        }
-
-        public async Task<AppUser> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
-        {
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                return await session.Query<AppUser>()
-                    .FirstOrDefaultAsync(
-                        user => user.EmailAddress == normalizedEmail,
-                        cancellationToken
-                    );
-            }
-        }
-
-        public async Task<string> GetEmailAsync(AppUser user, CancellationToken cancellationToken)
-        {
+            AppUser user = await DocumentSession.LoadAsync<AppUser>(token.UserId);
             if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
+                throw new InvalidCastException($"User not found with Id '{token.UserId}'.");
 
-                return targetUser.EmailAddress;
-            }
+            user.Tokens.Add(token);
         }
 
-        public async Task SetEmailAsync(AppUser user, string email, CancellationToken cancellationToken)
+        protected override async Task RemoveUserTokenAsync(AppUserToken token)
         {
+            if (token == null)
+                throw new ArgumentNullException(nameof(token));
+            
+            AppUser user = await DocumentSession.LoadAsync<AppUser>(token.UserId);
             if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
+                throw new InvalidCastException($"User not found with Id '{token.UserId}'.");
 
-                targetUser.EmailAddress = email;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public Task<string> GetNormalizedEmailAsync(AppUser user, CancellationToken cancellationToken) => GetEmailAsync(user, cancellationToken);
-
-        public Task SetNormalizedEmailAsync(AppUser user, string normalizedEmail, CancellationToken cancellationToken) => SetEmailAsync(user, normalizedEmail, cancellationToken);
-
-        public async Task<bool> GetEmailConfirmedAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return targetUser.IsEmailAddressConfirmed;
-            }
-        }
-
-        public async Task SetEmailConfirmedAsync(AppUser user, bool confirmed, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.IsEmailAddressConfirmed = confirmed;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public async Task<DateTimeOffset?> GetLockoutEndDateAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return targetUser.Lockout.EndDate;
-            }
-        }
-
-        public async Task SetLockoutEndDateAsync(AppUser user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.Lockout.EndDate = lockoutEnd;
-            }
-        }
-
-        public async Task<int> GetAccessFailedCountAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                return targetUser.Lockout.AccessFailedCount;
-            }
-        }
-
-        public async Task<int> IncrementAccessFailedCountAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.Lockout.AccessFailedCount++;
-
-                await session.SaveChangesAsync(cancellationToken);
-
-                return targetUser.Lockout.AccessFailedCount;
-            }
-        }
-
-        public async Task ResetAccessFailedCountAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.Lockout.AccessFailedCount = 0;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public async Task<bool> GetLockoutEnabledAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.Lockout.AccessFailedCount++;
-
-                await session.SaveChangesAsync(cancellationToken);
-
-                return targetUser.Lockout.IsEnabled;
-            }
-        }
-
-        public async Task SetLockoutEnabledAsync(AppUser user, bool enabled, CancellationToken cancellationToken)
-        {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
-            
-            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
-            {
-                AppUser targetUser = await session.LoadAsync<AppUser>(user.Id, cancellationToken);
-                if (targetUser == null)
-                    throw new InvalidOperationException($"User not found with Id '{user.Id}'.");
-
-                targetUser.Lockout.IsEnabled = enabled;
-
-                await session.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        public Task<IList<Claim>> GetClaimsAsync(AppUser user, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task AddClaimsAsync(AppUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task ReplaceClaimAsync(AppUser user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task RemoveClaimsAsync(AppUser user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IList<AppUser>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
+            AppUserToken existingToken = user.Tokens.FirstOrDefault(
+                userToken => userToken.LoginProvider == token.LoginProvider && userToken.Name == token.Name
+            );
+            if (existingToken != null)
+                user.Tokens.Remove(existingToken);
         }
     }
 }

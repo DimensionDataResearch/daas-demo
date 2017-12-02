@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -10,104 +11,59 @@ namespace DaaSDemo.Models.Data
     /// </summary>
     [EntitySet("AppUser")]
     public class AppUser
-        : IDeepCloneable<AppUser>
+        : IdentityUser<string>
     {
         /// <summary>
-        ///     The user Id.
-        /// </summary>
-        public string Id { get; set; }
-
-        /// <summary>
-        ///     The user's (account) name.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        ///     The user's display name.
-        /// </summary>
-        public string DisplayName { get; set; }
-        
-        /// <summary>
-        ///     The user's e-mail address.
-        /// </summary>
-        public string EmailAddress { get; set; }
-
-        /// <summary>
-        ///     Has user's e-mail address been confirmed?
-        /// </summary>
-        public bool IsEmailAddressConfirmed { get; set; }
-
-        /// <summary>
-        ///     The user's password hash.
-        /// </summary>
-        public string PasswordHash { get; set; }
-
-        /// <summary>
-        ///     Opaque data used by ASP.NET Core Identity to determine whether the user is up-to-date.
-        /// </summary>
-        public string SecurityStamp { get; set; }
-
-        /// <summary>
-        ///     The user's lockout information
+        ///     Claims assigned to the user.
         /// </summary>
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
-        public AppUserLockout Lockout { get; private set; } = new AppUserLockout();
+        public HashSet<AppUserClaim> Claims { get; } = new HashSet<AppUserClaim>();
 
         /// <summary>
-        ///     The Ids of roles that the user is a member of.
+        ///     Logins assigned to the user.
         /// </summary>
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
-        public HashSet<string> RoleIds { get; private set; } = new HashSet<string>();
+        public HashSet<AppUserLogin> UserLogins { get; } = new HashSet<AppUserLogin>();
 
         /// <summary>
-        ///     Create a deep clone of the <see cref="AppUser"/>.
+        ///     AF: I don't see the distinction.
         /// </summary>
-        /// <returns>
-        ///     The cloned <see cref="AppUser"/>.
-        /// </returns>
-        public AppUser Clone()
-        {
-            return new AppUser
-            {
-                Id = Id,
-                Name = Name,
-                DisplayName = DisplayName,
-                EmailAddress = EmailAddress,
-                IsEmailAddressConfirmed = IsEmailAddressConfirmed,
-                
-                PasswordHash = PasswordHash,
-                SecurityStamp = SecurityStamp,
-                Lockout = Lockout.Clone(),
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public HashSet<UserLoginInfo> Logins { get; } = new HashSet<UserLoginInfo>();
 
-                RoleIds = new HashSet<string>(RoleIds)
-            };
-        }
+        /// <summary>
+        ///     Tokens assigned to the user.
+        /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public HashSet<AppUserToken> Tokens { get; } = new HashSet<AppUserToken>();
     }
 
     /// <summary>
-    ///     Lockout information for a DaaS application user.
+    ///     Represents a claim assigned to a DaaS application user.
     /// </summary>
-    public class AppUserLockout
-        : IDeepCloneable<AppUserLockout>
+    public class AppUserClaim
+        : IdentityUserClaim<string>
     {
-        public int AccessFailedCount { get; set; }
-        public bool IsEnabled { get; set; }
-        public DateTimeOffset? EndDate { get; set; }
-        
         /// <summary>
-        ///     Create a deep clone of the <see cref="AppUserLockout"/>.
+        ///     Do not persist Id - unused in RavenDB.
         /// </summary>
-        /// <returns>
-        ///     The cloned <see cref="AppUserLockout"/>.
-        /// </returns>
-        public AppUserLockout Clone()
-        {
-            return new AppUserLockout
-            {
-                AccessFailedCount = AccessFailedCount,
-                IsEnabled = IsEnabled,
-                EndDate = EndDate
-            };
-        }
+        [JsonIgnore]
+        public override int Id { get; set; }
+    }
+
+    /// <summary>
+    ///     Represents a login assigned to a DaaS application user.
+    /// </summary>
+    public class AppUserLogin
+        : IdentityUserLogin<string>
+    {
+    }
+
+    /// <summary>
+    ///     Represents an authentication token assigned to a DaaS application user.
+    /// </summary>
+    public class AppUserToken
+        : IdentityUserToken<string>
+    {
     }
 }
