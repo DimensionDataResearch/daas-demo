@@ -19,12 +19,19 @@ spec:
         k8s-app: ravendb
     spec:
       serviceAccountName: daas
-      terminationGracePeriodSeconds: 60
+      terminationGracePeriodSeconds: 5
 
       containers:
       - name: ravendb
         image: ravendb/ravendb:ubuntu-latest
         imagePullPolicy: IfNotPresent
+
+        livenessProbe:
+          httpGet:
+            path: /databases
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
         
         env:
           - name: UNSECURED_ACCESS_ALLOWED
