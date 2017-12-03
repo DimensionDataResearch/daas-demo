@@ -25,10 +25,12 @@ COPY test/DaaSDemo.TestHarness/*.csproj /build/test/DaaSDemo.TestHarness/
 ARG VERSION_PREFIX=1.0.0
 ARG VERSION_SUFFIX=dev
 
+WORKDIR /build
+
 RUN dotnet restore /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX}
 
 COPY . /build
-RUN dotnet publish src/DaaSDemo.DatabaseProxy/DaaSDemo.DatabaseProxy.csproj /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX} -o /out
+RUN dotnet publish src/DaaSDemo.IdentityServer/DaaSDemo.IdentityServer.csproj /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX} -o /out
 
 FROM microsoft/aspnetcore:2.0-jessie
 
@@ -36,7 +38,6 @@ WORKDIR /app
 
 COPY --from=build /out /app
 
-EXPOSE 5000
-ENV IN_KUBERNETES=0 PORT=5000 ASPNETCORE_URLS=http://localhost:5000
+ENV IN_KUBERNETES=0 ASPNETCORE_ENVIRONMENT=Production
 
-ENTRYPOINT [ "dotnet", "DaaSDemo.DatabaseProxy.dll" ]
+ENTRYPOINT [ "dotnet", "DaaSDemo.IdentityServer.dll" ]

@@ -9,12 +9,24 @@ Param(
     [string] $Version = '1.0.0-dev',
 
     [Parameter()]
-    [switch] $Deploy
+    [switch] $Deploy,
+
+    [Parameter()]
+    [switch] $NoPush
 )
+
+$VersionParts = $Version.Split('-')
+$VersionPrefix = $VersionParts[0]
+If ($VersionParts.Count -eq 2) {
+    $VersionSuffix = $VersionParts[1]
+} Else {
+    $VersionSuffix = ''
+}
 
 $Components = $OnlyComponents
 If (!$Components) {
     $Components = @(
+        'identity-server',
         'api',
         'database-proxy',
         'provisioning',
@@ -26,22 +38,24 @@ $docker = Get-Command docker
 
 Write-Host 'Building images...'
 ForEach ($Component in $Components) {
-    & $docker build -t "${Repo}/${Component}:${Version}" -f Dockerfile.${Component} .
+    & $docker build -t "${Repo}/${Component}:${Version}" --build-arg "VERSION_PREFIX=$VersionPrefix" --build-arg "VERSION_SUFFIX=$VersionSuffix" -f Dockerfile.${Component} .
     If ($LASTEXITCODE) {
         Return $LASTEXITCODE
     }
 }
 
-Write-Host 'Pushing images...'
-ForEach ($Component in $Components) {
-    & $docker push "${Repo}/${Component}:${Version}"
-
-    If ($LASTEXITCODE) {
-        Return $LASTEXITCODE
+If (!$NoPush) {
+    Write-Host 'Pushing images...'
+    ForEach ($Component in $Components) {
+        & $docker push "${Repo}/${Component}:${Version}"
+    
+        If ($LASTEXITCODE) {
+            Return $LASTEXITCODE
+        }
     }
 }
 
-If ($Deploy) {
+If ($Deploy -and !$NoPush) {
     $kubectl = Get-Command kubectl
     $manifestDirectory = Join-Path $PSScriptRoot 'deploy\k8s'
 

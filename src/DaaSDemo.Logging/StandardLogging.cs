@@ -3,6 +3,7 @@ using Serilog;
 using Serilog.Sinks.Elasticsearch;
 using System;
 using Serilog.Events;
+using System.Reflection;
 
 namespace DaaSDemo.Logging
 {
@@ -70,7 +71,17 @@ namespace DaaSDemo.Logging
                 }
             }
 
-            return loggerConfiguration.CreateLogger();
+            ILogger logger = loggerConfiguration.CreateLogger();
+
+            Assembly entryAssembly = Assembly.GetEntryAssembly();
+            var assemblyInformationalVersion = entryAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            logger.Information("Starting DaaS {ComponentName} ({EntryAssemblyName}) v{Version}...",
+                daasComponentName,
+                entryAssembly.GetName().Name,
+                assemblyInformationalVersion?.InformationalVersion
+            );
+
+            return logger;
         }
 
         /// <summary>

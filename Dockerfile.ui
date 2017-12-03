@@ -11,6 +11,7 @@ COPY src/DaaSDemo.Data/*.csproj /build/src/DaaSDemo.Data/
 COPY src/DaaSDemo.DatabaseProxy/*.csproj /build/src/DaaSDemo.DatabaseProxy/
 COPY src/DaaSDemo.DatabaseProxy.Client/*.csproj /build/src/DaaSDemo.DatabaseProxy.Client/
 COPY src/DaaSDemo.Identity/*.csproj /build/src/DaaSDemo.Identity/
+COPY src/DaaSDemo.IdentityServer/*.csproj /build/src/DaaSDemo.IdentityServer/
 COPY src/DaaSDemo.KubeClient/*.csproj /build/src/DaaSDemo.KubeClient/
 COPY src/DaaSDemo.Logging/*.csproj /build/src/DaaSDemo.Logging/
 COPY src/DaaSDemo.Models/*.csproj /build/src/DaaSDemo.Models/
@@ -30,7 +31,7 @@ RUN npm install --no-optional
 
 WORKDIR /build
 
-RUN dotnet restore /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_Suffix}
+RUN dotnet restore /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX}
 
 COPY . /build
 RUN dotnet publish src/DaaSDemo.UI/DaaSDemo.UI.csproj /p:VersionPrefix=${VERSION_PREFIX} /p:VersionSuffix=${VERSION_SUFFIX} -o /out

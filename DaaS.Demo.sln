@@ -33,7 +33,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Logging", "src\Daa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Crypto", "src\DaaSDemo.Crypto\DaaSDemo.Crypto.csproj", "{A10AE842-1113-4AA3-A8EB-D8DD89F5B27D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.STS", "src\DaaSDemo.STS\DaaSDemo.STS.csproj", "{B0721F85-8F6D-41DD-B38C-3337002A14B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.IdentityServer", "src\DaaSDemo.IdentityServer\DaaSDemo.IdentityServer.csproj", "{B0721F85-8F6D-41DD-B38C-3337002A14B7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DaaSDemo.Identity", "src\DaaSDemo.Identity\DaaSDemo.Identity.csproj", "{A2183256-3107-4D4F-B569-802D8B6D5D9D}"
 EndProject
