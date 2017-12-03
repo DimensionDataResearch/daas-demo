@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using System;
@@ -15,16 +16,22 @@ namespace DaaSDemo.Identity.Stores
     public class RavenUserStore
         : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>, IUserStore<AppUser>, IUserAuthenticationTokenStore<AppUser>, IUserAuthenticatorKeyStore<AppUser>, IUserClaimStore<AppUser>, IUserEmailStore<AppUser>, IUserLockoutStore<AppUser>, IUserLoginStore<AppUser>, IUserPasswordStore<AppUser>, IUserPhoneNumberStore<AppUser>, IUserSecurityStampStore<AppUser>
     {
-        public RavenUserStore(IAsyncDocumentSession documentSession)
+        public RavenUserStore(IAsyncDocumentSession documentSession, ILogger<RavenUserStore> logger)
             : base(new IdentityErrorDescriber())
         {
             if (documentSession == null)
                 throw new ArgumentNullException(nameof(documentSession));
 
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
             DocumentSession = documentSession;
+            Log = logger;
         }
 
         IAsyncDocumentSession DocumentSession { get; }
+        
+        ILogger Log { get; }
 
         public override IQueryable<AppUser> Users => DocumentSession.Query<AppUser>();
 

@@ -9,17 +9,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using DaaSDemo.IdentityServer.Filters;
 
-namespace DaaSDemo.IdentityServer.Controllers
+namespace IdentityServer4.Quickstart.UI
 {
-    using Filters;
-    using Models;
-
     /// <summary>
     /// This sample controller allows a user to revoke grants given to clients
     /// </summary>
-    [Authorize]
     [SecurityHeaders]
+    [Authorize]
     public class GrantsController : Controller
     {
         private readonly IIdentityServerInteractionService _interaction;

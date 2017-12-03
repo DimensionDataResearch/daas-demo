@@ -73,9 +73,10 @@ namespace DaaSDemo.UI
             services
                 .AddIdentity<AppUser, AppRole>(identity =>
                 {
-                    identity.ClaimsIdentity.UserIdClaimType = "sub";
-                    identity.ClaimsIdentity.UserNameClaimType = "name";
-                    identity.ClaimsIdentity.RoleClaimType = "role";
+                    identity.Password.RequireDigit = false;
+                    identity.Password.RequireLowercase = false;
+                    identity.Password.RequireNonAlphanumeric = false;
+                    identity.Password.RequireUppercase = false;
                 })
                 .AddDaaSIdentityStores();
 

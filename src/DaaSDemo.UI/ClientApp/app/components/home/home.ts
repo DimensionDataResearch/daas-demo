@@ -45,6 +45,8 @@ export class Home {
         const body = await endPointsResponse.json();
         const endPoints = body as EndPoints;
 
+        console.log(`Will use IdentityServer4 at '${endPoints.identityServer}'.`);
+
         this.authxManager.initialize(
             endPoints.identityServer,
             'daas-ui-dev',  // Client Id

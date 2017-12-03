@@ -9,10 +9,8 @@ using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace DaaSDemo.IdentityServer.Services
+namespace IdentityServer4.Quickstart.UI
 {
-    using Models;
-
     public class ConsentService
     {
         private readonly IClientStore _clientStore;

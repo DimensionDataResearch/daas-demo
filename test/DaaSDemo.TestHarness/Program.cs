@@ -42,9 +42,14 @@ namespace DaaSDemo.TestHarness
         /// </returns>
         static async Task AsyncMain()
         {
+            const string emailAddress = "foo@bar.com";
+            const string password = "tellNo1!";
+
             var user = new AppUser
             {
-                UserName = "testuser"
+                UserName = emailAddress,
+                Email = emailAddress,
+                EmailConfirmed = true
             };
 
             Log.Information("Building...");
@@ -65,7 +70,7 @@ namespace DaaSDemo.TestHarness
                 }
 
                 Log.Information("Adding password...");
-                result = await userManager.AddPasswordAsync(user, "potato3s!");
+                result = await userManager.AddPasswordAsync(user, password);
                 if (!result.Succeeded)
                 {
                     Log.Information("AddPasswordResult: {@Result}", result);
@@ -81,7 +86,7 @@ namespace DaaSDemo.TestHarness
                 IPasswordValidator<AppUser> passwordValidator = scope.ServiceProvider.GetRequiredService<IPasswordValidator<AppUser>>();
 
                 Log.Information("Validating password...");
-                IdentityResult result = await passwordValidator.ValidateAsync(userManager, user, "potato3s!");
+                IdentityResult result = await passwordValidator.ValidateAsync(userManager, user, password);
                 if (!result.Succeeded)
                 {
                     Log.Information("ValidateResult: {@Result}", result);
@@ -115,6 +120,11 @@ namespace DaaSDemo.TestHarness
             services.AddLogging(logging =>
             {
                 logging.AddSerilog(Log.Logger);
+            });
+
+            services.AddDataProtection(dataProtection =>
+            {
+                dataProtection.ApplicationDiscriminator = "DaaS.Demo";
             });
 
             services

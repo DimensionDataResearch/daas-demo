@@ -1,0 +1,21 @@
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login</title>
+    <link rel='stylesheet' href='app.css'>
+</head>
+
+<body>
+    <script src='~/js/oidc-client.js'></script>
+    <script type="text/javascript">
+        Oidc.Log.logger = console;
+        new Oidc.UserManager().signoutRedirectCallback();
+    </script>
+</body>
+
+</html>

@@ -7,13 +7,10 @@ using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using DaaSDemo.IdentityServer.Filters;
 
-namespace DaaSDemo.IdentityServer.Controllers
+namespace IdentityServer4.Quickstart.UI
 {
-    using Filters;
-    using Models;
-    using Services;
-
     /// <summary>
     /// This controller processes the consent UI
     /// </summary>
