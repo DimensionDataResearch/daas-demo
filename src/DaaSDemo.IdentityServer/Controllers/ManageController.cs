@@ -496,7 +496,7 @@ namespace DaaSDemo.IdentityServer.Controllers
         {
             return string.Format(
                 AuthenicatorUriFormat,
-                _urlEncoder.Encode("IdentityServerWithAspNetIdentity"),
+                _urlEncoder.Encode("DaaSDemo.IdentityServer"),
                 _urlEncoder.Encode(email),
                 unformattedKey);
         }

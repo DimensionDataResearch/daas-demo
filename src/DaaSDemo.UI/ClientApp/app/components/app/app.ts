@@ -14,6 +14,13 @@ export class App {
             nav: true,
             title: 'Home'
         }, {
+            route: 'users',
+            name: 'users',
+            settings: { icon: 'user' },
+            moduleId: PLATFORM.moduleName('../users/list'),
+            nav: false, // TODO: Enable once we have an Admin menu (or something like it) on the nav bar.
+            title: 'Users'
+        }, {
             route: 'tenants',
             name: 'tenants',
             settings: { icon: 'user' },

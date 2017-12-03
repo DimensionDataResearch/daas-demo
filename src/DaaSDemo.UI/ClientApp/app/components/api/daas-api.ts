@@ -22,6 +22,20 @@ export class DaaSAPI
     }
 
     /**
+     * Get information about all users.
+     * 
+     * @returns The users, sorted by name.
+     */
+    public async getUsers(): Promise<User[]> {
+        await this.configured;
+
+        const response = await this.http.fetch('admin/users');
+        const body = await response.json();
+
+        return body as User[];
+    }
+
+    /**
      * Get information about all tenants.
      * 
      * @returns The tenants, sorted by name.
@@ -89,6 +103,35 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to retrieve details for database with Id ${databaseId}: ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Get information about a specific user.
+     * 
+     * @param userId The user Id.
+     * @returns The user, or null if no user exists with the specified Id.
+     */
+    public async getUser(userId: string): Promise<User | null> {
+        await this.configured;
+
+        const response = await this.http.fetch(`users/${userId}`);
+        const body = await response.json();
+
+        if (response.ok)
+            return body as User;
+
+        if (response.status === 404)
+        {
+            const notFound = body as NotFoundResponse;
+            if (notFound.entityType == 'User')
+                return null;
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to retrieve details for user with Id ${userId}: ${errorResponse.message || 'Unknown error.'}`
         );
     }
 
@@ -536,6 +579,13 @@ export interface EndPoints {
      * The identity server (STS) base address.
      */
     identityServer: string;
+}
+
+export interface User {
+    id: string;
+    name: string;
+    emailAddress: string;
+    isLockedOut: boolean;
 }
 
 /**

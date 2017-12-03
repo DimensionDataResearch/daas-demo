@@ -1,0 +1,25 @@
+<template>
+    <h3 class="ui dividing header">Add user</h3>
+
+    <form class="ui form">
+        <div class="required field" validation-errors.bind="nameErrors" class.bind="nameErrors.length ? 'error' : ''">
+            <label>Name</label>
+            <input name="name" value.bind="newUser.name & validate" placeholder="User name" type="text">
+        </div>
+
+        <div class="ui message" if.bind="validationController.errors.length">
+            <div class="header">One or more fields are invalid</div>
+
+            <ul>
+                <li repeat.for="error of validationController.errors">
+                    ${error.message}
+                </li>
+            </ul>
+        </div>
+
+        <button class="ui positive button" click.delegate="createClicked()" disabled.bind="validationController.errors.length">
+            <i class="add circle icon"></i> Create
+        </button>
+        <button class="ui button" click.delegate="cancelClicked()">Cancel</button>
+    </form>
+</template>

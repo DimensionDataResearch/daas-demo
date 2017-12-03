@@ -1,0 +1,50 @@
+<template>
+    <require from="./forms/new"></require>
+
+    <div class="ui segment" style="min-height: 10.0rem;">
+        <div class="ui active dimmer" if.bind="isLoading">
+            <div class="ui active loader"></div>
+        </div>
+
+        <h1 class="ui dividing header">Users</h1>
+        
+        <div if.bind="!addingUser" style="margin-bottom: 0.5rem;">
+            <button class="ui icon button" click.delegate="showCreateUserForm()">
+                <i class="add circle icon"></i> Add
+            </button>
+            <button class="ui right floated circular icon button" click.delegate="load(true)">
+                <i class="refresh icon"></i>
+            </button>
+        </div>
+
+        <div if.bind="addingUser">
+            <new-user-form new-user.bind="newUser"
+                create-clicked.call="createUser()"
+                cancel-clicked.call="hideCreateUserForm()"
+            />
+        </div>
+        
+        <div if.bind="hasUser && !addingUser">
+            <table class="ui striped celled compact table">
+                <thead>
+                    <tr>
+                        <th class="collapsing left aligned">Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr repeat.for="user of users">
+                        <td class="collapsing left aligned">
+                            <a route-href="route: user; params.bind: { userId: user.id }">
+                                <i class="large user icon"></i> ${ user.name }
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 if.bind="!hasUser && !addingUser">
+            No users
+        </h3>
+    </div>
+</template>

@@ -1,4 +1,4 @@
-﻿@using IdentityServerWithAspNetIdentity.Views.Manage
+﻿@using DaaSDemo.IdentityServer.ViewModels.Manage
 @inject SignInManager<AppUser> SignInManager
 @{
     var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
