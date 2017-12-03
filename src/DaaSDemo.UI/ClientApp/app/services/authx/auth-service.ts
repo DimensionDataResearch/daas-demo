@@ -18,6 +18,13 @@ export class AuthService {
     }
 
     /**
+     * Is the user currently signed in?
+     */
+    public get isSignedIn(): boolean {
+        return !!this._user;
+    }
+
+    /**
      * The current user information (if signed in).
      */
     public get user(): User | null {
@@ -25,16 +32,67 @@ export class AuthService {
     }
 
     /**
-     * Is the user currently signed in?
+     * Is the AuthX service ready for use?
      */
-    public get isSignedIn(): boolean {
-        return this._user !== null;
+    public get ready(): Promise<void> {
+        return this._initialized;
+    }
+
+    /**
+     * Determine whether the user is a member of the specified role.
+     * 
+     * @param roleName The role's display name (e.g. "Administrator").
+     * 
+     * @returns true, if the user is a member of the role; otherwise, false.
+     */
+    public async isInRole(roleName: string): Promise<boolean> {
+        await this.ready;
+
+        if (!this.user) {
+            return false;
+        }
+
+        const roles = this.user.profile.roles as string[];
+        if (!roles) {
+            return false;
+        }
+
+        return roles.indexOf(roleName) !== -1;
+    }
+
+    /**
+     * Sign in.
+     */
+    public async signin(): Promise<User | null> {
+        await this.ready;
+
+        if (!this._userManager) {
+            throw new Error('AuthManager has not been initialised.');
+        }
+
+        this._user = await this._userManager.signinPopup();
+
+        return this.user;
+    }
+
+    /**
+     * Sign out.
+     */
+    public async signout(): Promise<void> {
+        await this.ready;
+
+        if (!this._userManager) {
+            throw new Error('AuthManager has not been initialised.');
+        }
+
+        await this._userManager.signoutPopup();
+        this._user = null;
     }
 
     /**
      * Initialise the AuthManager.
      */
-    async initialize(): Promise<void> {
+    private async initialize(): Promise<void> {
         const configuration: Configuration = await this.configService.getConfiguration();
 
         const authority = configuration.identity.authority;
@@ -58,39 +116,11 @@ export class AuthService {
             }
         });
         this._userManager.events.addUserUnloaded(() => {
-            this.eventAggregator.publish('AuthX.UserLoaded');
+            this.eventAggregator.publish('AuthX.UserUnloaded');
         });
         this._userManager.events.addUserSignedOut(() => {
             this.eventAggregator.publish('AuthX.UserSignedOut');
         });
-    }
-
-    /**
-     * Sign in.
-     */
-    public async signin(): Promise<User | null> {
-        await this._initialized;
-
-        if (!this._userManager) {
-            throw new Error('AuthManager has not been initialised.');
-        }
-
-        this._user = await this._userManager.signinPopup();
-
-        return this.user;
-    }
-
-    /**
-     * Sign out.
-     */
-    public async signout(): Promise<void> {
-        await this._initialized;
-
-        if (!this._userManager) {
-            throw new Error('AuthManager has not been initialised.');
-        }
-
-        await this._userManager.signoutPopup();
     }
 }
 
@@ -118,7 +148,8 @@ export function createUserManager(authority: string, client_id: string, addition
         popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=700,height=933,left=300,top=200;resizable=yes',
 
         // Automatically renew tokens before they expire using silent sign-in (hidden iframe).
-        automaticSilentRenew: false,
+        automaticSilentRenew: true,
+        checkSessionInterval: 10000,
         silent_redirect_uri: window.location.protocol + '//' + window.location.host + '/oidc/signin/silent',
     
         // Defaults needed for silent_renew

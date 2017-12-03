@@ -1,11 +1,22 @@
-<template bindable="router">
+<template>
     <div class="ui fixed inverted menu">
-        <div class="ui container">
-            <a href="#" class="header item">Database-as-a-Service</a>
-            <a href="#" class="item">Home</a>
-            <a repeat.for = "row of router.navigation" class="${ row.isActive ? 'active ' : '' }item" href.bind = "row.href">
-                <i if.bind="row.settings.icon" class="${ row.settings.icon } icon"></i>
-                ${ row.title }
+        <a href="#" class="header item">Database-as-a-Service</a>
+        <a href="#" class="item">Home</a>
+        <a repeat.for = "row of router.navigation" class="${ row.isActive ? 'active ' : '' }item" href.bind = "row.href">
+            <i if.bind="row.settings.icon" class="${ row.settings.icon } icon"></i>
+            ${ row.title }
+        </a>
+        <div if.bind="isSignedIn" class="right menu">
+            <div class="item">
+                ${ user.profile.name }
+            </div>
+            <a class="item" click.delegate="signout()">
+                <i class="lock icon"></i> Log out
+            </a>
+        </div>
+        <div if.bind="!isSignedIn" class="right menu">
+            <a class="item" click.delegate="signin()">
+                <i class="open lock icon"></i> Log in
             </a>
         </div>
     </div>

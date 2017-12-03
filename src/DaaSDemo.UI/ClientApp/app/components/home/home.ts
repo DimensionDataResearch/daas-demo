@@ -14,8 +14,7 @@ import { AuthService } from '../../services/authx/auth-service';
 export class Home {
     private subscriptions: Subscription[] = [];
 
-    @bindable public signedIn: boolean = false;
-    @bindable public message: string;
+    @bindable public message: string | null;
     
     /**
      * Create a new home view model.
@@ -40,12 +39,13 @@ export class Home {
         this.load();
 
         this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
-            this.signedIn = true;
-            this.message = 'OIDC profile: ' + JSON.stringify(user.profile, null, 4);
+            this.message = JSON.stringify(user.profile, null, 4);
         });
         this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
-            this.signedIn = false;
-            this.message = 'Not logged in.';
+            this.message = null;
+        });
+        this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
+            this.message = null;
         });
     }
 
@@ -69,11 +69,9 @@ export class Home {
     private async load(): Promise<void> {
         const user = this.authService.user;
         if (user) {
-            this.signedIn = true;
-            this.message = 'OIDC profile (cached): ' + JSON.stringify(user.profile, null, 4);
+            this.message = JSON.stringify(user.profile, null, 4);
         } else {
-            this.signedIn = false;
-            this.message = 'Not logged in.';
+            this.message = null;
         }
     }
 }

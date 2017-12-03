@@ -3,12 +3,9 @@
     
     <p>Welcome to the demo. Please select an option from the menu above.</p>
 
-    <button class="ui button" click.delegate="signin()" disabled.bind="signedIn">Login</button>
-    <button class="ui button" click.delegate="signout()" disabled.bind="!signedIn">Logout</button>
-
-    <p if.bind="message">
+    <div if.bind="message">
         <pre>
             <code>${ message | sanitizeHTML }</code>
         </pre>
-    </p>
+    </div>
 </template>

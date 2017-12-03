@@ -5,18 +5,30 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DaaSDemo.IdentityServer.Services
 {
-    using System.Linq;
     using Models.Data;
 
+    /// <summary>
+    ///     IdentityServer profile service that sources claims for the user profile from <see cref="AppUser"/> details (including role membership).
+    /// </summary>
     public class AppUserProfileService
         : IProfileService
     {
-        public AppUserProfileService(ILogger<AppUserProfileService> logger, UserManager<AppUser> userManager)
+        /// <summary>
+        ///     Create a new <see cref="AppUserProfileService"/>.
+        /// </summary>
+        /// <param name="userManager">
+        ///     The ASP.NET Core Identity user-management service.
+        /// </param>
+        /// <param name="logger">
+        ///     The service's logger.
+        /// </param>
+        public AppUserProfileService(UserManager<AppUser> userManager, ILogger<AppUserProfileService> logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
@@ -28,10 +40,25 @@ namespace DaaSDemo.IdentityServer.Services
             UserManager = userManager;
         }
 
+        /// <summary>
+        ///     The service's logger.
+        /// </summary>
         ILogger Log { get; }
 
+        /// <summary>
+        ///     The ASP.NET Core Identity user-management service.
+        /// </summary>
         UserManager<AppUser> UserManager { get; }
 
+        /// <summary>
+        ///     Get profile data for the specified subject.
+        /// </summary>
+        /// <param name="context">
+        ///     A <see cref="ProfileDataRequestContext"/> containing contextual information about the subject and the claims being issued.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
         public async Task GetProfileDataAsync(ProfileDataRequestContext context)
         {
             if (context == null)
@@ -43,6 +70,13 @@ namespace DaaSDemo.IdentityServer.Services
                 Log.LogWarning("GetProfileDataAsync: Failed to find user.");
 
                 return;
+            }
+
+            if (!context.IssuedClaims.Any(claim => claim.Type == JwtClaimTypes.Name))
+            {
+                context.IssuedClaims.Add(
+                    new Claim(JwtClaimTypes.Name, user.UserName)
+                );
             }
 
             IList<string> roles = await UserManager.GetRolesAsync(user);
@@ -60,13 +94,30 @@ namespace DaaSDemo.IdentityServer.Services
             ));
         }
 
-        public Task IsActiveAsync(IsActiveContext context)
+        /// <summary>
+        ///     Determine whether the user is valid or active.
+        /// </summary>
+        /// <param name="context">
+        ///     An <see cref="IsActiveContext"/> containing contextual information about the subject whether it should be treated as active.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        public async Task IsActiveAsync(IsActiveContext context)
         {
-            Log.LogInformation("IsActiveAsync");
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
-            context.IsActive = true;
+            AppUser user = await UserManager.GetUserAsync(context.Subject);
+            if (user == null)
+            {
+                Log.LogWarning("IsActiveAsync: Failed to find user.");
+                context.IsActive = false;
 
-            return Task.CompletedTask;
+                return;
+            }
+
+            context.IsActive = !user.LockoutEnabled;
         }
     }
 }
