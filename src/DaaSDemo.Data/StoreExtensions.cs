@@ -29,7 +29,7 @@ namespace DaaSDemo.Data
                     session.Store(new AppRole
                     {
                         Name = "Administrator",
-                        NormalizedName = "admin"
+                        NormalizedName = "ADMIN"
                     });
                 }
                 if (session.Load<AppRole>(AppRole.MakeId("user")) == null)
@@ -37,7 +37,7 @@ namespace DaaSDemo.Data
                     session.Store(new AppRole
                     {
                         Name = "User",
-                        NormalizedName = "user"
+                        NormalizedName = "USER"
                     });
                 }
 

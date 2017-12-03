@@ -13,7 +13,7 @@ namespace DaaSDemo.Common.Options
         /// <summary>
         ///     The base address of the identity server.
         /// </summary>
-        public string IdentityServerBaseAddress { get; set; }
+        public string Authority { get; set; }
 
         /// <summary>
         ///     Load <see cref="SecurityOptions"/> from configuration.

@@ -5,13 +5,12 @@ import { RouteConfig } from 'aurelia-router';
 
 import { UserManager, User } from 'oidc-client';
 
-import { EndPoints } from '../../services/api/daas-api';
-import { createUserManager, AuthXManager } from '../authx/authenticator';
+import { AuthService } from '../../services/authx/auth-service';
 
 /**
  * The view model for the default (home) view.
  */
-@inject(AuthXManager, EventAggregator, HttpClient)
+@inject(EventAggregator, HttpClient, AuthService)
 export class Home {
     private subscriptions: Subscription[] = [];
 
@@ -21,14 +20,14 @@ export class Home {
     /**
      * Create a new home view model.
      * 
-     * @param authxManager The authentication / authorisation service.
      * @param eventAggregator The event-aggregator service.
      * @param http An HTTP client.
+     * @param authService The authentication / authorisation service.
      */
     constructor(
-        private authxManager: AuthXManager,
         private eventAggregator: EventAggregator,
-        private http: HttpClient
+        private http: HttpClient,
+        private authService: AuthService
     ) { }
 
     /**
@@ -38,64 +37,40 @@ export class Home {
      * @param routeConfig The configuration for the currently-active route.
      */
     public async activate(params: any, routeConfig: RouteConfig): Promise<void> {
-        const endPointsResponse = await this.http.fetch('end-points');
-        if (!endPointsResponse.ok)
-            throw new Error('Failed to retrieve configuration for DaaS API end-points.');
-
-        const body = await endPointsResponse.json();
-        const endPoints = body as EndPoints;
-
-        console.log(`Will use IdentityServer4 at '${endPoints.identityServer}'.`);
-
-        this.authxManager.initialize(
-            endPoints.identityServer,
-            'daas-ui-dev',  // Client Id
-            [ 'roles' ]     // Additional claims
-        );
-
-        this.subscriptions.push(
-            this.eventAggregator.subscribe('AuthX.UserLoaded', async () => {
-                const userClaims = await this.authxManager.getUserClaims();
-                if (userClaims) {
-                    this.signedIn = true;
-                    this.message = 'OIDC profile: ' + JSON.stringify(userClaims, null, '  ');
-                }
-            }),
-            this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
-                this.signedIn = false;
-                this.message = 'Not logged in.';
-            }),
-            this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
-                this.signedIn = false;
-                this.message = 'Not logged in.';
-            })
-        );
-        
         this.load();
+
+        this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
+            this.signedIn = true;
+            this.message = 'OIDC profile: ' + JSON.stringify(user.profile, null, 4);
+        });
+        this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
+            this.signedIn = false;
+            this.message = 'Not logged in.';
+        });
     }
 
     /**
      * Trigger sign-in.
      */
     public async signin(): Promise<void> {
-        await this.authxManager.signin();
+        await this.authService.signin();
     }
 
     /**
      * Trigger sign-out.
      */
     public async signout(): Promise<void> {
-        await this.authxManager.signout();
+        await this.authService.signout();
     }
 
     /**
      * Load initial AuthX state.
      */
     private async load(): Promise<void> {
-        const userClaims = await this.authxManager.getUserClaims();
-        if (userClaims) {
+        const user = this.authService.user;
+        if (user) {
             this.signedIn = true;
-            this.message = 'OIDC profile (cached): ' + JSON.stringify(userClaims, null, '  ');
+            this.message = 'OIDC profile (cached): ' + JSON.stringify(user.profile, null, 4);
         } else {
             this.signedIn = false;
             this.message = 'Not logged in.';

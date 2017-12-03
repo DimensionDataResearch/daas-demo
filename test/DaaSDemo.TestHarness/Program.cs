@@ -29,6 +29,7 @@ namespace DaaSDemo.TestHarness
     using Provisioning.Actors;
     using Provisioning.Filters;
     using Provisioning.Messages;
+    using Raven.Client.Documents;
 
     /// <summary>
     ///     A general-purpose test harness.
@@ -44,7 +45,7 @@ namespace DaaSDemo.TestHarness
         static async Task AsyncMain()
         {
             const string emailAddress = "tintoy@tintoy.io";
-            const string password = "woozle";
+            const string password = "password";
 
             var user = new AppUser
             {
@@ -55,6 +56,9 @@ namespace DaaSDemo.TestHarness
 
             Log.Information("Building...");
             IServiceProvider serviceProvider = BuildServiceProvider();
+
+            IDocumentStore documentStore = serviceProvider.GetRequiredService<IDocumentStore>();
+            documentStore.CreateInitialData();
 
             using (var scope = serviceProvider.CreateScope())
             {
@@ -79,14 +83,14 @@ namespace DaaSDemo.TestHarness
                     return;
                 }
 
-                result = await userManager.AddClaimsAsync(user, new Claim[]
+                result = await userManager.AddToRolesAsync(user, new string[]
                 {
-                    new Claim("role", "user"),
-                    new Claim("role", "admin")
+                    "user",
+                    "admin"
                 });
                 if (!result.Succeeded)
                 {
-                    Log.Information("AddClaimsResult: {@Result}", result);
+                    Log.Information("AddToRolesResult: {@Result}", result);
                     
                     return;
                 }

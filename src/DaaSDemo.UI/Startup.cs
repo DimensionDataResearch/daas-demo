@@ -95,7 +95,7 @@ namespace DaaSDemo.UI
                 {
                     oidc.SignInScheme = "Cookies";
 
-                    oidc.Authority = securityOptions.IdentityServerBaseAddress;
+                    oidc.Authority = securityOptions.Authority;
                     oidc.RequireHttpsMetadata = false;
 
                     oidc.ClientId = "daas-ui-dev";

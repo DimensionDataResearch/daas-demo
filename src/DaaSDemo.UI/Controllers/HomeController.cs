@@ -52,49 +52,25 @@ namespace DaaSDemo.UI.Controllers
         public IActionResult App() => View("Index");
 
         /// <summary>
-        ///     Get configured API end-points.
+        ///     Get client app configuration.
         /// </summary>
-        [HttpGet("end-points")]
-        public async Task<IActionResult> ApiEndPoints()
+        [HttpGet("config")]
+        public IActionResult ApiEndPoints()
         {
-            AppUser user = await UserManager.FindByNameAsync("TINTOY");
-            if (user != null)
-            {
-                Serilog.Log.Information("Found user {UserName} with hashed password {PasswordHash}.", user.UserName, user.PasswordHash);
-
-                bool isMatch = await UserManager.CheckPasswordAsync(user, "woozle");
-                if (!isMatch)
-                {
-                    Serilog.Log.Warning("Password does not match for user {UserName}.", user.PasswordHash);
-
-                    var result = await UserManager.RemovePasswordAsync(user);
-                    if (result.Succeeded)
-                    {
-                        Serilog.Log.Information("Removed password for user {UserName}.", user.UserName);
-
-                        result = await UserManager.AddPasswordAsync(user, "woozle");
-                        if (result.Succeeded)
-                            Serilog.Log.Information("Added password for user {UserName}.", user.UserName);
-                        else
-                            Serilog.Log.Warning("Failed to add password for user {UserName}: {@Result}", user.UserName, result);
-                    }
-                    else
-                        Serilog.Log.Warning("Failed to remove password for user {UserName}: {@Result}", user.UserName, result);
-                }
-                else
-                    Serilog.Log.Information("Found user {UserName} with matching hashed password {PasswordHash}.", user.PasswordHash);
-            }
-            else
-                Serilog.Log.Warning("Failed to retrieve user.");
-
             return Json(new
             {
-                API = Configuration.GetValue<string>("API:EndPoint"),
-                IdentityServer = Configuration.GetValue<string>("Security:IdentityServerBaseAddress")
+                API = new
+                {
+                    EndPoint = Configuration.GetValue<string>("API:EndPoint")
+                },
+                Identity = new
+                {
+                    Authority = Configuration.GetValue<string>("Security:Authority"),
+                    ClientId = Configuration.GetValue<string>("Security:ClientId:UI"),
+                    AdditionalScopes = Configuration.GetValue<string>("Security:AdditionalScopes")
+                }
             });
         }
-
-        // TODO: Implement /end-points and return both API and STS base addresses.
 
         /// <summary>
         ///     Display the error page.

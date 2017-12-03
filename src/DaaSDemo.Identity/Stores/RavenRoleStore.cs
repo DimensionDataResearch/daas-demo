@@ -63,7 +63,7 @@ namespace DaaSDemo.Identity.Stores
                 throw new ArgumentException("Argument cannot be null, empty, or entirely composed of whitespace: 'normalizedName'.", nameof(normalizedName));
 
             return await DocumentSession.Query<AppRole>().FirstOrDefaultAsync(
-                role => role.Name == normalizedName
+                role => role.NormalizedName == normalizedName
             );
         }
 

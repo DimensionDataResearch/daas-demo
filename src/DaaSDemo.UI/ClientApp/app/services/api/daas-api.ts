@@ -1,11 +1,13 @@
-import { inject, singleton } from 'aurelia-framework';
+import { inject, singleton, NewInstance } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
+
+import { ConfigService, Configuration } from '../config/config-service';
 
 /**
  * Client for the Database-as-a-Service API.
  */
 @singleton()
-@inject(HttpClient)
+@inject(NewInstance.of(HttpClient), ConfigService)
 export class DaaSAPI
 {
     private configured: Promise<void>;
@@ -15,7 +17,7 @@ export class DaaSAPI
      * 
      * @param http An HTTP client.
      */
-    constructor(private http: HttpClient)
+    constructor(private http: HttpClient, private configService: ConfigService)
     {
         this.configured = this.configure();
     }
@@ -546,15 +548,10 @@ export class DaaSAPI
      * Configure the DaaS API client.
      */
     private async configure(): Promise<void> {
-        const endPointsResponse = await this.http.fetch('end-points');
-        if (!endPointsResponse.ok)
-            throw new Error('Failed to retrieve configuration for DaaS API end-points.');
-
-        const body = await endPointsResponse.json();
-        const endPoints = body as EndPoints;
-
+        const configuration: Configuration = await this.configService.getConfiguration();
+        
         this.http.configure(request =>
-            request.withBaseUrl(endPoints.api).withDefaults({
+            request.withBaseUrl(configuration.api.endPoint).withDefaults({
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',

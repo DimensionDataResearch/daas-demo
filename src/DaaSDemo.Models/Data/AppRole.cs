@@ -32,7 +32,7 @@ namespace DaaSDemo.Models.Data
         /// <returns>
         ///     The document Id.
         /// </returns>
-        public static string MakeId(string normalizedName) => $"AppRole/{normalizedName}";
+        public static string MakeId(string normalizedName) => $"AppRole/{normalizedName.ToLowerInvariant()}";
     }
 
     /// <summary>

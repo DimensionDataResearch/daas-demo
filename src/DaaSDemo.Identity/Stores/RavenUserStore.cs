@@ -14,7 +14,7 @@ namespace DaaSDemo.Identity.Stores
     using Models.Data;
 
     public class RavenUserStore
-        : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>, IUserStore<AppUser>, IUserAuthenticationTokenStore<AppUser>, IUserAuthenticatorKeyStore<AppUser>, IUserClaimStore<AppUser>, IUserEmailStore<AppUser>, IUserLockoutStore<AppUser>, IUserLoginStore<AppUser>, IUserPasswordStore<AppUser>, IUserPhoneNumberStore<AppUser>, IUserSecurityStampStore<AppUser>
+        : UserStoreBase<AppUser, string, AppUserClaim, AppUserLogin, AppUserToken>, IUserStore<AppUser>, IUserAuthenticationTokenStore<AppUser>, IUserAuthenticatorKeyStore<AppUser>, IUserClaimStore<AppUser>, IUserEmailStore<AppUser>, IUserLockoutStore<AppUser>, IUserLoginStore<AppUser>, IUserPasswordStore<AppUser>, IUserPhoneNumberStore<AppUser>, IUserSecurityStampStore<AppUser>, IUserRoleStore<AppUser>
     {
         public RavenUserStore(IAsyncDocumentSession documentSession, ILogger<RavenUserStore> logger)
             : base(new IdentityErrorDescriber())
@@ -303,6 +303,74 @@ namespace DaaSDemo.Identity.Stores
             );
             if (existingToken != null)
                 user.Tokens.Remove(existingToken);
+        }
+
+        public async Task AddToRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            if (user.Roles.Any(userRole => userRole.NormalizedRoleName == roleName))
+                return;
+
+            AppRole targetRole = await DocumentSession.Query<AppRole>().FirstOrDefaultAsync(
+                role => role.NormalizedName == roleName
+            );
+            if (targetRole == null)
+                throw new InvalidOperationException($"AppRole not found with name '{roleName}'.");
+
+            user.Roles.Add(new AppUserRole
+            {
+                RoleId = targetRole.Id,
+                RoleName = targetRole.Name,
+                NormalizedRoleName = targetRole.NormalizedName
+            });
+        }
+
+        public Task RemoveFromRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            AppUserRole targetUserRole = user.Roles.FirstOrDefault(
+                userRole => userRole.NormalizedRoleName == roleName
+            );
+            if (targetUserRole == null)
+                return Task.CompletedTask;
+
+            user.Roles.Remove(targetUserRole);
+            
+            return Task.CompletedTask;
+        }
+
+        public Task<IList<string>> GetRolesAsync(AppUser user, CancellationToken cancellationToken)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+
+            return Task.FromResult<IList<string>>(
+                user.Roles.Select(
+                    userRole => userRole.RoleName
+                )
+                .ToList()
+            );
+        }
+
+        public Task<bool> IsInRoleAsync(AppUser user, string roleName, CancellationToken cancellationToken)
+        {
+            if (user == null)
+                throw new ArgumentNullException(nameof(user));
+            
+            return Task.FromResult(
+                user.Roles.Any(userRole => userRole.NormalizedRoleName == roleName)
+            );
+        }
+
+        public async Task<IList<AppUser>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
+        {
+            return await DocumentSession.Query<AppUser>()
+                .Where(user => user.Roles.Any(userRole => userRole.NormalizedRoleName == roleName))
+                .ToListAsync(cancellationToken);
         }
     }
 }

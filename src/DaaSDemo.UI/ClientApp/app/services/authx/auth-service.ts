@@ -2,20 +2,18 @@ import { inject } from 'aurelia-framework';
 import { EventAggregator } from 'aurelia-event-aggregator';
 import { UserManager, User } from 'oidc-client';
 
-import { EndPoints } from '../api/daas-api'
-import { HttpClient } from 'aurelia-fetch-client';
+import { ConfigService, Configuration } from '../config/config-service';
 
 /**
  * The DaaS application authentication manager.
  */
-@inject(EventAggregator)
-export class AuthManager {
+@inject(EventAggregator, ConfigService)
+export class AuthService {
     private _userManager: UserManager | null = null;
-    private _identityServerBaseAddress: string | null = null;
     private _initialized: Promise<void>;
     private _user: User | null;
 
-    constructor(private eventAggregator: EventAggregator) {
+    constructor(private eventAggregator: EventAggregator, private configService: ConfigService) {
         this._initialized = this.initialize();
     }
 
@@ -37,22 +35,13 @@ export class AuthManager {
      * Initialise the AuthManager.
      */
     async initialize(): Promise<void> {
-        const http = new HttpClient();
+        const configuration: Configuration = await this.configService.getConfiguration();
 
-        const endPointsResponse = await http.fetch('end-points');
-        if (!endPointsResponse.ok)
-            throw new Error('Failed to retrieve configuration for DaaS API end-points.');
+        const authority = configuration.identity.authority;
+        const clientId = configuration.identity.clientId;
+        const additionalScopes: string[] = (configuration.identity.additionalScopes || '').split(';');
 
-        const body = await endPointsResponse.json();
-        const endPoints = body as EndPoints;
-
-        this._identityServerBaseAddress = endPoints.identityServer;
-
-        this._userManager = createUserManager(
-            this._identityServerBaseAddress, // authority
-            'daas-ui-dev',                  // client_id
-            ['daas_api_v1']                 // additionalScopes
-        );
+        this._userManager = createUserManager(authority, clientId, additionalScopes);
         this._userManager.events.addAccessTokenExpired(() => {
             this.eventAggregator.publish('AuthX.TokenExpired');
         });
@@ -115,11 +104,8 @@ export class AuthManager {
 export function createUserManager(authority: string, client_id: string, additionalScopes: string[] = []): UserManager {
     const baseAddress: string = window.location.protocol + '//' + window.location.host;
 
-    const scopes: string[] = [
-        'openid',
-        'profile'
-    ];
-    scopes.splice(0, 0, ...additionalScopes);
+    const scopes: string[] = [ 'openid', 'profile' ];
+    scopes.splice(scopes.length, 0, ...additionalScopes);
 
     const userManager = new UserManager({
         authority: authority,        
@@ -132,7 +118,7 @@ export function createUserManager(authority: string, client_id: string, addition
         popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=700,height=933,left=300,top=200;resizable=yes',
 
         // Automatically renew tokens before they expire using silent sign-in (hidden iframe).
-        // automaticSilentRenew: true,
+        automaticSilentRenew: false,
         silent_redirect_uri: window.location.protocol + '//' + window.location.host + '/oidc/signin/silent',
     
         // Defaults needed for silent_renew

@@ -7,6 +7,8 @@
     <button class="ui button" click.delegate="signout()" disabled.bind="!signedIn">Logout</button>
 
     <p if.bind="message">
-        ${ message | sanitizeHTML }
+        <pre>
+            <code>${ message | sanitizeHTML }</code>
+        </pre>
     </p>
 </template>

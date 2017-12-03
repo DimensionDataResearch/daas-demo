@@ -112,14 +112,14 @@ namespace DaaSDemo.IdentityServer
                 {
                     new ApiResource
                     {
-                        Name = "daas_api_v1",
+                        Name = "daas-api-v1",
                         Description = "DaaS API (v1)",
 
                         Scopes = new Scope[]
                         {
                             new Scope
                             {
-                                Name = "daas_api_v1",
+                                Name = "daas-api-v1",
                                 Description = "DaaS API (v1)",
                                 UserClaims = new string[]
                                 {
@@ -145,7 +145,6 @@ namespace DaaSDemo.IdentityServer
                         AllowedGrantTypes = GrantTypes.Implicit,
                         RequireConsent = false,
                         AllowAccessTokensViaBrowser = true,
-                        AlwaysIncludeUserClaimsInIdToken = true,
                         AllowedCorsOrigins = portalBaseAddresses,
 
                         RedirectUris = portalBaseAddresses.SelectMany(baseAddress => new string[]
@@ -164,11 +163,12 @@ namespace DaaSDemo.IdentityServer
                             IdentityServerConstants.StandardScopes.OpenId,
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
-                            "daas_api_v1"
+                            "daas-api-v1"
                         }
                     }
                 })
-                .AddAspNetIdentity<AppUser>();
+                .AddAspNetIdentity<AppUser>()
+                .AddProfileService<AppUserProfileService>();
         }
 
         /// <summary>
