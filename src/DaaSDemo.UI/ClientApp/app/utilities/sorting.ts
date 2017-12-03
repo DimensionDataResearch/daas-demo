@@ -1,5 +1,3 @@
-import { DatabaseServer } from '../components/api/daas-api';
-
 /**
  * Represents a named item.
  */

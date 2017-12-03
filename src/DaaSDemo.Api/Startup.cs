@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using IdentityModel;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -73,9 +74,9 @@ namespace DaaSDemo.Api
             services
                 .AddIdentity<AppUser, AppRole>(identity =>
                 {
-                    identity.ClaimsIdentity.UserIdClaimType = "sub";
-                    identity.ClaimsIdentity.UserNameClaimType = "name";
-                    identity.ClaimsIdentity.RoleClaimType = "role";
+                    identity.ClaimsIdentity.UserIdClaimType = JwtClaimTypes.Subject;
+                    identity.ClaimsIdentity.UserNameClaimType = JwtClaimTypes.Name;
+                    identity.ClaimsIdentity.RoleClaimType = JwtClaimTypes.Role;
                 })
                 .AddDaaSIdentityStores();
 

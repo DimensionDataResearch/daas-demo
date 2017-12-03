@@ -2,7 +2,7 @@ import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { Router, RouteConfig } from 'aurelia-router';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, DatabaseServer, Database, ProvisioningAction } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, Database, ProvisioningAction } from '../../services/api/daas-api';
 import { sortByName } from '../../utilities/sorting';
 
 import { NewDatabase } from './forms/new';

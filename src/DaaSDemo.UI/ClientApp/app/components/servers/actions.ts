@@ -1,6 +1,6 @@
 import { bindable } from 'aurelia-framework';
 
-import { Tenant, DatabaseServer, ProvisioningStatus } from '../api/daas-api';
+import { Tenant, DatabaseServer, ProvisioningStatus } from '../../services/api/daas-api';
 import { computedFrom } from 'aurelia-binding';
 
 export class ServerActions

@@ -71,6 +71,16 @@ export class AuthXManager {
     /**
      * Get claims associated with the current user.
      */
+    public async getUser(): Promise<User | null> {
+        if (!this.userManager)
+            throw new Error('AuthXManager has not been initialised.');
+
+        return await this.userManager.getUser();
+    }
+
+    /**
+     * Get claims associated with the current user.
+     */
     public async getUserClaims(): Promise<UserClaims | null> {
         if (!this.userManager)
             throw new Error('AuthXManager has not been initialised.');

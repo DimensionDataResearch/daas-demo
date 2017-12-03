@@ -90,9 +90,9 @@ namespace DaaSDemo.IdentityServer
             services
                 .AddIdentity<AppUser, AppRole>(identity =>
                 {
-                    identity.ClaimsIdentity.UserIdClaimType = "sub";
-                    identity.ClaimsIdentity.UserNameClaimType = "name";
-                    identity.ClaimsIdentity.RoleClaimType = "role";
+                    identity.ClaimsIdentity.UserIdClaimType = JwtClaimTypes.Subject;
+                    identity.ClaimsIdentity.UserNameClaimType = JwtClaimTypes.Name;
+                    identity.ClaimsIdentity.RoleClaimType = JwtClaimTypes.Role;
                 })
                 .AddDaaSIdentityStores()
                 .AddDefaultTokenProviders();
@@ -110,13 +110,30 @@ namespace DaaSDemo.IdentityServer
                 .AddDeveloperSigningCredential()
                 .AddInMemoryApiResources(new []
                 {
-                    new ApiResource("daas_api_v1", "DaaS API (v1)")
+                    new ApiResource
+                    {
+                        Name = "daas_api_v1",
+                        Description = "DaaS API (v1)",
+
+                        Scopes = new Scope[]
+                        {
+                            new Scope
+                            {
+                                Name = "daas_api_v1",
+                                Description = "DaaS API (v1)",
+                                UserClaims = new string[]
+                                {
+                                    JwtClaimTypes.Role
+                                }
+                            }
+                        }
+                    }
                 })
                 .AddInMemoryIdentityResources(new IdentityResource[]
                 {
                     new IdentityResources.OpenId(),
                     new IdentityResources.Profile(),
-                    new IdentityResource("roles", new string[] { "roles" })
+                    new IdentityResource("roles", new string[] { JwtClaimTypes.Role })
                 })
                 .AddInMemoryClients(new Client[]
                 {
@@ -128,6 +145,8 @@ namespace DaaSDemo.IdentityServer
                         AllowedGrantTypes = GrantTypes.Implicit,
                         RequireConsent = false,
                         AllowAccessTokensViaBrowser = true,
+                        AlwaysIncludeUserClaimsInIdToken = true,
+                        AllowedCorsOrigins = portalBaseAddresses,
 
                         RedirectUris = portalBaseAddresses.SelectMany(baseAddress => new string[]
                         {
@@ -146,8 +165,7 @@ namespace DaaSDemo.IdentityServer
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
                             "daas_api_v1"
-                        },
-                        AllowedCorsOrigins = portalBaseAddresses
+                        }
                     }
                 })
                 .AddAspNetIdentity<AppUser>();

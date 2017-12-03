@@ -4,7 +4,7 @@ import { bindable, inject } from 'aurelia-framework';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { Database } from '../api/daas-api';
+import { Database } from '../../services/api/daas-api';
 
 const noAction = () => { };
 

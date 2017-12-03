@@ -5,7 +5,7 @@ import { RouteConfig } from 'aurelia-router';
 
 import { UserManager, User } from 'oidc-client';
 
-import { EndPoints } from '../api/daas-api';
+import { EndPoints } from '../../services/api/daas-api';
 import { createUserManager, AuthXManager } from '../authx/authenticator';
 
 /**

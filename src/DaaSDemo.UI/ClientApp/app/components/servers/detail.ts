@@ -9,7 +9,7 @@ import * as $ from 'jquery';
 import 'semantic';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, DatabaseServer, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../api/daas-api';
+import { DaaSAPI, DatabaseServer, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../../services/api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**

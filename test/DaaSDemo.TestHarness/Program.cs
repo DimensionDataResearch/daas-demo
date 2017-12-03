@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -42,8 +43,8 @@ namespace DaaSDemo.TestHarness
         /// </returns>
         static async Task AsyncMain()
         {
-            const string emailAddress = "foo@bar.com";
-            const string password = "tellNo1!";
+            const string emailAddress = "tintoy@tintoy.io";
+            const string password = "woozle";
 
             var user = new AppUser
             {
@@ -74,6 +75,18 @@ namespace DaaSDemo.TestHarness
                 if (!result.Succeeded)
                 {
                     Log.Information("AddPasswordResult: {@Result}", result);
+                    
+                    return;
+                }
+
+                result = await userManager.AddClaimsAsync(user, new Claim[]
+                {
+                    new Claim("role", "user"),
+                    new Claim("role", "admin")
+                });
+                if (!result.Succeeded)
+                {
+                    Log.Information("AddClaimsResult: {@Result}", result);
                     
                     return;
                 }

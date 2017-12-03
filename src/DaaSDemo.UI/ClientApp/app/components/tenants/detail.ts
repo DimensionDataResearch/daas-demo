@@ -5,7 +5,7 @@ import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Tenant, DatabaseServer, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../api/daas-api';
+import { DaaSAPI, Tenant, DatabaseServer, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../../services/api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 import { sortByName } from '../../utilities/sorting';
 import { ViewModel } from '../common/view-model';

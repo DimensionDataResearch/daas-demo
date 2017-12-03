@@ -3,7 +3,7 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, DatabaseServer, Database, Tenant, ProvisioningAction } from '../../api/daas-api';
+import { DaaSAPI, DatabaseServer, Database, Tenant, ProvisioningAction } from '../../../services/api/daas-api';
 import { ConfirmDialog } from '../../dialogs/confirm';
 import { NewDatabase } from './forms/new';
 

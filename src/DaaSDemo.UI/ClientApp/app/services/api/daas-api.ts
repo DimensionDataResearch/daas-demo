@@ -1,6 +1,5 @@
 import { inject, singleton } from 'aurelia-framework';
 import { HttpClient, json } from 'aurelia-fetch-client';
-import { ServerProvisioningStatus } from '../status/server-provisioning-status';
 
 /**
  * Client for the Database-as-a-Service API.
@@ -899,7 +898,7 @@ export interface DatabaseServerProvisioningEvent extends DatabaseServerEvent {
     /**
      * The server's current status when the event was raised.
      */
-    status: ServerProvisioningStatus;
+    status: ProvisioningStatus;
 }
 
 /**

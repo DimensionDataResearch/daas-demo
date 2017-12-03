@@ -4,7 +4,7 @@ import { bindable, inject, computedFrom } from 'aurelia-framework';
 import * as $ from 'jquery';
 import 'semantic';
 
-import { DatabaseServer, ServerProvisioningPhase } from '../api/daas-api';
+import { DatabaseServer, ServerProvisioningPhase } from '../../services/api/daas-api';
 
 export class ServerProvisioningPhaseProgress {
     @bindable private progressBarElement: Element
