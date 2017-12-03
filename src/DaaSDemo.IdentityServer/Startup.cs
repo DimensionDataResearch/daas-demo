@@ -184,8 +184,8 @@ namespace DaaSDemo.IdentityServer
             else
                 app.UseExceptionHandler("/Home/Error");
 
-            app.UseIdentityServer();
             app.UseStaticFiles();
+            app.UseIdentityServer();
             app.UseMvcWithDefaultRoute();
         }
     }
