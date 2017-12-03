@@ -11,8 +11,11 @@ using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace IdentityServer4.Quickstart.UI
+namespace DaaSDemo.IdentityServer.Services
 {
+    using Options;
+    using ViewModels.Account;
+
     public class AccountService
     {
         private readonly IClientStore _clientStore;

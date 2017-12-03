@@ -1,16 +1,17 @@
-﻿using System;
+﻿using IdentityServer4.Services;
+using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using IdentityServerWithAspNetIdentity.Models;
-using IdentityServer4.Services;
-using IdentityServer4.Quickstart.UI;
 
-namespace IdentityServerWithAspNetIdentity.Controllers
+namespace DaaSDemo.IdentityServer.Controllers
 {
-    public class HomeController : Controller
+    using ViewModels.Home;
+
+    public class HomeController
+        : Controller
     {
         private readonly IIdentityServerInteractionService _interaction;
 

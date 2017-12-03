@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-using IdentityServerWithAspNetIdentity.Services;
 
-namespace IdentityServerWithAspNetIdentity.Services
+namespace DaaSDemo.IdentityServer.Services
 {
     public static class EmailSenderExtensions
     {

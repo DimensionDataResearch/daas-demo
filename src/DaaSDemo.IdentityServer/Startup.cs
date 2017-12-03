@@ -20,8 +20,8 @@ namespace DaaSDemo.IdentityServer
     using DaaSDemo.Models.Data;
     using Data;
     using Identity;
-    using IdentityServer4.Quickstart.UI;
-    using IdentityServerWithAspNetIdentity.Services;
+    using Options;
+    using Services;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo UI.
@@ -99,9 +99,8 @@ namespace DaaSDemo.IdentityServer
 
             AccountOptions.AutomaticRedirectAfterSignOut = true;
 
-            services.AddTransient<AccountService>();
-            services.AddTransient<ConsentService>();
-            services.AddTransient<IEmailSender, EmailSender>();
+            services.AddScoped<AccountService>();
+            services.AddScoped<IEmailSender, EmailSender>();
 
             string[] portalBaseAddresses = (CorsOptions.UI ?? String.Empty).Split(';');
             

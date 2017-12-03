@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using IdentityServerWithAspNetIdentity.Models;
-using IdentityServerWithAspNetIdentity.Models.ManageViewModels;
-using IdentityServerWithAspNetIdentity.Services;
-using DaaSDemo.Models.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
-namespace IdentityServerWithAspNetIdentity.Controllers
+namespace DaaSDemo.IdentityServer.Controllers
 {
+    using Models.Data;
+    using Services;
+    using ViewModels.Manage;
+
     [Authorize]
     [Route("[controller]/[action]")]
     public class ManageController : Controller

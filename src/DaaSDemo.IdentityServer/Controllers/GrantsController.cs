@@ -4,21 +4,25 @@
 
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using DaaSDemo.IdentityServer.Filters;
 
-namespace IdentityServer4.Quickstart.UI
+namespace DaaSDemo.IdentityServer.Controllers
 {
+    using Filters;
+    using Services;
+    using ViewModels.Grants;
+
     /// <summary>
     /// This sample controller allows a user to revoke grants given to clients
     /// </summary>
-    [SecurityHeaders]
     [Authorize]
-    public class GrantsController : Controller
+    [SecurityHeaders]
+    public class GrantsController
+        : Controller
     {
         private readonly IIdentityServerInteractionService _interaction;
         private readonly IClientStore _clients;
