@@ -3,6 +3,8 @@ using IdentityServer4.Models;
 using IdentityServer4.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,16 +30,20 @@ namespace DaaSDemo.IdentityServer.Services
         /// <param name="logger">
         ///     The service's logger.
         /// </param>
-        public AppUserProfileService(UserManager<AppUser> userManager, ILogger<AppUserProfileService> logger)
+        public AppUserProfileService(UserManager<AppUser> userManager, IDocumentStore documentStore, ILogger<AppUserProfileService> logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
 
             if (userManager == null)
                 throw new ArgumentNullException(nameof(userManager));
+
+            if (documentStore == null)
+                throw new ArgumentNullException(nameof(documentStore));
             
             Log = logger;
             UserManager = userManager;
+            DocumentStore = documentStore;
         }
 
         /// <summary>
@@ -49,6 +55,11 @@ namespace DaaSDemo.IdentityServer.Services
         ///     The ASP.NET Core Identity user-management service.
         /// </summary>
         UserManager<AppUser> UserManager { get; }
+
+        /// <summary>
+        ///     The RavenDB document store.
+        /// </summary>
+        IDocumentStore DocumentStore { get; }
 
         /// <summary>
         ///     Get profile data for the specified subject.
@@ -79,14 +90,26 @@ namespace DaaSDemo.IdentityServer.Services
                 );
             }
 
-            IList<string> roles = await UserManager.GetRolesAsync(user);
-            Log.LogInformation("User {Name} has roles: {@Roles}",
+            IList<string> roleIds = await UserManager.GetRolesAsync(user);
+            
+            List<string> roleNames = new List<string>();
+            using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
+            {
+                IDictionary<string, AppRole> roles = await session.LoadAsync<AppRole>(roleIds);
+                roleNames.AddRange(
+                    roles.Values
+                        .Where(role => role != null)
+                        .Select(role => role.Name)
+                );
+            }
+
+            Log.LogInformation("User {Name} has roles: {@RoleNames}",
                 user.UserName,
-                roles
+                roleNames
             );
             
-            context.AddRequestedClaims(roles.Select(
-                role => new Claim("role", role)
+            context.AddRequestedClaims(roleNames.Select(
+                roleName => new Claim("role", roleName)
             ));
 
             context.AddRequestedClaims(user.Claims.Select(

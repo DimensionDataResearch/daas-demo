@@ -350,7 +350,7 @@ namespace DaaSDemo.Identity.Stores
 
             return Task.FromResult<IList<string>>(
                 user.Roles.Select(
-                    userRole => userRole.RoleName
+                    userRole => userRole.RoleId
                 )
                 .ToList()
             );
