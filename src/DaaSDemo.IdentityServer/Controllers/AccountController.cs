@@ -226,6 +226,43 @@ namespace DaaSDemo.IdentityServer.Controllers
 
         [HttpGet]
         [AllowAnonymous]
+        public IActionResult Register(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            if (ModelState.IsValid)
+            {
+                var user = new AppUser { UserName = model.Email, Email = model.Email };
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("User created a new account with password.");
+
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var callbackUrl = Url.EmailConfirmationLink(user.Id, code, Request.Scheme);
+                    await _emailSender.SendEmailConfirmationAsync(model.Email, callbackUrl);
+
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    _logger.LogInformation("User created a new account with password.");
+                    return RedirectToLocal(returnUrl);
+                }
+                AddErrors(result);
+            }
+
+            // If we got this far, something failed, redisplay form
+            return View(model);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> Logout(string logoutId)
         {
             // build a model so the logout page knows what to display
@@ -454,7 +491,9 @@ namespace DaaSDemo.IdentityServer.Controllers
             return View();
         }
 
-        void AddErrors(IdentityResult result)
+        #region Helpers
+
+        private void AddErrors(IdentityResult result)
         {
             foreach (var error in result.Errors)
             {
@@ -462,7 +501,7 @@ namespace DaaSDemo.IdentityServer.Controllers
             }
         }
 
-        IActionResult RedirectToLocal(string returnUrl)
+        private IActionResult RedirectToLocal(string returnUrl)
         {
             if (Url.IsLocalUrl(returnUrl))
             {
@@ -473,5 +512,7 @@ namespace DaaSDemo.IdentityServer.Controllers
                 return RedirectToAction(nameof(HomeController.Index), "Home");
             }
         }
+
+        #endregion
     }
 }

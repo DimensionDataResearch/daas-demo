@@ -5,19 +5,21 @@
 }  
 @if (SignInManager.IsSignedIn(User) && !signedOut)
 {
-    <div class="right menu">
-        <a class="ui item button" asp-area="" asp-controller="Manage" asp-action="Index" title="Manage">
-            Hello @UserManager.GetUserName(User)!
-        </a>
-        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" id="logoutForm">
-            <button class="ui item button" type="submit" class="item">Log out</button>
-        </form>
-    </div>
+    <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" class="navbar-right">
+        <ul class="nav navbar-nav navbar-right">
+            <li>
+                <a asp-area="" asp-controller="Manage" asp-action="Index" title="Manage">Hello @UserManager.GetUserName(User)!</a>
+            </li>
+            <li>
+                <button type="submit" class="btn btn-link navbar-btn navbar-link">Log out</button>
+            </li>
+        </ul>
+    </form>
 }
 else
 {
-    <div class="right menu">
-        <a class="item" asp-area="" asp-controller="Account" asp-action="Register">Register</a>
-        <a class="item" asp-area="" asp-controller="Account" asp-action="Login">Log in</a>
-    </div>
+    <ul class="nav navbar-nav navbar-right">
+        <li><a asp-area="" asp-controller="Account" asp-action="Register">Register</a></li>
+        <li><a asp-area="" asp-controller="Account" asp-action="Login">Log in</a></li>
+    </ul>
 }
