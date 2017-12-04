@@ -19,18 +19,16 @@
             <div class="ui segment">
                 <form class="ui form" asp-route-returnurl="@ViewData[" ReturnUrl "]" method="post">
                     <h4 class="ui dividing header">Use a local account to log in</h4>
-
                     <div asp-validation-summary="All" class="ui error message"></div>
-                    
                     <div class="required field">
                         <label asp-for="Email"></label>
-                        <input asp-for="Email" />
-                        <span asp-validation-for="Email"></span>
+                        <input asp-for="Email" class="form-control" />
+                        <span asp-validation-for="Email" class="ui error message"></span>
                     </div>
                     <div class="required field">
                         <label asp-for="Password"></label>
-                        <input asp-for="Password" />
-                        <span asp-validation-for="Password"></span>
+                        <input asp-for="Password" class="form-control" />
+                        <span asp-validation-for="Password" class="ui error message"></span>
                     </div>
                     <div class="field">
                         <div class="ui checkbox">
@@ -70,12 +68,12 @@
                         </p>
                     </div>
                 } else {
-                    <form asp-action="ExternalLogin" asp-route-returnurl="@ViewData[" ReturnUrl "]" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in loginProviders) {
-                                    <button type="submit" class="ui default button" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
+                        <form asp-action="ExternalLogin" asp-route-returnurl="@ViewData[" ReturnUrl "]" method="post" class="form-horizontal">
+                            <div>
+                                <p>
+                                    @foreach (var provider in loginProviders) {
+                                        <button type="submit" class="ui default button" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
+                                    }
                             </p>
                         </div>
                     </form>
@@ -85,6 +83,4 @@
     </div>
 </div>
 
-@section Scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
-}
+@section Scripts { @await Html.PartialAsync("_ValidationScriptsPartial") }
