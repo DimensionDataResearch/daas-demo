@@ -38,15 +38,26 @@ export class Home {
     public async activate(params: any, routeConfig: RouteConfig): Promise<void> {
         this.load();
 
-        this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
-            this.message = JSON.stringify(user.profile, null, 4);
-        });
-        this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
-            this.message = null;
-        });
-        this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
-            this.message = null;
-        });
+        this.subscriptions.push(
+            this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
+                this.message = JSON.stringify(user.profile, null, 4);
+            }),
+            this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
+                this.message = null;
+            }),
+            this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
+                this.message = null;
+            })
+        );
+    }
+
+    /**
+     * Called when the component has been detached from the DOM.
+     */
+    public detached(): void {
+        this.subscriptions.forEach(
+            subscription => subscription.dispose()
+        );
     }
 
     /**
