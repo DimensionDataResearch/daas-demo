@@ -122,7 +122,11 @@ export class AuthService {
             this.eventAggregator.publish('AuthX.UserSignedOut');
         });
 
+        // Manually trigger initial sign-in event.
         this._user = await this._userManager.getUser();
+        if (this._user) {
+            this.eventAggregator.publish('AuthX.UserLoaded', this.user);
+        }
     }
 }
 
