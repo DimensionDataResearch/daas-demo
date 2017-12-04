@@ -9,48 +9,28 @@
     
 @{
     ViewData["Title"] = "Log in";
-    Layout = null;
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - DaaS Identity Server</title>
+<h2>@ViewData["Title"]</h2>
 
-    <environment include="Development">
-        <link rel="stylesheet" href="~/lib/semantic-ui/semantic.css" />
-        <link rel="stylesheet" href="~/css/site.css" />
-    </environment>
-    <environment exclude="Development">
-        <link rel="stylesheet" href="~/lib/semantic-ui/semantic.min.css" />
-        <link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
-    </environment>
-</head>
-<body>
-    <div class="ui middle aligned center aligned grid">
-        <div class="column">
-            <h2 class="ui header">
-                <div class="content">
-                    <i class="large database icon"></i> Sign in to DaaS
-                </div>
-            </h2>
-            <form class="ui large form">
-                <div class="ui segment">
-                    <div class="field">
-                        <div class="ui left icon input">
-                            <i class="user icon"></i>
-                            <input asp-for="Email" placeholder="E-mail address">
-                            <span asp-validation-for="Email"></span>
-                        </div>
+<div class="ui one column grid">
+    <div class="row">
+        <div class="twelve wide column">
+            <div class="ui segment">
+                <form class="ui form" asp-route-returnurl="@ViewData[" ReturnUrl "]" method="post">
+                    <h4 class="ui dividing header">Use a local account to log in</h4>
+
+                    <div asp-validation-summary="All" class="ui error message"></div>
+                    
+                    <div class="required field">
+                        <label asp-for="Email"></label>
+                        <input asp-for="Email" />
+                        <span asp-validation-for="Email"></span>
                     </div>
-                    <div class="field">
-                        <div class="ui left icon input">
-                            <i class="lock icon"></i>
-                            <input type="password" asp-for="Password" placeholder="Password">
-                            <span asp-validation-for="Password"></span>
-                        </div>
+                    <div class="required field">
+                        <label asp-for="Password"></label>
+                        <input asp-for="Password" />
+                        <span asp-validation-for="Password"></span>
                     </div>
                     <div class="field">
                         <div class="ui checkbox">
@@ -58,25 +38,53 @@
                             <input asp-for="RememberMe" type="checkbox" />                            
                         </div>
                     </div>
-                    <div class="ui fluid large submit button">Login</div>
-                </div>
 
-                <div asp-validation-summary="All" class="ui error message"></div>
-            </form>
+                    <div class="field">
+                        <button type="submit" class="ui default button">Log in</button>
+                    </div>
+
+                    <div>
+                        <p>
+                            <a asp-action="ForgotPassword">Forgot your password?</a>
+                        </p>
+                        <p>
+                            <a asp-action="Register" asp-route-returnurl="@ViewData[" ReturnUrl "]">Register as a new user?</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+    <div class="row">
+        <div class="twelve wide column">
+            <h4 class="ui dividing header">Use another service to log in</h4>
 
-    <environment include="Development">
-        <script src="~/lib/jquery/dist/jquery.js"></script>
-        <script src="~/lib/semantic-ui/semantic.js"></script>
-        <script src="~/js/site.js" asp-append-version="true"></script>
-    </environment>
-    <environment exclude="Development">
-        <script src="~/lib/jquery/dist/jquery.min.js"></script>
-        <script src="~/lib/semantic-ui/semantic.min.js"></script>
-        <script src="~/js/site.min.js" asp-append-version="true"></script>
-    </environment>
+            @{
+                var loginProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+                if (loginProviders.Count == 0) {
+                    <div>
+                        <p>
+                            There are no external authentication services configured. See
+                            <a href="https://go.microsoft.com/fwlink/?LinkID=532715">this article</a>
+                            for details on setting up this ASP.NET application to support logging in via external services.
+                        </p>
+                    </div>
+                } else {
+                    <form asp-action="ExternalLogin" asp-route-returnurl="@ViewData[" ReturnUrl "]" method="post" class="form-horizontal">
+                        <div>
+                            <p>
+                                @foreach (var provider in loginProviders) {
+                                    <button type="submit" class="ui default button" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
+                                }
+                            </p>
+                        </div>
+                    </form>
+                }
+            }
+        </div>
+    </div>
+</div>
 
+@section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
-</body>
-</html>
+}
