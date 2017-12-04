@@ -4,11 +4,14 @@ import { Router, RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Tenant, DatabaseServer, ProvisioningAction, ProvisioningStatus, ServerProvisioningPhase, DatabaseServerKind  } from '../../services/api/daas-api';
-import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
+import { DaaSAPI } from '../../services/api/daas-api';
+import { Tenant, DatabaseServer, DatabaseServerKind, ProvisioningAction } from '../../services/api/daas-models';
+
 import { sortByName } from '../../utilities/sorting';
 import { ViewModel } from '../common/view-model';
+
+import { ConfirmDialog } from '../dialogs/confirm';
+import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**
  * Component for the Tenant detail view.
@@ -16,7 +19,6 @@ import { ViewModel } from '../common/view-model';
 @inject(DaaSAPI, Router, NewInstance.of(ValidationController))
 export class TenantDetail extends ViewModel {
     private tenantId: string;
-    private ensureUpToDate: boolean = false;
 
     @bindable public tenant: Tenant | null = null;
     @bindable public servers: DatabaseServer[] = [];
@@ -200,7 +202,6 @@ export class TenantDetail extends ViewModel {
             return;
         }
 
-        this.ensureUpToDate = true;
         await this.runBusyAsync(
             () => this.load()
         );
@@ -227,7 +228,6 @@ export class TenantDetail extends ViewModel {
             return;
         }
 
-        this.ensureUpToDate = true;
         await this.runBusyAsync(
             () => this.load()
         );
@@ -255,27 +255,23 @@ export class TenantDetail extends ViewModel {
     private async load(): Promise<void> {
         this.clearError();
         
-        try {
-            const tenantRequest = this.api.getTenant(this.tenantId);
-            const serversRequest = this.api.getTenantServers(this.tenantId, this.ensureUpToDate);
+        const tenantRequest = this.api.getTenant(this.tenantId);
+        const serversRequest = this.api.getTenantServers(this.tenantId);
 
-            this.tenant = await tenantRequest;
-            this.servers = sortByName(
-                await serversRequest
-            );
+        this.tenant = await tenantRequest;
+        this.servers = sortByName(
+            await serversRequest
+        );
 
-            if (!this.tenant) {
-                this.routeConfig.title = 'Tenant not found';
-                this.errorMessage = `Tenant not found with Id ${this.tenantId}.`;
-            } else {
-                this.routeConfig.title = this.tenant.name;
-            }
+        if (!this.tenant) {
+            this.routeConfig.title = 'Tenant not found';
+            this.errorMessage = `Tenant not found with Id ${this.tenantId}.`;
+        } else {
+            this.routeConfig.title = this.tenant.name;
+        }
 
-            if (this.areServerActionsInProgress) {
-                this.pollHandle = window.setTimeout(() => this.load(), 2000);
-            }
-        } finally {
-            this.ensureUpToDate = false;
+        if (this.areServerActionsInProgress) {
+            this.pollHandle = window.setTimeout(() => this.load(), 2000);
         }
     }
 }

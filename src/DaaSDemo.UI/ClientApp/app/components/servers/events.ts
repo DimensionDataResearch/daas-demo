@@ -1,8 +1,10 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { Router, RouteConfig } from 'aurelia-router';
 
-import { DaaSAPI, DatabaseServer, DatabaseServerEvent } from '../../services/api/daas-api';
 import { dateDiff, DatePart } from '../../utilities/date-and-time';
+
+import { DaaSAPI } from '../../services/api/daas-api';
+import { DatabaseServer, DatabaseServerEvent } from '../../services/api/daas-models';
 
 // TODO: Create separate components to render various event types.
 

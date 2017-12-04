@@ -27,7 +27,7 @@ namespace DaaSDemo.Api.Controllers
     /// </summary>
     [Route("api/v1/tenants")]
     public class TenantsController
-        : Controller
+        : DataControllerBase
     {
         /// <summary>
         ///     Create a new tenants API controller.
@@ -39,26 +39,9 @@ namespace DaaSDemo.Api.Controllers
         ///     The controller's log facility.
         /// </param>
         public TenantsController(IDocumentSession documentSession, ILogger<TenantsController> logger)
+            : base(documentSession, logger)
         {
-            if (documentSession == null)
-                throw new ArgumentNullException(nameof(documentSession));
-
-            if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-            
-            DocumentSession = documentSession;
-            Log = logger;
         }
-
-        /// <summary>
-        ///     The RavenDB document session for the current request.
-        /// </summary>
-        IDocumentSession DocumentSession { get; }
-
-        /// <summary>
-        ///     The controller's log facility.
-        /// </summary>
-        ILogger Log { get; }
 
         /// <summary>
         ///     Get a tenant by Id.
@@ -89,6 +72,7 @@ namespace DaaSDemo.Api.Controllers
         {
             return Json(
                 DocumentSession.Query<Tenant>()
+                    .Customize(WaitForResultsUpToRequestedEtag)
             );
         }
 
@@ -123,11 +107,8 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        /// <param name="ensureUpToDate">
-        ///     Ensure that the results are as up-to-date as possible?
-        /// </param>
         [HttpGet("{tenantId}/servers")]
-        public IActionResult GetServers(string tenantId, bool ensureUpToDate = false)
+        public IActionResult GetServers(string tenantId)
         {
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
@@ -140,22 +121,12 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            IRavenQueryable<DatabaseServer> query = DocumentSession.Query<DatabaseServer, DatabaseServerDetails>();
-            if (ensureUpToDate)
-            {
-                query = query.Customize(
-                    queryConfig => queryConfig.WaitForNonStaleResults(
-                        waitTimeout: TimeSpan.FromSeconds(5)
-                    )
-                );
-            }
-
             return Json(
-                query.Where(
-                    server => server.TenantId == tenantId
-                )
-                .OrderBy(server => server.Name)
-                .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
+                DocumentSession.Query<DatabaseServer, DatabaseServerDetails>()
+                    .Customize(WaitForResultsUpToRequestedEtag)
+                    .Where(server => server.TenantId == tenantId)
+                    .OrderBy(server => server.Name)
+                    .ProjectFromIndexFieldsInto<DatabaseServerDetail>()
             );
         }
 
@@ -165,11 +136,8 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="tenantId">
         ///     The tenant Id.
         /// </param>
-        /// <param name="ensureUpToDate">
-        ///     Ensure that the results are as up-to-date as possible?
-        /// </param>
         [HttpGet("{tenantId}/databases")]
-        public IActionResult GetDatabases(string tenantId, bool ensureUpToDate = false)
+        public IActionResult GetDatabases(string tenantId)
         {
             Tenant tenant = DocumentSession.Load<Tenant>(tenantId);
             if (tenant == null)
@@ -182,39 +150,11 @@ namespace DaaSDemo.Api.Controllers
                 });
             }
 
-            IRavenQueryable<DatabaseInstance> query = DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>();
-            if (ensureUpToDate)
-            {
-                query = query.Customize(
-                    queryConfig => queryConfig.WaitForNonStaleResults(
-                        waitTimeout: TimeSpan.FromSeconds(5)
-                    )
-                );
-            }
-
             return Json(
-                query.Where(
-                    database => database.TenantId == tenantId
-                )
-                .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
-            );
-        }
-
-        /// <summary>
-        ///     Populate the "ETag" header using the specified entity's ETag.
-        /// </summary>
-        /// <param name="entity">
-        ///     The target entity.
-        /// </param>
-        void SetEtagHeader<TEntity>(TEntity entity)
-            where TEntity: class
-        {
-            if (entity == null)
-                throw new ArgumentNullException(nameof(entity));
-
-            long etag = DocumentSession.Advanced.GetEtagFor(entity);
-            Response.Headers.Add("ETag",
-                $"\"{etag}\""
+                DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>()
+                    .Customize(WaitForResultsUpToRequestedEtag)
+                    .Where(database => database.TenantId == tenantId)
+                    .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
             );
         }
     }

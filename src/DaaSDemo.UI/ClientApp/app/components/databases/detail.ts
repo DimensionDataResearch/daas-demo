@@ -3,8 +3,10 @@ import { Router, RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
+import { DaaSAPI } from '../../services/api/daas-api';
+import { Database, DatabaseServerKind, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-models';
+
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, Database, ProvisioningAction, ProvisioningStatus, DatabaseServerKind  } from '../../services/api/daas-api';
 import { ViewModel } from '../common/view-model';
 
 /**

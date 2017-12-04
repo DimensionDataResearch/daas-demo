@@ -3,7 +3,9 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, DatabaseServer, Database, Tenant, ProvisioningAction } from '../../../services/api/daas-api';
+import { DaaSAPI } from '../../../services/api/daas-api';
+import { Tenant, DatabaseServer, Database, ProvisioningAction } from '../../../services/api/daas-models';
+
 import { ConfirmDialog } from '../../dialogs/confirm';
 import { NewDatabase } from './forms/new';
 
@@ -11,7 +13,6 @@ import { NewDatabase } from './forms/new';
 export class TenantDatabaseList {
     private routeConfig: RouteConfig;
     private tenantId: string;
-    private ensureUpToDate: boolean = false;
 
     private pollHandle: number = 0;
 
@@ -122,7 +123,6 @@ export class TenantDatabaseList {
             return;
         }
         
-        this.ensureUpToDate = true;
         await this.load(true);
 
         this.hideCreateDatabaseForm();
@@ -154,7 +154,6 @@ export class TenantDatabaseList {
             return;
         }
 
-        this.ensureUpToDate = true;
         await this.load(true);
     }
 
@@ -195,8 +194,8 @@ export class TenantDatabaseList {
         try
         {
             const tenantRequest = this.api.getTenant(this.tenantId);
-            const serversRequest = this.api.getTenantServers(this.tenantId, this.ensureUpToDate);
-            const databasesRequest = this.api.getTenantDatabases(this.tenantId, this.ensureUpToDate);
+            const serversRequest = this.api.getTenantServers(this.tenantId);
+            const databasesRequest = this.api.getTenantDatabases(this.tenantId);
     
             this.tenant = await tenantRequest;
             
@@ -218,8 +217,6 @@ export class TenantDatabaseList {
         {
             if (!isReload)
                 this.isLoading = false;
-
-            this.ensureUpToDate = false;
         }
     }
 
@@ -231,7 +228,6 @@ export class TenantDatabaseList {
     private async deleteDatabase(database: Database): Promise<void> {
         await this.api.deleteDatabase(database.id);
 
-        this.ensureUpToDate = true;
         await this.load(true);
     }
 

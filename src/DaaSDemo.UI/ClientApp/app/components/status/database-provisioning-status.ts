@@ -1,5 +1,6 @@
 import { bindable } from 'aurelia-framework';
-import { Database, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-api';
+
+import { Database, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-models';
 
 export class DatabaseProvisioningStatus {
     @bindable public database: Database;

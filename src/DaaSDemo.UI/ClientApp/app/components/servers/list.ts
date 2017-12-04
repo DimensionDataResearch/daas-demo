@@ -1,9 +1,12 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
 import { Router, RouteConfig } from 'aurelia-router';
 
-import { DaaSAPI, DatabaseServer, ProvisioningAction } from '../../services/api/daas-api';
-import { ConfirmDialog } from '../dialogs/confirm';
+import { DaaSAPI } from '../../services/api/daas-api';
+import { DatabaseServer, ProvisioningAction } from '../../services/api/daas-models';
+
 import { sortByName } from '../../utilities/sorting';
+
+import { ConfirmDialog } from '../dialogs/confirm';
 
 @inject(DaaSAPI, Router)
 export class ServerList {

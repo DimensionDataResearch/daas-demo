@@ -1,7 +1,15 @@
 import { inject, singleton, NewInstance } from 'aurelia-framework';
-import { HttpClient, json } from 'aurelia-fetch-client';
+import { HttpClient, json, Interceptor, RequestInit } from 'aurelia-fetch-client';
 
 import { ConfigService, Configuration } from '../config/config-service';
+import {
+    User,
+    Tenant,
+    DatabaseServer,
+    DatabaseServerKind,
+    DatabaseServerEvent,
+    Database
+} from './daas-models';
 
 /**
  * Client for the Database-as-a-Service API.
@@ -10,7 +18,8 @@ import { ConfigService, Configuration } from '../config/config-service';
 @inject(NewInstance.of(HttpClient), ConfigService)
 export class DaaSAPI
 {
-    private configured: Promise<void>;
+    private _lastETagInterceptor: LastETagInterceptor = new LastETagInterceptor();
+    private _configured: Promise<void>;
 
     /**
      * Create a new DaaS API client.
@@ -19,7 +28,14 @@ export class DaaSAPI
      */
     constructor(private http: HttpClient, private configService: ConfigService)
     {
-        this.configured = this.configure();
+        this._configured = this.configure();
+    }
+
+    /**
+     * The last ETag (if any) returned by a DaaS API call.
+     */
+    public get lastETag(): number {
+        return this._lastETagInterceptor.lastEtag;
     }
 
     /**
@@ -28,7 +44,7 @@ export class DaaSAPI
      * @returns The users, sorted by name.
      */
     public async getUsers(): Promise<User[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('admin/users');
         const body = await response.json();
@@ -42,7 +58,7 @@ export class DaaSAPI
      * @returns The tenants, sorted by name.
      */
     public async getTenants(): Promise<Tenant[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('tenants');
         const body = await response.json();
@@ -56,7 +72,7 @@ export class DaaSAPI
      * @returns The tenants, sorted by name.
      */
     public async getServers(): Promise<DatabaseServer[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('servers');
         const body = await response.json();
@@ -70,7 +86,7 @@ export class DaaSAPI
      * @returns The databases, sorted by server and then name.
      */
     public async getDatabases(): Promise<Database[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('databases');
         const body = await response.json();
@@ -85,7 +101,7 @@ export class DaaSAPI
      * @returns The database, or null if no database exists with the specified Id.
      */
     public async getDatabase(databaseId: string): Promise<Database | null> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`databases/${databaseId}`);
         const body = await response.json();
@@ -114,7 +130,7 @@ export class DaaSAPI
      * @returns The user, or null if no user exists with the specified Id.
      */
     public async getUser(userId: string): Promise<User | null> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`users/${userId}`);
         const body = await response.json();
@@ -143,7 +159,7 @@ export class DaaSAPI
      * @returns The tenant, or null if no tenant exists with the specified Id.
      */
     public async getTenant(tenantId: string): Promise<Tenant | null> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`tenants/${tenantId}`);
         const body = await response.json();
@@ -172,7 +188,7 @@ export class DaaSAPI
      * @returns The server, or null if no server exists with the specified Id.
      */
     public async getServer(serverId: string): Promise<DatabaseServer | null> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`servers/${serverId}`);
         const body = await response.json();
@@ -202,7 +218,7 @@ export class DaaSAPI
      * @returns The server events.
      */
     public async getServerEvents(serverId: string): Promise<DatabaseServerEvent[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`servers/${serverId}/events`);
         const body = await response.json();
@@ -230,7 +246,7 @@ export class DaaSAPI
      * @returns The databases.
      */
     public async getServerDatabases(serverId: string): Promise<Database[]> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`servers/${serverId}/databases`);
         const body = await response.json();
@@ -256,18 +272,13 @@ export class DaaSAPI
      * Get information about a tenant's database servers.
      * 
      * @param tenantId The tenant Id.
-     * @param ensureUpToDate Ensure that the results are as up-to-date as possible?
      * 
      * @returns The servers.
      */
-    public async getTenantServers(tenantId: string, ensureUpToDate: boolean = false): Promise<DatabaseServer[]> {
-        await this.configured;
+    public async getTenantServers(tenantId: string): Promise<DatabaseServer[]> {
+        await this._configured;
 
-        let requestURI = `tenants/${tenantId}/servers`;
-        if (ensureUpToDate)
-            requestURI += '?ensureUpToDate=true';
-
-        const response = await this.http.fetch(requestURI);
+        const response = await this.http.fetch(`tenants/${tenantId}/servers`);
         const body = await response.json();
 
         if (response.ok) {
@@ -285,18 +296,13 @@ export class DaaSAPI
      * Get information about a tenant's SQL server instance.
      * 
      * @param tenantId The Id of the tenant that owns the server.
-     * @param ensureUpToDate Ensure that the results are as up-to-date as possible?
      * 
      * @returns The databases, or null if the tenant does not have a server.
      */
-    public async getTenantDatabases(tenantId: string, ensureUpToDate: boolean = false): Promise<Database[] | null> {
-        await this.configured;
+    public async getTenantDatabases(tenantId: string): Promise<Database[] | null> {
+        await this._configured;
 
-        let requestURI = `tenants/${tenantId}/databases`;
-        if (ensureUpToDate)
-            requestURI += '?ensureUpToDate=true';
-
-        const response = await this.http.fetch(requestURI);
+        const response = await this.http.fetch(`tenants/${tenantId}/databases`);
         const body = await response.json();
 
         if (response.ok) {
@@ -325,7 +331,7 @@ export class DaaSAPI
      * @returns The Id of the new tenant.
      */
     public async createTenant(name: string): Promise<string> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('tenants', {
             method: 'POST',
@@ -358,7 +364,7 @@ export class DaaSAPI
      * @returns The Id of the new server.
      */
     public async deploySqlServer(tenantId: string, name: string, adminPassword: string): Promise<string> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('servers/create/sql', {
             method: 'POST',
@@ -394,7 +400,7 @@ export class DaaSAPI
      * @returns The Id of the new server.
      */
     public async deployRavenServer(tenantId: string, name: string): Promise<string> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch('servers/create/ravendb', {
             method: 'POST',
@@ -426,7 +432,7 @@ export class DaaSAPI
      * @param serverId The server Id.
      */
     public async destroyServer(serverId: string): Promise<void> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`servers/${serverId}`, {
             method: 'DELETE'
@@ -450,7 +456,7 @@ export class DaaSAPI
      * @param serverId The server Id.
      */
     public async reconfigureServer(serverId: string): Promise<void> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`servers/${serverId}/reconfigure`, {
             method: 'POST'
@@ -477,7 +483,7 @@ export class DaaSAPI
      * @param password The database user password.
      */
     public async createDatabase(serverId: string, name: string, user: string, password: string): Promise<string> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`databases`, {
             method: 'POST',
@@ -526,7 +532,7 @@ export class DaaSAPI
      * @param databaseId The database Id.
      */
     public async deleteDatabase(databaseId: string): Promise<void> {
-        await this.configured;
+        await this._configured;
 
         const response = await this.http.fetch(`databases/${databaseId}`, {
             method: 'DELETE'
@@ -558,374 +564,61 @@ export class DaaSAPI
                     'X-AuthX-Scope': 'daas_api' // Pseudo-header used to trigger automatic acquisition of access tokens
                 }
             })
+            .withInterceptor(
+                new LastETagInterceptor()
+            )
         );
     }
 }
 
 /**
- * End-point configuration for the DaaS UI.
+ * The name of the "X-Results-UpTo-ETag" header.
  */
-export interface EndPoints {
-    /**
-     * The DaaS API end-point.
-     */
-    api: string;
-
-    /**
-     * The identity server (STS) base address.
-     */
-    identityServer: string;
-}
-
-export interface User {
-    id: string;
-    name: string;
-    emailAddress: string;
-    isLockedOut: boolean;
-}
+export const ResultsUpToETagHeader = 'X-Results-UpTo-ETag';
 
 /**
- * Represents a DaaS Tenant.
+ * Interceptor that tracks the last ETag returned by the DaaS API and adds it to outgoing API requests using "X-Results-UpTo-ETag" header.
  */
-export interface Tenant
-{
+export class LastETagInterceptor implements Interceptor {
     /**
-     * The tenant Id.
+     * The last ETag  (if any) returned by an API call.
      */
-    id: string;
-    
-    /**
-     * The tenant name.
-     */
-    name: string;
-}
-
-/**
- * Represents a DaaS SQL Server instance.
- */
-export interface DatabaseServer
-{
-    /**
-     * The server Id.
-     */
-    id: string;
-    
-    /**
-     * The server name.
-     */
-    name: string;
+    public lastEtag: number = 0;
 
     /**
-     * The type of server.
+     * Create a new LastETagInterceptor.
      */
-    kind: DatabaseServerKind;
+    constructor() { }
 
     /**
-     * The fully-qualified domain name (if any) on which the server is externally accessible.
+     * Intercept an outgoing request and add the "X-Results-UpTo-ETag" header.
+     * 
+     * @param request The outgoing request.
      */
-    publicFQDN?: string | null;
-    
-    /**
-     * The TCP port (if any) on which the server is externally accessible.
-     */
-    publicPort?: number | null;
+    public request(request: Request): Request {
+        if (this.lastEtag) {
+            request.headers.set(ResultsUpToETagHeader,
+                `"${this.lastEtag}"` // ETag header value has to be quoted, so we do the same for our custom header to be consistent
+            );
+        }
+
+        return request;
+    }
 
     /**
-     * The Id of the tenant that owns the server.
+     * Intercept an outgoing response, extracting the latest ETag from the "ETag" header (if present).
+     * 
+     * @param response The incoming response.
      */
-    tenantId: string;
+    public response(response: Response): Response {
+        const etagHeader = response.headers.get('ETag');
+        if (etagHeader && etagHeader[0] == '"' && etagHeader[etagHeader.length - 1] == '"') {
+            const etagValue = etagHeader.substring(1, etagHeader.length - 1);
+            this.lastEtag = Number.parseInt(etagValue);
+        }
 
-    /**
-     * The name of the tenant that owns the server.
-     */
-    tenantName: string;
-
-    /**
-     * The currently-requested action (if any) for the server.
-     */
-    action: ProvisioningAction;
-
-    /**
-     * The server provovisioning phase (if any).
-     */
-    phase: ServerProvisioningPhase;
-
-    /**
-     * The server status.
-     */
-    status: ProvisioningStatus;
-}
-
-/**
- * Represents an instance of an SQL Server database.
- */
-export interface Database {
-    /**
-     * The database Id.
-     */
-    id: string;
-    
-    /**
-     * The database name.
-     */
-    name: string;
-
-    /**
-     * The name of the user assigned to the database.
-     */
-    databaseUser: string;
-
-    /**
-     * The Id of the server that hosts the database.
-     */
-    serverId: string;
-
-    /**
-     * The name of the server that hosts the database.
-     */
-    serverName: string;
-
-    /**
-     * The kind of server that hosts the database.
-     */
-    serverKind: DatabaseServerKind;
-
-    /**
-     * The server's fully-qualified public domain name (if available).
-     */
-    serverPublicFQDN: string | null;
-
-    /**
-     * The server's public TCP port (if available).
-     */
-    serverPublicPort: number | null;
-
-    /**
-     * The Id of the tenant that owns the database.
-     */
-    tenantId: string;
-
-    /**
-     * The name of the tenant that owns the database.
-     */
-    tenantName: string;
-
-    /**
-     * The database's currently-requested provisioning action (if any).
-     */
-    action: ProvisioningAction;
-
-    /**
-     * The database provisioning status.
-     */
-    status: ProvisioningStatus;
-}
-
-/**
- * The provisioning status of a resource.
- */
-export enum ProvisioningStatus {
-    /**
-     * Resource provisioning is pending.
-     */
-    Pending = 'Pending',
-
-    /**
-     * Resource is ready for use.
-     */
-    Ready = 'Ready',
-
-    /**
-     * Resource is being provisioned.
-     */
-    Provisioning = 'Provisioning',
-
-    /**
-     * Resource is being de-provisioned.
-     */
-    Deprovisioning = 'Deprovisioning',
-
-    /**
-     * Resource is being reconfigured.
-     */
-    Reconfiguring = 'Reconfiguring',
-
-    /**
-     * Resource state is invalid.
-     */
-    Error = 'Error',
-
-    /**
-     * Resource has been de-provisioned.
-     */
-    Deprovisioned = 'Deprovisioned'
-}
-
-/**
- * A provisioning action to be performed for a resource.
- */
-export enum ProvisioningAction {
-    /**
-     * No provisioning action.
-     */
-    None = 'None',
-
-    /**
-     * Provision resource(s).
-     */
-    Provision = 'Provision',
-
-    /**
-     * De-provision resource(s).
-     */
-    Deprovision = 'Deprovision',
-
-    /**
-     * Reconfigure resource(s).
-     */
-    Reconfigure = 'Reconfigure'
-}
-
-/**
- * Represents a phase in server provisioning / reconfiguration / de-provisioning.
- */
-export enum ServerProvisioningPhase
-{
-    /**
-     * No provisioning phase is currently active.
-     */
-    None = 'None',
-
-    /**
-     * Server storage.
-     */
-    Storage = 'Storage',
-
-    /**
-     * Security configuration (e.g. credentials, firewall rules).
-     */
-    Security = 'Security',
-
-    /**
-     * The server instance.
-     */
-    Instance = 'Instance',
-
-    /**
-     * The server's internal network connectivity.
-     */
-    Network = 'Network',
-
-    /**
-     * The server's monitoring infrastructure.
-     */
-    Monitoring = 'Monitoring',
-
-    /**
-     * The server's configuration.
-     */
-    Configuration = 'Configuration',
-
-    /**
-     * The server's external network connectivity.
-     */
-    Ingress = 'Ingress',
-
-    /**
-     * The server's current action has been completed.
-     */
-    Done = 'Done'
-}
-
-/**
- * Well-known kinds of database server.
- */
-export enum DatabaseServerKind
-{
-    /**
-     * An unknown server kind.
-     */
-    Unknown = 'Unknown',
-
-    /**
-     * Microsoft SQL Server.
-     */
-    SqlServer = 'SqlServer',
-
-    /**
-     * RavenDB.
-     */
-    RavenDB = 'RavenDB'
-}
-
-/**
- * Represents an event relating to a DatabaseServer.
- */
-export interface DatabaseServerEvent {
-    /**
-     * The date / time that the event occurred.
-     */
-    timestamp: string;
-
-    /**
-     * The kind of event represented by the DatabaseServerEvent.
-     */
-    kind: DatabaseServerEventKind;
-
-    /**
-     * Messages (if any) associated with the event.
-     */
-    messages: string[];
-}
-
-/**
- * Represents a provisioning event relating to a DatabaseServer.
- */
-export interface DatabaseServerProvisioningEvent extends DatabaseServerEvent {
-    /**
-     * The requested action.
-     */
-    action: ProvisioningAction;
-
-    /**
-     * The server's current provisioning phase (if any) when the event was raised.
-     */
-    phase: ServerProvisioningPhase;
-
-    /**
-     * The server's current status when the event was raised.
-     */
-    status: ProvisioningStatus;
-}
-
-/**
- * Represents an event indicating that a DatabaseServer's ingress details have changed.
- */
-export interface DatabaseServerIngressChangedEvent extends DatabaseServerEvent {
-    /**
-     * The server's current fully-qualified public domain name (if any) when the event was raised.
-     */
-    publicFQDN: string | null;
-
-    /**
-     * The server's current public TCP port (if any) when the event was raised.
-     */
-    publicPort: number | null;
-}
-
-/**
- * A well-known kind of DatabaseServerEvent.
- */
-export enum DatabaseServerEventKind {
-    /**
-     * A provisioning-related event.
-     */
-    Provisioning = 'Provisioning',
-
-    /**
-     * Event indicating that a server's ingress details have changed.
-     */
-    IngressChanged = 'IngressChanged'
+        return response;
+    }
 }
 
 /**

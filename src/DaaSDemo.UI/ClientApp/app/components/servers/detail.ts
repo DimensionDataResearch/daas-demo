@@ -8,8 +8,10 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 import * as $ from 'jquery';
 import 'semantic';
 
+import { DaaSAPI } from '../../services/api/daas-api';
+import { DatabaseServer, DatabaseServerKind, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-models';
+
 import { ConfirmDialog } from '../dialogs/confirm';
-import { DaaSAPI, DatabaseServer, ProvisioningAction, ServerProvisioningPhase, ProvisioningStatus, DatabaseServerKind  } from '../../services/api/daas-api';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
 
 /**

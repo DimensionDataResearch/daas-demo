@@ -26,7 +26,7 @@ namespace DaaSDemo.Api.Controllers
     /// </summary>
     [Route("api/v1/databases")]
     public class DatabasesController
-        : Controller
+        : DataControllerBase
     {
         /// <summary>
         ///     Create a new databases API controller.
@@ -38,26 +38,9 @@ namespace DaaSDemo.Api.Controllers
         ///     The controller's log facility.
         /// </param>
         public DatabasesController(IDocumentSession documentSession, ILogger<DatabasesController> logger)
+            : base(documentSession, logger)
         {
-            if (documentSession == null)
-                throw new ArgumentNullException(nameof(documentSession));
-
-            if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-
-            DocumentSession = documentSession;
-            Log = logger;
         }
-
-        /// <summary>
-        ///     The RavenDB document session for the current request.
-        /// </summary>
-        IDocumentSession DocumentSession { get; }
-
-        /// <summary>
-        ///     The controller's log facility.
-        /// </summary>
-        ILogger Log { get; }
 
         /// <summary>
         ///     Get a database by Id.
@@ -117,6 +100,7 @@ namespace DaaSDemo.Api.Controllers
         {
             return Json(
                 DocumentSession.Query<DatabaseInstance, DatabaseInstanceDetails>()
+                    .Customize(WaitForResultsUpToRequestedEtag)
                     .ProjectFromIndexFieldsInto<DatabaseInstanceDetail>()
             );
         }
@@ -410,24 +394,6 @@ namespace DaaSDemo.Api.Controllers
                 EntityType = "Database",
                 Message = $"Database '{targetDatabase.Name}' queued for reconfiguration on server '{targetServer.Name}'."
             });
-        }
-
-        /// <summary>
-        ///     Populate the "ETag" header using the specified entity's ETag.
-        /// </summary>
-        /// <param name="entity">
-        ///     The target entity.
-        /// </param>
-        void SetEtagHeader<TEntity>(TEntity entity)
-            where TEntity: class
-        {
-            if (entity == null)
-                throw new ArgumentNullException(nameof(entity));
-
-            long etag = DocumentSession.Advanced.GetEtagFor(entity);
-            Response.Headers.Add("ETag",
-                $"\"{etag}\""
-            );
         }
     }
 }

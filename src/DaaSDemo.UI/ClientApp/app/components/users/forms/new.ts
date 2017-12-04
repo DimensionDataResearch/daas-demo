@@ -3,7 +3,7 @@ import { NewInstance } from 'aurelia-dependency-injection';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, User } from '../../../services/api/daas-api';
+import { DaaSAPI } from '../../../services/api/daas-api';
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class NewUserForm {

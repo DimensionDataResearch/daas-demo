@@ -1,6 +1,6 @@
 import { bindable } from 'aurelia-framework';
 
-import { DatabaseServer, DatabaseServerKind } from '../../services/api/daas-api';
+import { DatabaseServer, DatabaseServerKind } from '../../services/api/daas-models';
 
 export class ServerConnectivity
 {

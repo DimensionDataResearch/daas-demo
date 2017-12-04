@@ -4,7 +4,9 @@ import { RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationController } from 'aurelia-validation';
 
-import { DaaSAPI, User  } from '../../services/api/daas-api';
+import { DaaSAPI } from '../../services/api/daas-api';
+import { User } from '../../services/api/daas-models';
+
 import { NewUser } from './forms/new';
 
 /**
