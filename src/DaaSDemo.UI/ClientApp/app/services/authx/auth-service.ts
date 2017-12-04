@@ -121,6 +121,8 @@ export class AuthService {
         this._userManager.events.addUserSignedOut(() => {
             this.eventAggregator.publish('AuthX.UserSignedOut');
         });
+
+        this._user = await this._userManager.getUser();
     }
 }
 
@@ -145,7 +147,7 @@ export function createUserManager(authority: string, client_id: string, addition
         popup_redirect_uri: baseAddress + '/oidc/signin/popup',
         popup_post_logout_redirect_uri: baseAddress + '/oidc/signout/popup',
         post_logout_redirect_uri: baseAddress + '/oidc/signout/popup',
-        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=700,height=933,left=300,top=200;resizable=yes',
+        popupWindowFeatures: 'menubar=no,location=yes,toolbar=no,width=546,height=602,left=450,top=86;resizable=yes',
 
         // Automatically renew tokens before they expire using silent sign-in (hidden iframe).
         automaticSilentRenew: true,
