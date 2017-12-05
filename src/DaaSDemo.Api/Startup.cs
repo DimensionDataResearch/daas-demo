@@ -1,9 +1,7 @@
 ﻿using IdentityModel;
-using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using IdentityServer4.AccessTokenValidation;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Converters;
+using Serilog;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace DaaSDemo.Api
 {
@@ -80,6 +83,36 @@ namespace DaaSDemo.Api
                 })
                 .AddDaaSIdentityStores();
 
+            services.AddAuthorization(authorization =>
+            {
+                authorization.DefaultPolicy = new AuthorizationPolicyBuilder(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .RequireRole("User")
+                    .Build();
+
+                authorization.AddPolicy("User", authorization.DefaultPolicy);
+
+                authorization.AddPolicy("Administrator",
+                    new AuthorizationPolicyBuilder(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                        .RequireAuthenticatedUser()
+                        .RequireRole("Administrator")
+                        .Build()
+                );
+            });
+
+            services.AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                .AddIdentityServerAuthentication(options =>
+                {
+                    options.Authority = "http://localhost:58352";
+                    options.RequireHttpsMetadata = false;
+
+                    options.ApiName = "daas-api-v1";
+                    options.ApiSecret = "secret".ToSha256();
+                    
+                    options.EnableCaching = true;
+                    options.CacheDuration = TimeSpan.FromSeconds(30);
+                });
+
             services.AddCors(cors =>
             {
                 if (String.IsNullOrWhiteSpace(CorsOptions.UI))
@@ -119,6 +152,7 @@ namespace DaaSDemo.Api
         {
             app.UseDeveloperExceptionPage();
             app.UseCors("UI");
+            app.UseAuthentication();
             app.UseMvc();
 
             appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);

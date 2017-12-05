@@ -115,6 +115,12 @@ namespace DaaSDemo.IdentityServer
                     {
                         Name = "daas-api-v1",
                         Description = "DaaS API (v1)",
+                        ApiSecrets = new Secret[]
+                        {
+                            new Secret(
+                                "secret".ToSha256()
+                            )
+                        },
 
                         Scopes = new Scope[]
                         {

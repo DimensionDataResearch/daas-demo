@@ -1,6 +1,9 @@
 using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
+using IdentityModel;
+using IdentityServer4.AccessTokenValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -79,6 +82,23 @@ namespace DaaSDemo.Api.Controllers
                 await DocumentSession.Query<AppUser>()
                     .ToListAsync()
             );
+        }
+
+        /// <summary>
+        ///     Get information about the current (authenticated) user.
+        /// </summary>
+        [HttpGet("whoami"), Authorize("User")]
+        public IActionResult WhoAmI()
+        {
+            return Ok(new
+            {
+                Name = User.Identity.Name,
+                IsUser = User.IsInRole("User"),
+                IsAdministrator = User.IsInRole("Administrator"),
+                Roles = User.Claims
+                    .Where(claim => claim.Type == JwtClaimTypes.Role)
+                    .Select(claim => claim.Value)
+            });
         }
     }
 }

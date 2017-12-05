@@ -15,6 +15,7 @@ export class Home {
     private subscriptions: Subscription[] = [];
 
     @bindable public message: string | null;
+    @bindable public token: string | null;
     
     /**
      * Create a new home view model.
@@ -40,13 +41,16 @@ export class Home {
 
         this.subscriptions.push(
             this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
-                this.message = JSON.stringify(user.profile, null, 4);
+                this.message = 'Profile: ' + JSON.stringify(user.profile, null, 4);
+                this.token = 'Access Token: ' + user.access_token;
             }),
             this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
                 this.message = null;
+                this.token = null;
             }),
             this.eventAggregator.subscribe('AuthX.UserSignedOut', () => {
                 this.message = null;
+                this.token = null;
             })
         );
     }
