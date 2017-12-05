@@ -92,25 +92,37 @@ namespace DaaSDemo.IdentityServer.Services
 
             IList<string> roleIds = await UserManager.GetRolesAsync(user);
             
-            List<string> roleNames = new List<string>();
             using (IAsyncDocumentSession session = DocumentStore.OpenAsyncSession())
             {
                 IDictionary<string, AppRole> roles = await session.LoadAsync<AppRole>(roleIds);
-                roleNames.AddRange(
-                    roles.Values
-                        .Where(role => role != null)
-                        .Select(role => role.Name)
+                
+                string[] roleNames = roles.Values
+                    .Where(role => role != null)
+                    .Select(role => role.Name)
+                    .ToArray();
+
+                Log.LogInformation("User {Name} has roles: {@RoleNames}",
+                    user.UserName,
+                    roleNames
+                );
+
+                // Expose their role memberships as claims.
+                context.AddRequestedClaims(roleNames.Select(
+                    roleName => new Claim(JwtClaimTypes.Role, roleName)
+                ));
+
+                // Also add any claims provided by roles they are a member of.
+                context.AddRequestedClaims(
+                    roles.Values.Where(
+                        role => role != null
+                    )
+                    .SelectMany(
+                        role => role.Claims.Select(
+                            claim => new Claim(claim.ClaimType, claim.ClaimValue)
+                        )
+                    )
                 );
             }
-
-            Log.LogInformation("User {Name} has roles: {@RoleNames}",
-                user.UserName,
-                roleNames
-            );
-            
-            context.AddRequestedClaims(roleNames.Select(
-                roleName => new Claim("role", roleName)
-            ));
 
             context.AddRequestedClaims(user.Claims.Select(
                 claim => new Claim(claim.ClaimType, claim.ClaimValue)
