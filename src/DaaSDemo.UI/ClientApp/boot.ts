@@ -11,6 +11,10 @@ export function configure(aurelia: Aurelia) {
     aurelia.use.standardConfiguration();
     aurelia.use.singleton(AuthService);
     aurelia.use.singleton(ConfigService);
+    
+    aurelia.use.globalResources(
+        PLATFORM.moduleName('app/behaviors/async-binding')
+    )
 
     aurelia.use.plugin(
         PLATFORM.moduleName('aurelia-validation')
