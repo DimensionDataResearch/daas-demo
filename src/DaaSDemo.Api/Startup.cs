@@ -85,11 +85,14 @@ namespace DaaSDemo.Api
 
             services.AddAuthorization(authorization =>
             {
-                authorization.DefaultPolicy = new AuthorizationPolicyBuilder(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-                    .RequireAuthenticatedUser()
-                    .RequireRole("User")
-                    .Build();
+                AuthorizationPolicy defaultPolicy =
+                    new AuthorizationPolicyBuilder(IdentityServerAuthenticationDefaults.AuthenticationScheme)
+                        .RequireAuthenticatedUser()
+                        .RequireRole("User")
+                        .Build();
 
+                authorization.DefaultPolicy = defaultPolicy;
+                authorization.AddPolicy("Default", authorization.DefaultPolicy);
                 authorization.AddPolicy("User", authorization.DefaultPolicy);
 
                 authorization.AddPolicy("Administrator",
@@ -110,7 +113,7 @@ namespace DaaSDemo.Api
                     options.ApiSecret = "secret".ToSha256();
                     
                     options.EnableCaching = true;
-                    options.CacheDuration = TimeSpan.FromSeconds(30);
+                    options.CacheDuration = TimeSpan.FromMinutes(1);
                 });
 
             services.AddCors(cors =>

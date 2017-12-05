@@ -37,7 +37,6 @@ namespace DaaSDemo.UI
         /// </returns>
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseUrls("http://*:5000")
                 .UseStartup<Startup>()
                 .ConfigureAppConfiguration((context, config) =>
                 {
