@@ -139,8 +139,8 @@ namespace DaaSDemo.IdentityServer
                 {
                     new Client
                     {
-                        ClientId = "daas-ui-dev",
-                        ClientName = "DaaS Portal (development)",
+                        ClientId = "daas-ui",
+                        ClientName = "DaaS Portal",
 
                         AllowedGrantTypes = GrantTypes.Implicit,
                         RequireConsent = false,
@@ -158,6 +158,38 @@ namespace DaaSDemo.IdentityServer
                             $"{baseAddress}/oidc/signout/popup",
                             $"{baseAddress}/signout-callback-oidc"
                         }).ToArray(),
+                        AllowedScopes = new List<string>
+                        {
+                            IdentityServerConstants.StandardScopes.OpenId,
+                            IdentityServerConstants.StandardScopes.Profile,
+                            "roles",
+                            "daas-api-v1"
+                        }
+                    },
+                    new Client
+                    {
+                        ClientId = "daas-ui-dev",
+                        ClientName = "DaaS Portal (development)",
+
+                        AllowedGrantTypes = GrantTypes.Implicit,
+                        RequireConsent = false,
+                        AllowAccessTokensViaBrowser = true,
+                        AllowedCorsOrigins = new string[]
+                        {
+                            "http://localhost:5000"
+                        },
+
+                        RedirectUris = new string[]
+                        {
+                            "http://localhost:5000/oidc/signin/popup",
+                            "http://localhost:5000/oidc/signin/silent",
+                            "http://localhost:5000/signin-oidc"
+                        },
+                        PostLogoutRedirectUris = new string[]
+                        {
+                            "http://localhost:5000/oidc/signout/popup",
+                            "http://localhost:5000/signout-callback-oidc"
+                        },
                         AllowedScopes = new List<string>
                         {
                             IdentityServerConstants.StandardScopes.OpenId,

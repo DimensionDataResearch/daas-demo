@@ -16,10 +16,14 @@ data: # Example values and keys, customise as required
   
   storageclass_data: 'daas-data'
 
-  image_name_sql: 'microsoft/mssql-server-linux:2017-CU1'
+  image_name_sql:     'microsoft/mssql-server-linux:2017-CU1'
   image_name_ravendb: 'ravendb/ravendb:4.0.0-rc-40023-ubuntu.16.04-x64'
 
   cluster_fqdn: 'kr-cluster.tintoy.io'
+
+  identity_server_endpoint:                   'http://identity.kr-cluster.tintoy.io:31414'
+  identity_server_clientid_ui:                'daas-ui'
+  identity_server_additional_scopes_ui:       'roles;daas-api-v1'
 
   vault_endpoint:                             'http://daas-vault-external.default.svc.cluster.local:8200'
   vault_token:                                '464320de-0831-bfcf-62ad-bba874fd0cbf'

@@ -1,14 +1,14 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: daas-ui
+  name: daas-identity-server
   labels:
-    k8s-app: daas-ui
+    k8s-app: daas-identity-server
 spec:
   replicas: 3
   selector:
     matchLabels:
-      k8s-app: daas-ui
+      k8s-app: daas-identity-server
 
   strategy:
         type: RollingUpdate
@@ -16,13 +16,13 @@ spec:
   template:
     metadata:
       labels:
-        k8s-app: daas-ui
+        k8s-app: daas-identity-server
     spec:
       serviceAccountName: daas
       terminationGracePeriodSeconds: 60
 
       containers:
-      - name: daas-ui
+      - name: daas-identity-server
         image: tintoy.azurecr.io/daas/ui:1.0.0-dev
         imagePullPolicy: Always
         env:
@@ -51,21 +51,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DAAS_Security__Authority
-            valueFrom:
-              configMapKeyRef:
-                name: daas
-                key: identity_server_endpoint
-          - name: DAAS_Security__ClientId
-            valueFrom:
-              configMapKeyRef:
-                name: daas
-                key: identity_server_clientid_ui
-          - name: DAAS_Security__AdditionalScopes
-            valueFrom:
-              configMapKeyRef:
-                name: daas
-                key: identity_server_additional_scopes_ui
         ports:
           - containerPort: 5000
       
@@ -78,16 +63,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: daas-ui-external
+  name: daas-identity-server-external
   labels:
-    k8s-app: daas-ui
+    k8s-app: daas-identity-server
 spec:
   type: NodePort
   ports:
   - port: 5000
-    nodePort: 31313
+    nodePort: 31414
     targetPort: 5000
     protocol: TCP
-    name: daas-ui
+    name: daas-identity-server
   selector:
-    k8s-app: daas-ui
+    k8s-app: daas-identity-server
