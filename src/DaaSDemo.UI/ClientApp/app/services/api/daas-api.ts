@@ -10,15 +10,17 @@ import {
     DatabaseServerEvent,
     Database
 } from './daas-models';
+import { AuthenticationInterceptor } from '../authx/auth-interceptor';
 
 /**
  * Client for the Database-as-a-Service API.
  */
 @singleton()
-@inject(NewInstance.of(HttpClient), ConfigService)
+@inject(NewInstance.of(HttpClient), ConfigService, AuthenticationInterceptor)
 export class DaaSAPI
 {
     private _lastETagInterceptor: LastETagInterceptor = new LastETagInterceptor();
+    private _authenticationInterceptor: AuthenticationInterceptor;
     private _configured: Promise<void>;
 
     /**
@@ -26,8 +28,9 @@ export class DaaSAPI
      * 
      * @param http An HTTP client.
      */
-    constructor(private http: HttpClient, private configService: ConfigService)
+    constructor(private http: HttpClient, private configService: ConfigService, authenticationInterceptor: AuthenticationInterceptor)
     {
+        this._authenticationInterceptor = authenticationInterceptor;
         this._configured = this.configure();
     }
 
@@ -560,13 +563,11 @@ export class DaaSAPI
             request.withBaseUrl(configuration.api.endPoint).withDefaults({
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-AuthX-Scope': 'daas_api' // Pseudo-header used to trigger automatic acquisition of access tokens
+                    'Content-Type': 'application/json'
                 }
             })
-            .withInterceptor(
-                new LastETagInterceptor()
-            )
+            .withInterceptor(this._authenticationInterceptor)
+            .withInterceptor(this._lastETagInterceptor)
         );
     }
 }
