@@ -39,6 +39,18 @@ export class AuthService {
     }
 
     /**
+     * Load the user profile (if available).
+     */
+    public async loadUser(): Promise<User | null> {
+        await this.ready;
+
+        if (!this._userManager)
+            return null;
+
+        return await this._userManager.getUser();
+    }
+
+    /**
      * Determine whether the user is a member of the specified role.
      * 
      * @param roleName The role's display name (e.g. "Administrator").

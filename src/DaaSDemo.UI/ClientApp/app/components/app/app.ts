@@ -13,14 +13,7 @@ export class App {
             moduleId: PLATFORM.moduleName('../home/home'),
             nav: true,
             title: 'Home'
-        }, {
-            route: 'users',
-            name: 'users',
-            settings: { icon: 'user' },
-            moduleId: PLATFORM.moduleName('../users/list'),
-            nav: false, // TODO: Enable once we have an Admin menu (or something like it) on the nav bar.
-            title: 'Users'
-        }, {
+        },{
             route: 'tenants',
             name: 'tenants',
             settings: { icon: 'user' },
@@ -72,6 +65,13 @@ export class App {
             settings: { icon: 'database' },
             moduleId: PLATFORM.moduleName('../databases/detail'),
             title: 'Database'
+        }, {
+            route: 'users',
+            name: 'users',
+            settings: { icon: 'user', roles: [ 'User' ] },
+            moduleId: PLATFORM.moduleName('../users/list'),
+            nav: true,
+            title: 'Users'
         }]);
 
         this.router = router;

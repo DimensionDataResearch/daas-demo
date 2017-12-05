@@ -22,14 +22,17 @@ export class AsyncBindingBehavior {
         // Override the binding-update function.
         binding.updateTarget = (value: any) => {
             if (isPromise(value)) {
+                console.log('AsyncBindingBehavior: busyUpdateTarget', busyValue);
                 binding.originalupdateTarget(busyValue || null);
                 
-                value.then(
-                    resolvedValue => binding.originalupdateTarget(resolvedValue)
-                );
-            }
-            else
+                value.then(resolvedValue => {
+                    console.log('AsyncBindingBehavior: resolvedUpdateTarget', resolvedValue)
+                    binding.originalupdateTarget(resolvedValue);
+                });
+            } else {
+                console.log('AsyncBindingBehavior: originalUpdateTarget', busyValue);
                 binding.originalupdateTarget(value);
+            }
         };
     }
 

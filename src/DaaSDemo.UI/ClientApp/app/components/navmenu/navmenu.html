@@ -1,8 +1,10 @@
 <template>
+    <require from="../../converters/nav-auth-filter"></require>
+
     <div class="ui fixed inverted menu">
         <a href="#" class="header item">Database-as-a-Service</a>
         <a href="#" class="item">Home</a>
-        <a repeat.for = "row of router.navigation" class="${ row.isActive ? 'active ' : '' }item" href.bind = "row.href">
+        <a repeat.for = "row of router.navigation | navAuthFilter:user" class="${ row.isActive ? 'active ' : '' }item" href.bind = "row.href">
             <i if.bind="row.settings.icon" class="${ row.settings.icon } icon"></i>
             ${ row.title }
         </a>
