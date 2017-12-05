@@ -1,8 +1,13 @@
+using IdentityModel;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using System;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace DaaSDemo.Api.Controllers.Admin
@@ -14,30 +19,42 @@ namespace DaaSDemo.Api.Controllers.Admin
     /// <summary>
     ///     Controller for the users API.
     /// </summary>
-    [Route("api/v1/admin/users")]
+    [Route("api/v1/admin/users"), Authorize("Administrator")]
     public class UsersController
         : Controller
     {
         /// <summary>
         ///     Create a new users API controller.
         /// </summary>
+        /// <param name="userManager">
+        ///     The ASP.NET Core Identity user manager.
+        /// </param>
         /// <param name="documentSession">
         ///     The RavenDB document session for the current request.
         /// </param>
         /// <param name="logger">
         ///     The controller's log facility.
         /// </param>
-        public UsersController(IAsyncDocumentSession documentSession, ILogger<UsersController> logger)
+        public UsersController(UserManager<AppUser> userManager, IAsyncDocumentSession documentSession, ILogger<UsersController> logger)
         {
+            if (userManager == null)
+                throw new ArgumentNullException(nameof(userManager));
+
             if (documentSession == null)
                 throw new ArgumentNullException(nameof(documentSession));
 
             if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-
+                throw new ArgumentNullException(nameof(logger));            
+            
+            UserManager = userManager;
             DocumentSession = documentSession;
             Log = logger;
         }
+
+        /// <summary>
+        ///     The ASP.NET Core Identity user manager.
+        /// </summary>
+        UserManager<AppUser> UserManager { get; }
 
         /// <summary>
         ///     The RavenDB document session for the current request.
@@ -74,18 +91,104 @@ namespace DaaSDemo.Api.Controllers.Admin
         {
             AppUser user = await DocumentSession.LoadAsync<AppUser>(userId);
             if (user == null)
-            {
-                return NotFound(new
-                {
-                    Id = userId,
-                    EntityType = "User",
-                    Message = $"User not found with Id '{userId}'."
-                });
-            }
+                return UserNotFoundById(userId);
 
             return Ok(
                 AppUserDetail.From(user)
             );
+        }
+
+        /// <summary>
+        ///     Get information about a user's role memberships.
+        /// </summary>
+        /// <param name="userId">
+        ///     The target user Id.
+        /// </param>
+        [HttpGet("{userId}/roles")]
+        public async Task<IActionResult> GetRoles(string userId)
+        {
+            AppUser user = await DocumentSession.LoadAsync<AppUser>(userId);
+            if (user == null)
+                return UserNotFoundById(userId);
+
+            return Ok(user.Roles);
+        }
+
+        /// <summary>
+        ///     Change the current user's password.
+        /// </summary>
+        /// <param name="setPassword">
+        ///     The set-user-password model.
+        /// </param>
+        [HttpPost("{userId}/password"), Authorize("User")]
+        public async Task<IActionResult> SetPassword(string userId, [FromBody] SetPassword setPassword)
+        {
+            if (String.Equals(setPassword.NewPassword, setPassword.NewPasswordConfirmation, StringComparison.OrdinalIgnoreCase))
+                ModelState.AddModelError("NewPasswordConfirmation", "Passwords do not match.");
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            AppUser user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+                return UserNotFoundById(userId);
+            
+            if (await UserManager.HasPasswordAsync(user))
+            {
+                IdentityResult removePasswordResult = await UserManager.RemovePasswordAsync(user);
+                if (!removePasswordResult.Succeeded)
+                {
+                    Log.LogError("Failed to add password for user {UserId}. {@IdentityResult}", userId, removePasswordResult);
+
+                    IdentityError removePasswordError = removePasswordResult.Errors.First();
+
+                    return BadRequest(new
+                    {
+                        UserId = userId,
+                        Reason = removePasswordError.Code,
+                        Message = $"Failed to set password for user '{user.UserName}': {removePasswordError.Description}"
+                    });
+                }
+            }
+
+            IdentityResult addPasswordResult = await UserManager.AddPasswordAsync(user, setPassword.NewPassword);
+            if (!addPasswordResult.Succeeded)
+            {
+                Log.LogError("Failed to add password for user {UserId}. {@IdentityResult}", userId, addPasswordResult);
+
+                IdentityError addPasswordError = addPasswordResult.Errors.First();
+
+                return BadRequest(new
+                {
+                    UserId = userId,
+                    Reason = addPasswordError.Code,
+                    Message = $"Failed to set password for user '{user.UserName}': {addPasswordError.Description}"
+                });
+            }
+
+            return Ok(new
+            {
+                Message = $"Password updated for user '{user.UserName}'."
+            });
+        }
+
+        /// <summary>
+        ///     Create an <see cref="IActionResult"/> representing a user that was not found by Id in the management database.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns>
+        ///     The <see cref="IActionResult"/>.
+        /// </returns>
+        IActionResult UserNotFoundById(string userId)
+        {
+            Log.LogWarning("User {UserId} not found in the database.", userId);
+            
+            return NotFound(new
+            {
+                Id = userId,
+                EntityType = "User",
+                Message = $"User not found with Id '{userId}'."
+            });
         }
     }
 }
