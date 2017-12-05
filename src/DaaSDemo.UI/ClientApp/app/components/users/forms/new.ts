@@ -28,13 +28,22 @@ export class NewUserForm {
  * Represents the form values for creating a user.
  */
 export class NewUser {
-    name: string | null = null;
-
-    // TODO: Add e-mail address with validation.
+    email: string | null = null;
+    password: string | null = null;
+    passwordConfirmation: string | null = null;
 }
 
 ValidationRules
-    .ensure('name').displayName('User name')
+    .ensure<NewUser, string>('email').displayName('Email address')
+        .required()
+        .email()
+    .ensure('password').displayName('Password')
         .required()
         .minLength(5)
+    .ensure('passwordConfirmation').displayName('Password confirmation')
+        .required()
+        .minLength(5)
+        .satisfies(
+            (passwordConfirmation: string, newUser: NewUser) => passwordConfirmation == newUser.password
+        ).withMessage('Passwords must match')
     .on(NewUser);

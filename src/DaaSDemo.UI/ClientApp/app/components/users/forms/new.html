@@ -2,9 +2,26 @@
     <h3 class="ui dividing header">Add user</h3>
 
     <form class="ui form">
-        <div class="required field" validation-errors.bind="nameErrors" class.bind="nameErrors.length ? 'error' : ''">
-            <label>Name</label>
-            <input name="name" value.bind="newUser.name & validate" placeholder="User name" type="text">
+        <div class="required field" validation-errors.bind="emailErrors" class.bind="emailErrors.length ? 'error' : ''">
+            <label for="email">Email</label>
+            <input name="email" value.bind="newUser.email & validate" placeholder="Email address" type="text">
+        </div>
+
+        <div class="required field" validation-errors.bind="passwordErrors" class.bind="passwordErrors.length ? 'error' : ''">
+            <label for="password">Password</label>
+            <input name="password" value.bind="newUser.password & validate" placeholder="Password" type="text">
+        </div>
+
+        <div class="required field" validation-errors.bind="passwordConfirmationErrors" class.bind="passwordConfirmationErrors.length ? 'error' : ''">
+            <label for="passwordConfirmation">Confirm password</label>
+            <input name="passwordConfirmation" value.bind="newUser.passwordConfirmation & validate" placeholder="Confirm password" type="text">
+        </div>
+
+        <div class="field">
+            <div class="ui checkbox">
+                <input name="isAdmin" type="checkbox">
+                <label for="isAdmin">Administrator</label>
+            </div>
         </div>
 
         <div class="ui message" if.bind="validationController.errors.length">
@@ -17,9 +34,11 @@
             </ul>
         </div>
 
-        <button class="ui positive button" click.delegate="createClicked()" disabled.bind="validationController.errors.length">
-            <i class="add circle icon"></i> Create
-        </button>
-        <button class="ui button" click.delegate="cancelClicked()">Cancel</button>
+        <div class="field">
+            <button class="ui positive button" click.delegate="createClicked()" disabled.bind="validationController.errors.length">
+                <i class="add circle icon"></i> Create
+            </button>
+            <button class="ui button" click.delegate="cancelClicked()">Cancel</button>
+        </div>
     </form>
 </template>
