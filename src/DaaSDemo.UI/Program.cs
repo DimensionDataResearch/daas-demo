@@ -37,8 +37,8 @@ namespace DaaSDemo.UI
         /// </returns>
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .UseUrls("http://*:5000")
                 .UseStartup<Startup>()
-                .UseUrls("http://localhost:5000")
                 .ConfigureAppConfiguration((context, config) =>
                 {
                     config.AddJsonFile("appsettings.json");

@@ -5,7 +5,7 @@ metadata:
   labels:
     k8s-app: daas-identity-server
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       k8s-app: daas-identity-server
@@ -23,7 +23,7 @@ spec:
 
       containers:
       - name: daas-identity-server
-        image: tintoy.azurecr.io/daas/ui:1.0.0-dev
+        image: tintoy.azurecr.io/daas/identity-server:1.0.0-dev
         imagePullPolicy: Always
         env:
           - name: PORT
@@ -32,6 +32,11 @@ spec:
             value: '1'
           - name: ASPNETCORE_URLS
             value: 'http://*:5000'
+          - name: DAAS_CORS__UI
+            valueFrom:
+              configMapKeyRef:
+                name: daas
+                key: ui_urls
           - name: DAAS_API__EndPoint
             valueFrom:
               configMapKeyRef:

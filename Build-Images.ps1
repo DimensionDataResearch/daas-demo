@@ -15,6 +15,8 @@ Param(
     [switch] $NoPush
 )
 
+$ErrorActionPreference = 'Stop'
+
 $VersionParts = $Version.Split('-')
 $VersionPrefix = $VersionParts[0]
 If ($VersionParts.Count -eq 2) {

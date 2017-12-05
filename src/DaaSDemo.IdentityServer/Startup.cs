@@ -20,6 +20,7 @@ namespace DaaSDemo.IdentityServer
     using DaaSDemo.Models.Data;
     using Data;
     using Identity;
+    using Microsoft.Extensions.Logging;
     using Options;
     using Services;
 
@@ -209,12 +210,17 @@ namespace DaaSDemo.IdentityServer
         /// <param name="app">
         ///     The application pipeline builder.
         /// </param>
-        public void Configure(IApplicationBuilder app, IHostingEnvironment hostingEnvironment, IApplicationLifetime appLifetime)
+        public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory, IHostingEnvironment hostingEnvironment, IApplicationLifetime appLifetime)
         {
             if (hostingEnvironment.IsDevelopment())
                 app.UseDeveloperExceptionPage();
             else
                 app.UseExceptionHandler("/Home/Error");
+
+            ILogger logger = loggerFactory.CreateLogger<Startup>();
+            logger.LogInformation("Will allow CORS for portal URLs: {PortalURLs}",
+                (CorsOptions.UI ?? String.Empty).Split(';')
+            );
 
             app.UseIdentityServer();
             app.UseStaticFiles();

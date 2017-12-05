@@ -56,7 +56,7 @@ spec:
               configMapKeyRef:
                 name: daas
                 key: identity_server_endpoint
-          - name: DAAS_Security__ClientId
+          - name: DAAS_Security__ClientId__UI
             valueFrom:
               configMapKeyRef:
                 name: daas
