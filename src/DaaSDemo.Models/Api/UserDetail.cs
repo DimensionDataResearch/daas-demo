@@ -28,9 +28,14 @@ namespace DaaSDemo.Models.Api
         public string EmailAddress { get; set; }
 
         /// <summary>
+        ///     Does the user have administrative rights?
+        /// </summary>
+        public bool IsAdmin { get; set; }
+
+        /// <summary>
         ///     Is the user's account locked out?
         /// </summary>
-        public bool IsLockedOut { get; set; }
+        public bool IsLockedOut { get; set; }        
 
         /// <summary>
         ///     Create an <see cref="AppUserDetail"/> from an <see cref="AppUser"/>.
@@ -49,9 +54,10 @@ namespace DaaSDemo.Models.Api
             return new AppUserDetail
             {
                 Id = user.Id,
-                Name = user.UserName,
+                Name = user.DisplayName,
                 EmailAddress = user.Email,
 
+                IsAdmin = user.IsAdmin,
                 IsLockedOut = user.LockoutEnabled
             };
         }

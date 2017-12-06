@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace DaaSDemo.Models.Api
 {
     /// <summary>
-    ///     Model for creation of a new <see cref="Data.Models.DatabaseInstance"/>.
+    ///     Model for creation of a new <see cref="Models.Data.DatabaseInstance"/>.
     /// </summary>
     public class NewDatabaseInstance
     {

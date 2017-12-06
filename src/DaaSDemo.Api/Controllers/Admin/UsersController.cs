@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 namespace DaaSDemo.Api.Controllers.Admin
 {
     using Data.Indexes;
+    using Microsoft.AspNetCore.Http;
     using Models.Api;
     using Models.Data;
 
@@ -92,6 +93,106 @@ namespace DaaSDemo.Api.Controllers.Admin
             AppUser user = await DocumentSession.LoadAsync<AppUser>(userId);
             if (user == null)
                 return UserNotFoundById(userId);
+
+            return Ok(
+                AppUserDetail.From(user)
+            );
+        }
+
+        /// <summary>
+        ///     Create a new user.
+        /// </summary>
+        /// <param name="newUser">
+        ///     The request body as a <see cref="NewUser"/>.
+        /// </param>
+        [HttpPost("")]
+        public async Task<IActionResult> Create([FromBody] NewUser newUser)
+        {
+            if (!String.Equals(newUser.PasswordConfirmation, newUser.Password, StringComparison.Ordinal))
+            {
+                ModelState.AddModelError(nameof(newUser.PasswordConfirmation),
+                    errorMessage: "Passwords do not match."
+                );
+            }
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            AppUser user = new AppUser
+            {
+                DisplayName = newUser.Name,
+                UserName = newUser.Email,
+                Email = newUser.Email
+            };
+
+            IdentityResult createResult = await UserManager.CreateAsync(user);
+            if (createResult != IdentityResult.Success)
+            {
+                Log.LogError("Failed to create user {UserName} ({UserEmail}). {@IdentityResult}",
+                    newUser.Name,
+                    newUser.Email,
+                    createResult
+                );
+                
+                IdentityError createError = createResult.Errors.First();
+
+                return BadRequest(new
+                {
+                    Reason = "Identity." + createError.Code,
+                    Message = $"Failed to create user '{newUser.Name}'. " + createError.Description
+                });
+            }
+
+            Log.LogInformation("Created user {UserName} ({UserEmail}) with Id {UserId}.",
+                newUser.Name,
+                newUser.Email,
+                user.Id
+            );
+
+            IdentityResult addPasswordResult = await UserManager.AddPasswordAsync(user, newUser.Password);
+            if (addPasswordResult != IdentityResult.Success)
+            {
+                Log.LogError("Failed to add password for user {UserName} ({UserEmail}). {@IdentityResult}",
+                    newUser.Name,
+                    newUser.Email,
+                    addPasswordResult
+                );
+
+                IdentityError addPasswordError = createResult.Errors.First();
+
+                return BadRequest(new
+                {
+                    Reason = "Identity." + addPasswordError.Code,
+                    Message = $"Failed to set password for user '{newUser.Name}'. " + addPasswordError.Description
+                });
+            }
+
+            string userId = user.Id;
+            user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception($"Failed to retrieve newly-created user '{userId}' by Id."); // TODO: Custom exception type.
+
+            // User account will be locked out until their email address is confirmed; so let's short-circuit the process.
+            user.EmailConfirmed = true;
+            user.LockoutEnabled = false;
+
+            IdentityResult enableResult = await UserManager.UpdateAsync(user);
+            if (enableResult != IdentityResult.Success)
+            {
+                Log.LogError("Failed to enable user {UserName} ({UserEmail}). {@IdentityResult}",
+                    newUser.Name,
+                    newUser.Email,
+                    enableResult
+                );
+
+                IdentityError enableError = createResult.Errors.First();
+
+                return BadRequest(new
+                {
+                    Reason = "Identity." + enableError.Code,
+                    Message = $"Failed to set password for user '{newUser.Name}'. " + enableError.Description
+                });
+            }
 
             return Ok(
                 AppUserDetail.From(user)

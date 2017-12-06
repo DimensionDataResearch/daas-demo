@@ -327,6 +327,49 @@ export class DaaSAPI
     }
 
     /**
+     * Create a user.
+     * 
+     * @param name The user's name (for display purposes).
+     * @param email The user's email address.
+     * @param password The user's password.
+     * @param passwordConfirmation Confirm the user's password.
+     * @param isAdmin Grant the user administrative rights?
+     * 
+     * @returns The Id of the new user.
+     */
+    public async createUser(name: string, email: string, password: string, passwordConfirmation:string, isAdmin: boolean): Promise<string> {
+        await this._configured;
+
+        const response = await this.http.fetch('users', {
+            method: 'POST',
+            body: json({
+                name: name,
+                email: email,
+                password: password,
+                passwordConfirmation: passwordConfirmation,
+                isAdmin: isAdmin
+            })
+        });
+        
+        const body = await response.json();
+        if (response.ok) {
+            const userCreated = body as TenantCreated;
+
+            return userCreated.id;
+        }
+
+        if (response.status == 400 && !body.reason) {
+            throw createInvalidModelError(body as InvalidModelResponse);
+        }
+        
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to create user '${name}': ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
      * Create a tenant.
      * 
      * @param name The tenant name.
@@ -508,18 +551,7 @@ export class DaaSAPI
         }
 
         if (response.status == 400) {
-            const invalidModelResponse = body as InvalidModelResponse;
-
-            let validationMessages: string = 'Invalid request:\n';
-            for (const propertyName of Object.getOwnPropertyNames(invalidModelResponse)) {
-                const errorMessages: string[] = invalidModelResponse[propertyName];
-                for (const errorMessage of errorMessages) {
-                    validationMessages += `- ${propertyName}: ${errorMessage}`;
-                    validationMessages += '\n';
-                }
-            }
-
-            throw new Error(validationMessages);
+            throw createInvalidModelError(body as InvalidModelResponse);
         }
 
         const errorResponse = body as ApiResponse;
@@ -642,6 +674,12 @@ interface TenantCreated extends ApiResponse {
     name: string;
 }
 
+interface UserCreated extends ApiResponse {
+    id: string;
+    displayName: string;
+    emailAddress: string;
+}
+
 interface DatabaseCreated extends ApiResponse {
     id: string;
     name: string;
@@ -670,4 +708,22 @@ interface InvalidModelResponse {
      * Get the validation messages for the specified property.
      */
     [propertyName: string]: string[];
+}
+
+/**
+ * Create a new Error to represent an InvalidModelResponse.
+ * 
+ * @param invalidModelResponse The InvalidModelResponse containing model-validation error messages.
+ */
+function createInvalidModelError(invalidModelResponse: InvalidModelResponse): Error {
+    let errorMessage: string = 'Invalid request:\n';
+    for (const propertyName of Object.getOwnPropertyNames(invalidModelResponse)) {
+        const validationMessages: string[] = invalidModelResponse[propertyName];
+        for (const validationMessage of validationMessages) {
+            errorMessage += `- ${propertyName}: ${validationMessage}`;
+            errorMessage += '\n';
+        }
+    }
+
+    return new Error(errorMessage);
 }

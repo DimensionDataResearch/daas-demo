@@ -5,7 +5,7 @@ namespace DaaSDemo.Models.Api
     using Models.Data;
 
     /// <summary>
-    ///     Base model for creation of a new <see cref="Data.Models.DatabaseServer"/>.
+    ///     Base model for creation of a new <see cref="Models.Data.DatabaseServer"/>.
     /// </summary>
     public abstract class NewDatabaseServer
     {

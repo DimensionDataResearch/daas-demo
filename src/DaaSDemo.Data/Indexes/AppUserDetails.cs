@@ -22,9 +22,10 @@ namespace DaaSDemo.Data.Indexes
                 select new AppUserDetail
                 {
                     Id = user.Id,
-                    Name = user.UserName,
+                    Name = user.DisplayName,
                     EmailAddress = user.Email,
 
+                    IsAdmin = user.IsAdmin,
                     IsLockedOut = user.LockoutEnabled
                 };
 
