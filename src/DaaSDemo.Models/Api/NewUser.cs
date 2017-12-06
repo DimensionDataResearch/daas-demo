@@ -30,13 +30,6 @@ namespace DaaSDemo.Models.Api
         public string Password { get; set; }
 
         /// <summary>
-        ///     Confirm the user's password.
-        /// </summary>
-        [DisplayName("Confirm password")]
-        [Required(AllowEmptyStrings = false)]
-        public string PasswordConfirmation { get; set; }
-
-        /// <summary>
         ///     Grant the user administrative rights?
         /// </summary>
         [DisplayName("Administrator")]

@@ -74,13 +74,18 @@ export class UserList {
         if (this.newUser === null)
             return;
 
-        if (this.newUser.email == null || this.newUser.password == null || this.newUser.passwordConfirmation == null)
+        if (this.newUser.displayName == null || this.newUser.email == null || this.newUser.password == null || this.newUser.passwordConfirmation == null)
             return;
 
         this.clearError();
 
         try {
-            alert('Not implemented yet.');
+            await this.api.createUser(
+                this.newUser.displayName,
+                this.newUser.email,
+                this.newUser.password,
+                this.newUser.isAdmin
+            );
         }
         catch (error) {
             this.showError(error as Error);

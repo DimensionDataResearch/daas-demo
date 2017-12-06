@@ -108,13 +108,6 @@ namespace DaaSDemo.Api.Controllers.Admin
         [HttpPost("")]
         public async Task<IActionResult> Create([FromBody] NewUser newUser)
         {
-            if (!String.Equals(newUser.PasswordConfirmation, newUser.Password, StringComparison.Ordinal))
-            {
-                ModelState.AddModelError(nameof(newUser.PasswordConfirmation),
-                    errorMessage: "Passwords do not match."
-                );
-            }
-
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 

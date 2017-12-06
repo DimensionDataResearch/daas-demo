@@ -332,12 +332,11 @@ export class DaaSAPI
      * @param name The user's name (for display purposes).
      * @param email The user's email address.
      * @param password The user's password.
-     * @param passwordConfirmation Confirm the user's password.
      * @param isAdmin Grant the user administrative rights?
      * 
      * @returns The Id of the new user.
      */
-    public async createUser(name: string, email: string, password: string, passwordConfirmation:string, isAdmin: boolean): Promise<string> {
+    public async createUser(name: string, email: string, password: string, isAdmin: boolean): Promise<string> {
         await this._configured;
 
         const response = await this.http.fetch('users', {
@@ -346,7 +345,6 @@ export class DaaSAPI
                 name: name,
                 email: email,
                 password: password,
-                passwordConfirmation: passwordConfirmation,
                 isAdmin: isAdmin
             })
         });

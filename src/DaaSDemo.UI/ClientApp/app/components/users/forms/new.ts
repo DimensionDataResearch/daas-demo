@@ -28,13 +28,26 @@ export class NewUserForm {
  * Represents the form values for creating a user.
  */
 export class NewUser {
-    email: string | null = null;
-    password: string | null = null;
-    passwordConfirmation: string | null = null;
+    public displayName: string | null = null;
+    public email: string | null = null;
+    public password: string | null = null;
+    public passwordConfirmation: string | null = null;
+    public isAdmin: boolean = false;
+    
+    public get passwordsMatch(): boolean {
+        if (!this.password) {
+            return true; // Don't complain about password mismatch until they've actually entered one.
+        }
+
+        return this.password === this.passwordConfirmation;
+    }
 }
 
 ValidationRules
-    .ensure<NewUser, string>('email').displayName('Email address')
+    .ensure<NewUser, string>('displayName').displayName('Name')
+        .required()
+        .minLength(5)
+    .ensure('email').displayName('Email address')
         .required()
         .email()
     .ensure('password').displayName('Password')
@@ -44,6 +57,6 @@ ValidationRules
         .required()
         .minLength(5)
         .satisfies(
-            (passwordConfirmation: string, newUser: NewUser) => passwordConfirmation == newUser.password
+            (_, newUser: NewUser) => newUser.passwordsMatch
         ).withMessage('Passwords must match')
     .on(NewUser);
