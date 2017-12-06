@@ -20,6 +20,14 @@ namespace DaaSDemo.Models.Data
         public string DisplayName { get; set; }
 
         /// <summary>
+        ///     Is the user a superuser?
+        /// </summary>
+        /// <remarks>
+        ///     Superusers cannot be deleted, and have all rights (globally).
+        /// </remarks>
+        public bool IsSuperUser { get; set; }
+
+        /// <summary>
         ///     Is the user an Administrator?
         /// </summary>
         public bool IsAdmin => Roles.Any(userRole => userRole.RoleName == "Administrator");

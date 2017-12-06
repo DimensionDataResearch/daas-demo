@@ -98,6 +98,15 @@ namespace DaaSDemo.Identity.Stores
             if (user == null)
                 throw new ArgumentNullException(nameof(user));
 
+            if (user.IsSuperUser)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Code = "DaaS.CannotDeleteSuperUser",
+                    Description = "Superusers cannot be deleted."
+                });
+            }
+
             DocumentSession.Delete(user);
             await DocumentSession.SaveChangesAsync(cancellationToken);
 
