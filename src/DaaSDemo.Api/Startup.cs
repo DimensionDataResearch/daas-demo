@@ -40,6 +40,7 @@ namespace DaaSDemo.Api
 
             Configuration = configuration;
             CorsOptions = CorsOptions.From(Configuration);
+            SecurityOptions = SecurityOptions.From(Configuration);
             DatabaseOptions = DatabaseOptions.From(Configuration);
         }
 
@@ -52,6 +53,11 @@ namespace DaaSDemo.Api
         ///     CORS options for the application.
         /// </summary>
         public CorsOptions CorsOptions { get; }
+
+        /// <summary>
+        ///     Security options for the application.
+        /// </summary>
+        public SecurityOptions SecurityOptions { get; }
 
         /// <summary>
         ///     Database options for the application.
@@ -106,7 +112,7 @@ namespace DaaSDemo.Api
             services.AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
                 .AddIdentityServerAuthentication(options =>
                 {
-                    options.Authority = "http://localhost:58352";
+                    options.Authority = SecurityOptions.Authority;
                     options.RequireHttpsMetadata = false;
 
                     options.ApiName = "daas-api-v1";

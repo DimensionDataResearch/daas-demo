@@ -68,7 +68,7 @@ If ($Deploy -and !$NoPush) {
         & $kubectl delete -f $manifestFile
         # It's fine if the target doesn't exist before we try to delete it
 
-        & $kubectl create -f $manifestFile
+        & $kubectl apply -f $manifestFile
         If ($LASTEXITCODE) {
             Return $LASTEXITCODE
         }
