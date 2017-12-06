@@ -1,0 +1,21 @@
+---
+- name: install docker-py
+  pip:
+    name: docker-py
+    state: present
+
+- name: ensure rancher image is present
+  docker_image:
+    name: rancher/server
+    tag: v{{rancher_version}}
+    state: present
+
+- name: start rancher
+  docker_container:
+    name: rancher-server
+    image: rancher/server:v{{rancher_version}}
+    detach: True
+    network_mode: bridge
+    restart_policy: unless-stopped
+    published_ports:
+      - 8080:8080

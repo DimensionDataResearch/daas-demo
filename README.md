@@ -12,6 +12,7 @@ A quick-and-dirty PaaS implementation using SQL Server in Linux containers on Ku
 * A server for storage  
   This server will need to export an NFS volume unless you have your own options for storage
 * A DNS `A` wildcard record pointing to your cluster nodes' public IPs
+* If using Rancher to deploy Kubernetes, make sure that `kubelet` is run with `--volume-plugin-dir=/var/lib/kubelet/volumeplugins`.
 
 ### Deployment
 

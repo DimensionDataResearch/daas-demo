@@ -4,19 +4,20 @@ set -euo pipefail
 
 BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-pushd $BASEDIR/terraform/ddcloud
+pushd $BASEDIR/deploy/terraform/ddcloud
 
 terraform apply
 terraform refresh
 
-popd # $BASEDIR/terraform/ddcloud
+popd # $BASEDIR/deploy/terraform/ddcloud
 
-pushd $BASEDIR/ansible
+pushd $BASEDIR/deploy/ansible
 
 ansible all -m raw -a 'apt-get update && apt-get install -y python'
 ansible-playbook playbooks/reboot-servers.yml
 ansible all -m copy -a 'src=./roles/expand-root-volume/files/fdisk-script dest=/root/fdisk-script'
-ansible all -m shell -a 'fdisk /dev/sda < /root/fdisk-script'
+ansible all -m shell -a 'fdisk /dev/sda < /root/fdisk-script ; exit 0'
+ansible all -m file -a 'dest=/root/fdisk-script state=absent'
 ansible all -a 'partprobe /dev/sda'
 ansible all -a 'pvcreate /dev/sda3'
 ansible all -a 'vgextend ubuntu-cloud-vg /dev/sda3'
@@ -27,4 +28,4 @@ ansible-playbook playbooks/reboot-servers.yml
 
 ansible-playbook kubernetes-on-rancher.yml
 
-popd # $BASEDIR/ansible
+popd # $BASEDIR/deploy/ansible
