@@ -74,8 +74,8 @@ namespace DaaSDemo.Api.Controllers.Admin
         {
             return Json(
                 await DocumentSession.Query<AppUser, AppUserDetails>()
-                    .OrderBy(user => user.UserName)
                     .ProjectFromIndexFieldsInto<AppUserDetail>()
+                    .OrderBy(user => user.Name)
                     .ToListAsync()
             );
         }
