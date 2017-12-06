@@ -74,7 +74,7 @@ export class UserList {
         if (this.newUser === null)
             return;
 
-        if (this.newUser.name == null)
+        if (this.newUser.email == null || this.newUser.password == null || this.newUser.passwordConfirmation == null)
             return;
 
         this.clearError();
