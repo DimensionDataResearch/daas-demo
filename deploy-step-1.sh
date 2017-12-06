@@ -15,7 +15,7 @@ pushd $BASEDIR/ansible
 
 ansible all -m raw -a 'apt-get update && apt-get install -y python'
 ansible-playbook playbooks/reboot-servers.yml
-ansible all -m copy -a './roles/expand-root-volume/files/fdisk-script dest=/root/fdisk-script'
+ansible all -m copy -a 'src=./roles/expand-root-volume/files/fdisk-script dest=/root/fdisk-script'
 ansible all -m shell -a 'fdisk /dev/sda < /root/fdisk-script'
 ansible all -a 'partprobe /dev/sda'
 ansible all -a 'pvcreate /dev/sda3'
