@@ -1,0 +1,45 @@
+<template>
+    <div class="ui segment" style="min-height: 10.0rem;">
+        <div class="ui active dimmer" if.bind="isLoading">
+            <div class="ui active loader"></div>
+        </div>
+
+        <!-- <h3 class="ui header">
+            <i class="user icon"></i> ${ user.name }
+        </h3> -->
+
+        <div class="ui grid">
+            <div class="row">
+                <div class="six wide column">
+                    <h3 class="ui header">
+                        <i class="user icon"></i> ${ user.emailAddress }
+                    </h3>
+                </div>
+            </div>
+            <div class="row">
+                <div class="six wide column">
+                    <table class="ui very basic small definition table">
+                        <tbody>
+                            <tr>
+                                <td class="six wide right aligned">Name</td>
+                                <td class="collapsing left aligned">${ user.name }</td>
+                            </tr>
+                            <tr>
+                                <td class="six wide right aligned">Administrator?</td>
+                                <td class="collapsing left aligned">
+                                    <i class="ui ${ user.isAdmin ? 'green check' : 'red remove' } icon"></i>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="six wide right aligned">Locked out?</td>
+                                <td class="collapsing left aligned">
+                                    <i class="ui ${ user.isLockedOut ? 'green check' : 'red remove' } icon"></i>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

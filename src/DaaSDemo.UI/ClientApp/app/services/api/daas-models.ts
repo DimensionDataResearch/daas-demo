@@ -6,7 +6,7 @@ export interface User {
     name: string;
     emailAddress: string;
     isLockedOut: boolean;
-    idAdmin: boolean;
+    isAdmin: boolean;
 }
 
 /**

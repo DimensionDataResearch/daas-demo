@@ -68,10 +68,17 @@ export class App {
         }, {
             route: 'users',
             name: 'users',
-            settings: { icon: 'user', roles: [ 'User' ] },
+            settings: { icon: 'users', roles: [ 'User' ] },
             moduleId: PLATFORM.moduleName('../users/list'),
             nav: true,
             title: 'Users'
+        }, {
+            route: 'user/:userId',
+            name: 'user',
+            settings: { icon: 'user', roles: [ 'User' ] },
+            moduleId: PLATFORM.moduleName('../users/detail'),
+            nav: false,
+            title: 'User'
         }]);
 
         this.router = router;

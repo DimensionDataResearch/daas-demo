@@ -135,7 +135,7 @@ export class DaaSAPI
     public async getUser(userId: string): Promise<User | null> {
         await this._configured;
 
-        const response = await this.http.fetch(`users/${userId}`);
+        const response = await this.http.fetch(`admin/users/${userId}`);
         const body = await response.json();
 
         if (response.ok)
