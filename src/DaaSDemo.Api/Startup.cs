@@ -116,7 +116,7 @@ namespace DaaSDemo.Api
                     options.RequireHttpsMetadata = false;
 
                     options.ApiName = "daas-api-v1";
-                    options.ApiSecret = "secret".ToSha256();
+                    options.ApiSecret = "snaus4g3$!".ToSha256(); // TODO: Get this from configuration.
                     
                     options.EnableCaching = true;
                     options.CacheDuration = TimeSpan.FromMinutes(1);
