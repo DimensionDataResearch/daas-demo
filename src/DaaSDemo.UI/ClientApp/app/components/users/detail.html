@@ -1,4 +1,6 @@
 <template>
+    <require from="../menus/actions/user"></require>
+
     <div class="ui segment" style="min-height: 10.0rem;">
         <div class="ui active dimmer" if.bind="isLoading">
             <div class="ui active loader"></div>
@@ -38,6 +40,12 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+            <div class="row">
+                <div class="twelve wide column"></div>
+                <div class="four wide right aligned column">
+                    <user-actions-menu user.bind="user"></user-actions-menu>
                 </div>
             </div>
         </div>

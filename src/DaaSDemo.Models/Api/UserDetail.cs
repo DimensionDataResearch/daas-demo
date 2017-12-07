@@ -33,6 +33,11 @@ namespace DaaSDemo.Models.Api
         public bool IsAdmin { get; set; }
 
         /// <summary>
+        ///     Is the user a super-user?
+        /// </summary>
+        public bool IsSuperUser { get; set; }
+
+        /// <summary>
         ///     Is the user's account locked out?
         /// </summary>
         public bool IsLockedOut { get; set; }        

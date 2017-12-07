@@ -1,0 +1,15 @@
+<template>
+    <div class="ui ${ disabled ? 'disabled' : '' } dropdown blue icon button" element.ref="rootElement">
+        <i class="setting icon"></i>
+        <span if.bind="label">${ label }</span>
+        <i class="angle down icon"></i>
+
+        <div class="menu">
+            <div class="item" class.bind="!canDelete ? 'disabled' : ''">
+                <a click.delegate="destroyClicked()">
+                    <i class="red circle delete icon"></i> Delete
+                </a>
+            </div>
+        </div>
+    </div>
+</template>

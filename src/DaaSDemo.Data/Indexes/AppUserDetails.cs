@@ -26,6 +26,7 @@ namespace DaaSDemo.Data.Indexes
                     EmailAddress = user.Email,
 
                     IsAdmin = user.IsAdmin,
+                    IsSuperUser = user.IsSuperUser,
                     IsLockedOut = user.LockoutEnabled
                 };
 

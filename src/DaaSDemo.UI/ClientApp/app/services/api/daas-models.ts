@@ -7,6 +7,7 @@ export interface User {
     emailAddress: string;
     isLockedOut: boolean;
     isAdmin: boolean;
+    isSuperUser: boolean;
 }
 
 /**

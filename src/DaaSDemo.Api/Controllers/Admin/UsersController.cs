@@ -160,6 +160,28 @@ namespace DaaSDemo.Api.Controllers.Admin
                 });
             }
 
+            if (newUser.IsAdmin)
+            {
+                IdentityResult makeAdminResult = await UserManager.AddToRoleAsync(user, "Administrator");
+                if (makeAdminResult != IdentityResult.Success)
+                {
+                    Log.LogError("Failed to assign user {UserName} ({UserEmail}) to the {RoleName} role. {@IdentityResult}",
+                        newUser.Name,
+                        newUser.Email,
+                        "Administrator",
+                        makeAdminResult
+                    );
+
+                    IdentityError makeAdminError = createResult.Errors.First();
+
+                    return BadRequest(new
+                    {
+                        Reason = "Identity." + makeAdminError.Code,
+                        Message = $"Failed to assign user '{newUser.Name}' to the 'Administrator' role. " + makeAdminError.Description
+                    });
+                }
+            }
+
             string userId = user.Id;
             user = await UserManager.FindByIdAsync(userId);
             if (user == null)
