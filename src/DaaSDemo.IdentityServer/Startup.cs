@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
@@ -17,12 +18,13 @@ using System.Threading.Tasks;
 namespace DaaSDemo.IdentityServer
 {
     using Common.Options;
-    using DaaSDemo.Models.Data;
     using Data;
     using Identity;
-    using Microsoft.Extensions.Logging;
+    using Models.Data;
     using Options;
     using Services;
+
+    using IdentityConstants = Common.IdentityConstants;
 
     /// <summary>
     ///     Startup logic for the Database-as-a-Service demo UI.
@@ -118,7 +120,7 @@ namespace DaaSDemo.IdentityServer
                         ApiSecrets = new Secret[]
                         {
                             new Secret(
-                                "secret".ToSha256()
+                                "snaus4g3$!".ToSha256() // TODO: Get this from configuration.
                             )
                         },
 
@@ -130,7 +132,8 @@ namespace DaaSDemo.IdentityServer
                                 Description = "DaaS API (v1)",
                                 UserClaims = new string[]
                                 {
-                                    JwtClaimTypes.Role
+                                    JwtClaimTypes.Role,
+                                    IdentityConstants.JwtClaimTypes.SuperUser
                                 }
                             }
                         }
@@ -140,7 +143,11 @@ namespace DaaSDemo.IdentityServer
                 {
                     new IdentityResources.OpenId(),
                     new IdentityResources.Profile(),
-                    new IdentityResource("roles", new string[] { JwtClaimTypes.Role })
+                    new IdentityResource("roles", claimTypes: new string[]
+                    {
+                        JwtClaimTypes.Role,
+                        IdentityConstants.JwtClaimTypes.SuperUser
+                    })
                 })
                 .AddInMemoryClients(new Client[]
                 {

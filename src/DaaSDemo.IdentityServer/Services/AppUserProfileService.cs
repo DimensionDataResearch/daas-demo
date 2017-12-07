@@ -15,6 +15,8 @@ namespace DaaSDemo.IdentityServer.Services
 {
     using Models.Data;
 
+    using IdentityConstants = Common.IdentityConstants;
+
     /// <summary>
     ///     IdentityServer profile service that sources claims for the user profile from <see cref="AppUser"/> details (including role membership).
     /// </summary>
@@ -75,6 +77,8 @@ namespace DaaSDemo.IdentityServer.Services
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
 
+            // TODO: Refactor this, breaking the adding of various sets of claims up into separate methods.
+
             AppUser user = await UserManager.GetUserAsync(context.Subject);
             if (user == null)
             {
@@ -88,6 +92,15 @@ namespace DaaSDemo.IdentityServer.Services
                 context.IssuedClaims.Add(
                     new Claim(JwtClaimTypes.Name, user.UserName)
                 );
+            }
+
+            // Always surface super-user status (allow relying parties to decide what it means).
+            if (user.IsSuperUser)
+            {
+                context.AddRequestedClaims(new Claim[]
+                {
+                    new Claim(IdentityConstants.JwtClaimTypes.SuperUser, "true", ClaimValueTypes.Boolean)
+                });
             }
 
             IList<string> roleIds = await UserManager.GetRolesAsync(user);
