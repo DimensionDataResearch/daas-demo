@@ -134,6 +134,8 @@ namespace DaaSDemo.IdentityServer
                                 {
                                     JwtClaimTypes.Role,
                                     IdentityConstants.JwtClaimTypes.SuperUser,
+                                    IdentityConstants.JwtClaimTypes.TenantAccessRead,
+                                    IdentityConstants.JwtClaimTypes.TenantAccessReadWrite,
                                     IdentityConstants.JwtClaimTypes.TenantAccessOwner
                                 }
                             }
@@ -151,6 +153,8 @@ namespace DaaSDemo.IdentityServer
                     }),
                     new IdentityResource("tenants", claimTypes: new string[]
                     {
+                        IdentityConstants.JwtClaimTypes.TenantAccessRead,
+                        IdentityConstants.JwtClaimTypes.TenantAccessReadWrite,
                         IdentityConstants.JwtClaimTypes.TenantAccessOwner
                     })
                 })
