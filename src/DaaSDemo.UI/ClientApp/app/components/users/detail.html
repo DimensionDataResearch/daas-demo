@@ -45,7 +45,11 @@
             <div class="row">
                 <div class="twelve wide column"></div>
                 <div class="four wide right aligned column">
-                    <user-actions-menu user.bind="user"></user-actions-menu>
+                    <user-actions-menu user.bind="user"
+                        disabled.bind="isBusy"
+                        delete-clicked.call="deleteUser()"
+                    >
+                    </user-actions-menu>
                 </div>
             </div>
         </div>

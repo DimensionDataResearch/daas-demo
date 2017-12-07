@@ -131,6 +131,7 @@ namespace DaaSDemo.Api.Controllers.Admin
 
                 return BadRequest(new
                 {
+                    EntityType = "User",
                     Reason = "Identity." + createError.Code,
                     Message = $"Failed to create user '{newUser.Name}'. " + createError.Description
                 });
@@ -155,6 +156,8 @@ namespace DaaSDemo.Api.Controllers.Admin
 
                 return BadRequest(new
                 {
+                    Id = user.Id,
+                    EntityType = "User",
                     Reason = "Identity." + addPasswordError.Code,
                     Message = $"Failed to set password for user '{newUser.Name}'. " + addPasswordError.Description
                 });
@@ -176,6 +179,8 @@ namespace DaaSDemo.Api.Controllers.Admin
 
                     return BadRequest(new
                     {
+                        Id = user.Id,
+                        EntityType = "User",
                         Reason = "Identity." + makeAdminError.Code,
                         Message = $"Failed to assign user '{newUser.Name}' to the 'Administrator' role. " + makeAdminError.Description
                     });
@@ -204,6 +209,8 @@ namespace DaaSDemo.Api.Controllers.Admin
 
                 return BadRequest(new
                 {
+                    Id = user.Id,
+                    EntityType = "User",
                     Reason = "Identity." + enableError.Code,
                     Message = $"Failed to set password for user '{newUser.Name}'. " + enableError.Description
                 });
@@ -212,6 +219,59 @@ namespace DaaSDemo.Api.Controllers.Admin
             return Ok(
                 AppUserDetail.From(user)
             );
+        }
+
+        /// <summary>
+        ///     Delete a user.
+        /// </summary>
+        /// <param name="userId">
+        ///     The Id of the user to delete.
+        /// </param>
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> Delete(string userId)
+        {
+            AppUser user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+                return UserNotFoundById(userId);
+
+            if (user.IsSuperUser)
+            {
+                return BadRequest(new
+                {
+                    Id = userId,
+                    EntityType = "User",
+                    Reason = "CannotDeleteSuperUser",
+                    Message = "Cannot delete super-users."
+                });
+            }
+
+            IdentityResult deleteResult = await UserManager.DeleteAsync(user);
+            if (deleteResult != IdentityResult.Success)
+            {
+                Log.LogError("Failed to delete user {UserName} ({UserEmail}). {@IdentityResult}",
+                    user.DisplayName,
+                    user.Email,
+                    deleteResult
+                );
+
+                IdentityError deleteError = deleteResult.Errors.First();
+
+                return BadRequest(new
+                {
+                    Id = userId,
+                    EntityType = "User",
+                    Reason = "Identity." + deleteError.Code,
+                    Message = $"Failed to delete user '{userId}'. " + deleteError.Description
+                });
+            }
+
+            return Ok(new
+            {
+                Success = true,
+                Id = userId,
+                EntityType = "User",
+                Message = $"Deleted user '{userId}'."
+            });
         }
 
         /// <summary>

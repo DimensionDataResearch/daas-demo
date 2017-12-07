@@ -14,7 +14,8 @@ export class UserActionsMenu {
     @bindable public user: User | null = null;
     @bindable public label: string | null = null;
     @bindable public disabled: boolean = false;
-    @bindable public destroyClicked: () => void = noAction;
+    @bindable public deleteClicked: () => void = noAction;
+    @bindable public addToTenantClicked: () => void = noAction;
 
     constructor() {}
 
@@ -25,12 +26,19 @@ export class UserActionsMenu {
     }
 
     public get canDelete(): boolean {
-        if (this.destroyClicked === noAction)
+        if (this.deleteClicked === noAction)
             return false; // No handler.
 
         if (!this.user)
             return false;
 
         return !this.user.isSuperUser;
+    }
+
+    public get canAddToTenant(): boolean {
+        if (this.addToTenantClicked === noAction)
+            return false; // No handler.
+
+        return !!this.user;
     }
 }

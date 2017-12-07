@@ -339,7 +339,7 @@ export class DaaSAPI
     public async createUser(name: string, email: string, password: string, isAdmin: boolean): Promise<string> {
         await this._configured;
 
-        const response = await this.http.fetch('users', {
+        const response = await this.http.fetch('admin/users', {
             method: 'POST',
             body: json({
                 name: name,
@@ -364,6 +364,32 @@ export class DaaSAPI
 
         throw new Error(
             `Failed to create user '${name}': ${errorResponse.message || 'Unknown error.'}`
+        );
+    }
+
+    /**
+     * Create a user.
+     * 
+     * @param id The Id of the user to delete.
+     * 
+     * @returns The Id of the new user.
+     */
+    public async deleteUser(id: string): Promise<void> {
+        await this._configured;
+
+        const response = await this.http.fetch(`admin/users/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const body = await response.json();
+        if (response.ok) {
+            return;
+        }
+
+        const errorResponse = body as ApiResponse;
+
+        throw new Error(
+            `Failed to delete user '${id}': ${errorResponse.message || 'Unknown error.'}`
         );
     }
 

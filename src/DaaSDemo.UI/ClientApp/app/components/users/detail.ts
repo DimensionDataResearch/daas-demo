@@ -1,6 +1,6 @@
 import { inject, NewInstance } from 'aurelia-framework';
 import { computedFrom } from 'aurelia-binding';
-import { RouteConfig } from 'aurelia-router';
+import { RouteConfig, Router } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 
 import { ViewModel } from '../common/view-model';
@@ -10,7 +10,7 @@ import { User } from '../../services/api/daas-models';
 /**
  * View model for the user detail view.
  */
-@inject(DaaSAPI)
+@inject(DaaSAPI, Router)
 export class UserDetail extends ViewModel {
     private userId: string;
 
@@ -20,9 +20,9 @@ export class UserDetail extends ViewModel {
      * Create a new user list view model.
      * 
      * @param api The DaaS API client.
-     * @param validationController The validation controller for the current context.
+     * @param router The Aurelia router service.
      */
-    constructor(private api: DaaSAPI) {
+    constructor(private api: DaaSAPI, private router: Router) {
         super();
     }
 
@@ -45,6 +45,13 @@ export class UserDetail extends ViewModel {
 
         this.userId = params.userId;
         this.load();
+    }
+
+    public async deleteUser(): Promise<void> {
+        await this.runLoadingAsync(async () => {
+            await this.api.deleteUser(this.userId);
+            await this.router.navigateToRoute('users');
+        });
     }
 
     /**
