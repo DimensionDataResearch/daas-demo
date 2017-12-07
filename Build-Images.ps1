@@ -40,6 +40,7 @@ $docker = Get-Command docker
 
 Write-Host 'Building images...'
 ForEach ($Component in $Components) {
+    Write-Host "Building image for $Component..."
     & $docker build -t "${Repo}/${Component}:${Version}" --build-arg "VERSION_PREFIX=$VersionPrefix" --build-arg "VERSION_SUFFIX=$VersionSuffix" -f Dockerfile.${Component} .
     If ($LASTEXITCODE) {
         Return $LASTEXITCODE
@@ -49,6 +50,7 @@ ForEach ($Component in $Components) {
 If (!$NoPush) {
     Write-Host 'Pushing images...'
     ForEach ($Component in $Components) {
+        Write-Host "Pushing image for $Component..."
         & $docker push "${Repo}/${Component}:${Version}"
     
         If ($LASTEXITCODE) {
@@ -63,6 +65,7 @@ If ($Deploy -and !$NoPush) {
 
     Write-Host 'Deploying application...'
     ForEach ($Component in $Components) {
+        Write-Host "Deploying $Component..."
         $manifestFile = Join-Path $manifestDirectory "daas-$Component.yml"
 
         & $kubectl delete -f $manifestFile

@@ -137,6 +137,15 @@ namespace DaaSDemo.IdentityServer.Services
                 );
             }
 
+            // Add access claims (if requested).
+            context.AddRequestedClaims(user.TenantAccess.Select(
+                access => new Claim(
+                    type: $"tenant.{access.Value.ToString().ToLower()}",
+                    value: access.Key
+                )
+            ));
+
+            // Finally, add any claims specific to this user.
             context.AddRequestedClaims(user.Claims.Select(
                 claim => new Claim(claim.ClaimType, claim.ClaimValue)
             ));

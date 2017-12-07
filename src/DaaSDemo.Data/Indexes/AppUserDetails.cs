@@ -25,6 +25,10 @@ namespace DaaSDemo.Data.Indexes
                     Name = user.DisplayName,
                     EmailAddress = user.Email,
 
+                    ReadTenantIds = user.ReadTenantIds.ToList(),
+                    ReadWriteTenantIds = user.ReadWriteTenantIds.ToList(),
+                    OwnerTenantIds = user.OwnerTenantIds.ToList(),
+
                     IsAdmin = user.IsAdmin,
                     IsSuperUser = user.IsSuperUser,
                     IsLockedOut = user.LockoutEnabled

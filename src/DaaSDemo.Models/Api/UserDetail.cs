@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DaaSDemo.Models.Api
 {
@@ -40,7 +42,22 @@ namespace DaaSDemo.Models.Api
         /// <summary>
         ///     Is the user's account locked out?
         /// </summary>
-        public bool IsLockedOut { get; set; }        
+        public bool IsLockedOut { get; set; }
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has read-only access.
+        /// </summary>
+        public List<string> ReadTenantIds { get; set; } = new List<string>();
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has read / write access.
+        /// </summary>
+        public List<string> ReadWriteTenantIds { get; set; } = new List<string>();
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has owner access.
+        /// </summary>
+        public List<string> OwnerTenantIds { get; set; } = new List<string>();
 
         /// <summary>
         ///     Create an <see cref="AppUserDetail"/> from an <see cref="AppUser"/>.
@@ -61,6 +78,10 @@ namespace DaaSDemo.Models.Api
                 Id = user.Id,
                 Name = user.DisplayName,
                 EmailAddress = user.Email,
+
+                ReadTenantIds = user.ReadTenantIds.ToList(),
+                ReadWriteTenantIds = user.ReadWriteTenantIds.ToList(),
+                OwnerTenantIds = user.OwnerTenantIds.ToList(),
 
                 IsAdmin = user.IsAdmin,
                 IsSuperUser = user.IsSuperUser,

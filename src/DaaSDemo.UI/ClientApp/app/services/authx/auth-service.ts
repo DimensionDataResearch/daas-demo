@@ -1,6 +1,6 @@
 import { inject } from 'aurelia-framework';
 import { EventAggregator } from 'aurelia-event-aggregator';
-import { UserManager, User } from 'oidc-client';
+import { UserManager, User, WebStorageStateStore } from 'oidc-client';
 
 import { ConfigService, Configuration } from '../config/config-service';
 
@@ -181,7 +181,11 @@ export function createUserManager(authority: string, client_id: string, addition
         revokeAccessTokenOnSignout: true,
     
         // Don't store OIDC protocol claims
-        filterProtocolClaims: true
+        filterProtocolClaims: true,
+
+        stateStore: new WebStorageStateStore({
+            prefix: 'daasIdentity'
+        })
     });
 
     return userManager;

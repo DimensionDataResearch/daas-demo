@@ -133,7 +133,8 @@ namespace DaaSDemo.IdentityServer
                                 UserClaims = new string[]
                                 {
                                     JwtClaimTypes.Role,
-                                    IdentityConstants.JwtClaimTypes.SuperUser
+                                    IdentityConstants.JwtClaimTypes.SuperUser,
+                                    IdentityConstants.JwtClaimTypes.TenantAccessOwner
                                 }
                             }
                         }
@@ -147,6 +148,10 @@ namespace DaaSDemo.IdentityServer
                     {
                         JwtClaimTypes.Role,
                         IdentityConstants.JwtClaimTypes.SuperUser
+                    }),
+                    new IdentityResource("tenants", claimTypes: new string[]
+                    {
+                        IdentityConstants.JwtClaimTypes.TenantAccessOwner
                     })
                 })
                 .AddInMemoryClients(new Client[]
@@ -177,6 +182,7 @@ namespace DaaSDemo.IdentityServer
                             IdentityServerConstants.StandardScopes.OpenId,
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
+                            "tenants",
                             "daas-api-v1"
                         }
                     },
@@ -209,6 +215,7 @@ namespace DaaSDemo.IdentityServer
                             IdentityServerConstants.StandardScopes.OpenId,
                             IdentityServerConstants.StandardScopes.Profile,
                             "roles",
+                            "tenants",
                             "daas-api-v1"
                         }
                     }

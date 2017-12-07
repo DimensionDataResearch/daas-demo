@@ -23,20 +23,32 @@
                     <table class="ui very basic small definition table">
                         <tbody>
                             <tr>
-                                <td class="six wide right aligned">Name</td>
+                                <td class="eight wide right aligned">Name</td>
                                 <td class="collapsing left aligned">${ user.name }</td>
                             </tr>
                             <tr>
-                                <td class="six wide right aligned">Administrator?</td>
+                                <td class="eight wide right aligned">Administrator?</td>
                                 <td class="collapsing left aligned">
                                     <i class="ui ${ user.isAdmin ? 'green check' : 'red remove' } icon"></i>
                                 </td>
                             </tr>
                             <tr>
-                                <td class="six wide right aligned">Locked out?</td>
+                                <td class="eight wide right aligned">Locked out?</td>
                                 <td class="collapsing left aligned">
                                     <i class="ui ${ user.isLockedOut ? 'green check' : 'red remove' } icon"></i>
                                 </td>
+                            </tr>
+                            <tr repeat.for="tenantId of user.readTenantIds">
+                                <td class="eight wide right aligned">Tenant (read-only)</td>
+                                <td class="collapsing left aligned">${ tenantId }</td>
+                            </tr>
+                            <tr repeat.for="tenantId of user.readWriteTenantIds">
+                                <td class="eight wide right aligned">Tenant (read / write)</td>
+                                <td class="collapsing left aligned">${ tenantId }</td>
+                            </tr>
+                            <tr repeat.for="tenantId of user.ownerTenantIds">
+                                <td class="eight wide right aligned">Tenant (owner)</td>
+                                <td class="collapsing left aligned">${ tenantId }</td>
                             </tr>
                         </tbody>
                     </table>

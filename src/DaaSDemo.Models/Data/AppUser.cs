@@ -33,6 +33,27 @@ namespace DaaSDemo.Models.Data
         public bool IsAdmin => Roles.Any(userRole => userRole.RoleName == "Administrator");
 
         /// <summary>
+        ///     The user's access levels for their tenants, keyed by tenant Id.
+        /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]
+        public Dictionary<string, TenantAccessLevel> TenantAccess { get; } = new Dictionary<string, TenantAccessLevel>();
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has read-only access.
+        /// </summary>
+        public IEnumerable<string> ReadTenantIds => TenantAccess.Where(access => access.Value == TenantAccessLevel.Read).Select(access => access.Key);
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has read / write access.
+        /// </summary>
+        public IEnumerable<string> ReadWriteTenantIds => TenantAccess.Where(access => access.Value == TenantAccessLevel.ReadWrite).Select(access => access.Key);
+
+        /// <summary>
+        ///     The Ids of tenants to which the user has owner-level access.
+        /// </summary>
+        public IEnumerable<string> OwnerTenantIds => TenantAccess.Where(access => access.Value == TenantAccessLevel.Owner).Select(access => access.Key);
+
+        /// <summary>
         ///     Roles assigned to the user.
         /// </summary>
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Reuse)]

@@ -9,11 +9,11 @@ export class NavigationAuthorizationFilter {
     constructor() { }
 
     public toView(navModels: NavModel[], user: User): NavModel[] {
-        console.log('NavigationAuthorizationFilter: filtering navModels for user.', navModels, user);
+        const userProfile = (user && user.profile) ? user.profile : { roles: [] };
 
-        const userRoles: string[] = (user && user.profile) ? user.profile.role : [];
-        console.log('NavigationAuthorizationFilter: userRoles = ', userRoles);
-
+        // If the user only has a single role, then userProfile.role will be a string rather than an array of strings.
+        const userRoles: string[] = isArray<string>(userProfile.role) ? userProfile.role : [ userProfile.role ];
+        
         function userHasRole(role: string): boolean {
             return userRoles.indexOf(role) !== -1;
         }
@@ -24,11 +24,7 @@ export class NavigationAuthorizationFilter {
                 return true;
 
             for (const requiredRole of requiredRoles) {
-                console.log(`NavigationAuthorizationFilter: checking user role '${requiredRole}' for nav item '${navModel.title}'.`);
-
                 if (!userHasRole(requiredRole)) {
-                    console.log(`NavigationAuthorizationFilter: filtering out nav item '${navModel.title}' because user does not have role '${requiredRole}'.`);
-
                     return false;
                 }
             }
@@ -36,8 +32,10 @@ export class NavigationAuthorizationFilter {
             return true;
         });
 
-        console.log('NavigationAuthorizationFilter: filtered nav models = ', filteredNavModels);
-
         return filteredNavModels;
     }
+}
+
+function isArray<T>(value: any): value is Array<T> {
+    return Array.isArray(value);
 }
