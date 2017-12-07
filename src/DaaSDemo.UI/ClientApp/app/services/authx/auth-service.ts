@@ -1,4 +1,4 @@
-import { inject } from 'aurelia-framework';
+import { inject, singleton } from 'aurelia-framework';
 import { EventAggregator } from 'aurelia-event-aggregator';
 import { UserManager, User, WebStorageStateStore } from 'oidc-client';
 
@@ -7,6 +7,7 @@ import { ConfigService, Configuration } from '../config/config-service';
 /**
  * The DaaS application authentication manager.
  */
+@singleton()
 @inject(EventAggregator, ConfigService)
 export class AuthService {
     private _userManager: UserManager | null = null;

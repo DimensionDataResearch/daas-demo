@@ -9,8 +9,6 @@ declare const IS_DEV_BUILD: boolean; // The value is supplied by Webpack during 
 
 export function configure(aurelia: Aurelia) {
     aurelia.use.standardConfiguration();
-    aurelia.use.singleton(AuthService);
-    aurelia.use.singleton(ConfigService);
 
     aurelia.use.plugin(
         PLATFORM.moduleName('aurelia-validation')
@@ -25,5 +23,9 @@ export function configure(aurelia: Aurelia) {
         config.withBaseUrl(baseUrl);
     });
 
-    aurelia.start().then(() => aurelia.setRoot(PLATFORM.moduleName('app/components/app/app')));
+    aurelia.start().then(() => {
+        aurelia.setRoot(
+            PLATFORM.moduleName('app/components/app/app')
+        );
+    });
 }

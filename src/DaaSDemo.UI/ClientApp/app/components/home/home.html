@@ -1,7 +1,7 @@
 <template>
     <h1>Database-as-a-Service Demo</h1>
     
-    <p>Welcome to the demo. Please select an option from the menu above.</p>
+    <p>Welcome to the demo.<span if.bind="!token"> Please log in and select an option from the menu above.</span></p>
 
     <div if.bind="message">
         <pre>

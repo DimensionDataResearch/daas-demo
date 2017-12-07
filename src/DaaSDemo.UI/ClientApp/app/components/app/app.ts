@@ -16,7 +16,7 @@ export class App {
         },{
             route: 'tenants',
             name: 'tenants',
-            settings: { icon: 'user' },
+            settings: { icon: 'user', roles: [ 'User' ] },
             moduleId: PLATFORM.moduleName('../tenants/list'),
             nav: true,
             title: 'Tenants'
@@ -33,7 +33,7 @@ export class App {
         }, {
             route: 'servers',
             name: 'servers',
-            settings: { icon: 'server' },
+            settings: { icon: 'server', roles: [ 'User' ] },
             moduleId: PLATFORM.moduleName('../servers/list'),
             nav: true,
             title: 'Servers'
@@ -55,7 +55,7 @@ export class App {
         }, {
             route: 'databases',
             name: 'databases',
-            settings: { icon: 'database' },
+            settings: { icon: 'database', roles: [ 'User' ] },
             moduleId: PLATFORM.moduleName('../databases/list'),
             nav: true,
             title: 'Databases'
@@ -68,7 +68,7 @@ export class App {
         }, {
             route: 'users',
             name: 'users',
-            settings: { icon: 'users', roles: [ 'User' ] },
+            settings: { icon: 'users', roles: [ 'Administrator' ] },
             moduleId: PLATFORM.moduleName('../users/list'),
             nav: true,
             title: 'Users'
@@ -77,7 +77,6 @@ export class App {
             name: 'user',
             settings: { icon: 'user', roles: [ 'User' ] },
             moduleId: PLATFORM.moduleName('../users/detail'),
-            nav: false,
             title: 'User'
         }]);
 

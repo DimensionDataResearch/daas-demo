@@ -1,9 +1,10 @@
-import { inject } from 'aurelia-framework';
+import { inject, singleton } from 'aurelia-framework';
 import { HttpClient } from 'aurelia-fetch-client';
 
 /**
  * The configuration-management service.
  */
+@singleton()
 @inject(HttpClient)
 export class ConfigService {
     private _initialized: Promise<void>;
