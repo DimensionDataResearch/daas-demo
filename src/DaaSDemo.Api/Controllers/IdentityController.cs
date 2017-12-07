@@ -1,4 +1,7 @@
 using IdentityModel;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -6,17 +9,17 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
+
 namespace DaaSDemo.Api.Controllers
 {
-    using Microsoft.AspNetCore.Authorization;
-    using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Identity;
     using Models.Api;
     using Models.Data;
 
     /// <summary>
     ///     Controller for the DaaS User Identity API.
     /// </summary>
+    [Authorize("User")]
     [Route("api/v1/identity")]
     public class IdentityController
         : ControllerBase

@@ -1,6 +1,7 @@
 using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
@@ -23,6 +24,7 @@ namespace DaaSDemo.Api.Controllers
     /// <summary>
     ///     Controller for the servers API.
     /// </summary>
+    [Authorize("User")]
     [Route("api/v1/servers")]
     public class ServersController
         : DataControllerBase

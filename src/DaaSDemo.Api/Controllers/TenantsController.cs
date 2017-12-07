@@ -1,9 +1,11 @@
 using HTTPlease;
 using HTTPlease.Formatters;
 using HTTPlease.Formatters.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using System;
 using System.Collections.Generic;
@@ -20,11 +22,11 @@ namespace DaaSDemo.Api.Controllers
     using Data.Indexes;
     using Models.Api;
     using Models.Data;
-    using Raven.Client.Documents.Linq;
 
     /// <summary>
     ///     Controller for the tenants API.
     /// </summary>
+    [Authorize("User")]
     [Route("api/v1/tenants")]
     public class TenantsController
         : DataControllerBase
@@ -82,7 +84,8 @@ namespace DaaSDemo.Api.Controllers
         /// <param name="newTenant">
         ///     The request body as a <see cref="Tenant"/>.
         /// </param>
-        [HttpPost]
+        [HttpPost("")]
+        [Authorize("Administrator")]
         public IActionResult Create([FromBody] NewTenant newTenant)
         {
             if (!ModelState.IsValid)
