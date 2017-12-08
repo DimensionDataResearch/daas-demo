@@ -9,54 +9,53 @@
             <div class="ui active loader"></div>
         </div>
 
-        <div if.bind="!hasError">
-            <h1 class="ui header">Tenant: ${ tenant.name }</h1>
-
-            <h3 class="ui dividing header">Servers</h3>
-
-            <div if.bind="hasServer && !addingServer">
-                <button class="ui icon button" click.delegate="showCreateServerForm()" disabled.bind="isBusy">
-                    <i class="add circle icon"></i> Add Server
-                </button>
-                <button class="ui right floated circular icon button" click.delegate="refreshServerList()" disabled.bind="isBusy">
-                    <i class="refresh icon"></i>
-                </button>
+        <h1 class="ui header">Tenant: ${ tenant.name }</h1>
+        
+        <h3 class="ui dividing header">Servers</h3>
     
-                <table class="ui striped celled table">
-                    <thead>
-                        <tr>
-                            <th class="center aligned"></th>
-                            <th class="center aligned">Name</th>
-                            <th class="center aligned">Public FQDN</th>
-                            <th class="center aligned">Public Port</th>
-                            <th class="center aligned">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr repeat.for="server of servers">
-                            <td class="collapsing center aligned">
-                                <server-actions-menu
-                                    server.bind="server"
-                                    show-databases-clicked.call="showDatabases(server)"
-                                    show-events-clicked.call="showEvents(server)"
-                                    destroy-clicked.call="destroyServer(server)"
-                                    repair-clicked.call="reconfigureServer(server)"
-                                >
-                                </server-actions-menu>
-                            </td>
-                            <td class="center aligned">
-                                <a route-href="route: server; params.bind: { serverId: server.id }">${ server.name }</a>
-                            </td>
-                            <td class="center aligned">${ server.publicFQDN }</td>
-                            <td class="center aligned">${ server.publicPort }</td>
-                            <td class="collapsing center aligned">
-                                <server-provisioning-status server.bind="server"></server-provisioning-status>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <div if.bind="hasServer && !addingServer">
+            <button class="ui icon button" click.delegate="showCreateServerForm()" disabled.bind="isBusy">
+                <i class="add circle icon"></i> Add Server
+            </button>
+            <button class="ui right floated circular icon button" click.delegate="refreshServerList()" disabled.bind="isBusy">
+                <i class="refresh icon"></i>
+            </button>
+    
+            <table class="ui striped celled table">
+                <thead>
+                    <tr>
+                        <th class="center aligned"></th>
+                        <th class="center aligned">Name</th>
+                        <th class="center aligned">Public FQDN</th>
+                        <th class="center aligned">Public Port</th>
+                        <th class="center aligned">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr repeat.for="server of servers">
+                        <td class="collapsing center aligned">
+                            <server-actions-menu
+                                server.bind="server"
+                                show-databases-clicked.call="showDatabases(server)"
+                                show-events-clicked.call="showEvents(server)"
+                                destroy-clicked.call="destroyServer(server)"
+                                repair-clicked.call="reconfigureServer(server)"
+                            >
+                            </server-actions-menu>
+                        </td>
+                        <td class="center aligned">
+                            <a route-href="route: server; params.bind: { serverId: server.id }">${ server.name }</a>
+                        </td>
+                        <td class="center aligned">${ server.publicFQDN }</td>
+                        <td class="center aligned">${ server.publicPort }</td>
+                        <td class="collapsing center aligned">
+                            <server-provisioning-status server.bind="server"></server-provisioning-status>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
             </div>
-
+    
             <div if.bind="addingServer">
                 <form class="ui form">
                     <div class="required six wide field">
@@ -66,7 +65,7 @@
                             <option value="RavenDB">RavenDB</option>
                         </select>
                     </div>
-
+    
                     <div class="required six wide field"
                         validation-errors.bind="nameErrors"
                         class.bind="nameErrors.length ? 'error' : ''"
@@ -74,7 +73,7 @@
                         <label>Name</label>
                         <input name="name" value.bind="newServer.name & validate" placeholder="Server name" type="text">
                     </div>
-
+    
                     <div class="required six wide field"
                         if.bind="showPasswordField"
                         validation-errors.bind="adminPasswordErrors"
@@ -83,7 +82,7 @@
                         <label>Admin password</label>
                         <input name="databaseUser" value.bind="newServer.adminPassword & validate" placeholder="Password for the sa user" type="password">
                     </div>
-
+    
                     <div class="ui message" if.bind="validationController.errors.length">
                         <div class="header">One or more fields are invalid</div>
                         
@@ -93,35 +92,24 @@
                             </li>
                         </ul>
                     </div>
-
+    
                     <button class="ui icon button" click.delegate="createServer()">
                         <i class="add circle icon"></i> Create
                     </button>
                     <button class="ui button" click.delegate="hideCreateServerForm()">Cancel</button>
                 </form>
             </div>
-
+    
             <div if.bind="!hasServer && !addingServer" class="ui info message">
                 <p>
                     No servers have been deployed for this tenant.
                 </p>
-
+    
                 <button class="ui icon button" click.delegate="showCreateServerForm()">
                     <i class="circular add button"></i>
                     Create Server
                 </button>
             </div>
-        </div>
-
-        <div if.bind="hasError" class="ui error message">
-            <p>
-                ${ errorMessage }
-            </p>
-
-            <button class="ui icon button" click.delegate="load(true)">
-                <i class="circular refresh button"></i>
-                Refresh
-            </button>
         </div>
     </div>
 

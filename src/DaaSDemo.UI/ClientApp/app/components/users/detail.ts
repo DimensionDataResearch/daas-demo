@@ -4,13 +4,15 @@ import { RouteConfig, Router } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 
 import { ViewModel } from '../common/view-model';
+import { ToastService } from '../../services/toast/toast-service';
+
 import { DaaSAPI } from '../../services/api/daas-api';
 import { User } from '../../services/api/daas-models';
 
 /**
  * View model for the user detail view.
  */
-@inject(DaaSAPI, Router)
+@inject(DaaSAPI, Router, ToastService)
 export class UserDetail extends ViewModel {
     private userId: string;
 
@@ -21,9 +23,10 @@ export class UserDetail extends ViewModel {
      * 
      * @param api The DaaS API client.
      * @param router The Aurelia router service.
+     * @param toastService The toast-display service.
      */
-    constructor(private api: DaaSAPI, private router: Router) {
-        super();
+    constructor(private api: DaaSAPI, private router: Router, toastService: ToastService) {
+        super(toastService);
     }
 
     /**
@@ -47,9 +50,14 @@ export class UserDetail extends ViewModel {
         this.load();
     }
 
+    /**
+     * Delete the user.
+     */
     public async deleteUser(): Promise<void> {
         await this.runLoadingAsync(async () => {
             await this.api.deleteUser(this.userId);
+            this.toastService.showSuccess(`Successfully deleted user '${this.userId}'.`, 'Deleted');
+            
             await this.router.navigateToRoute('users');
         });
     }

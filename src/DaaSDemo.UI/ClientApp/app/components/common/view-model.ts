@@ -1,5 +1,7 @@
-import { computedFrom } from 'aurelia-framework';
+import { computedFrom, bindable } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
+
+import { ToastService } from '../../services/toast/toast-service';
 
 /**
  * The base class for view models.
@@ -10,16 +12,13 @@ export abstract class ViewModel {
     
     protected routeConfig: RouteConfig;
     protected pollHandle: number = 0;
-    
-    public errorMessage: string | null = null;
 
     /**
      * Has an error occurred?
      */
-    @computedFrom('errorMessage')
-    public get hasError(): boolean {
-        return this.errorMessage !== null;
-    }
+    @bindable public hasError: boolean;
+
+    protected constructor(protected toastService: ToastService) { }
 
     /**
      * Is the view loading?
@@ -61,12 +60,14 @@ export abstract class ViewModel {
      * @param action The action to execute.
      */
     protected runLoading(action: () => void): void {
-        this.clearError();
+        this.toastService.dismissAll();
 
         try {
             this._isLoading = true;
 
             action();
+
+            this.clearError();
         } catch (error) {
             this.showError(error as Error);
         } finally {
@@ -80,12 +81,14 @@ export abstract class ViewModel {
      * @param action The action to execute.
      */
     protected async runLoadingAsync(action: () => Promise<void>): Promise<void> {
-        this.clearError();
-
+        this.toastService.dismissAll();
+        
         try {
             this._isLoading = true;
 
             await action();
+
+            this.clearError();
         } catch (error) {
             this.showError(error as Error);
         } finally {
@@ -99,12 +102,12 @@ export abstract class ViewModel {
      * @param action The action to execute.
      */
     protected runBusy(action: () => void): void {
-        this.clearError();
-
         try {
             this._isBusy = true;
 
             action();
+
+            this.clearError();
         } catch (error) {
             this.showError(error as Error);
         } finally {
@@ -118,12 +121,12 @@ export abstract class ViewModel {
      * @param action The action to execute.
      */
     protected async runBusyAsync(action: () => Promise<void>): Promise<void> {
-        this.clearError();
-
         try {
             this._isBusy = true;
 
             await action();
+
+            this.clearError();
         } catch (error) {
             this.showError(error as Error);
         } finally {
@@ -132,10 +135,10 @@ export abstract class ViewModel {
     }
 
     /**
-     * Clear the current error message (if any).
+     * Clear the view model's error status.
      */
     protected clearError(): void {
-        this.errorMessage = null;
+        this.hasError = false;
     }
 
     /**
@@ -146,7 +149,10 @@ export abstract class ViewModel {
     protected showError(error: Error): void {
         console.log(error);
         
-        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
+        this.hasError = true;
+        this.toastService.showError(
+            (error.message as string || 'Unknown error.').split('\n').join('<br/>'),
+        );
     }
 }
 

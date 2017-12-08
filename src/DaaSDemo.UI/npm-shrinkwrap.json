@@ -223,6 +223,15 @@
         "@types/jquery": "3.2.16"
       }
     },
+    "@types/toastr": {
+      "version": "2.1.35",
+      "resolved": "https://registry.npmjs.org/@types/toastr/-/toastr-2.1.35.tgz",
+      "integrity": "sha512-NSPsNyBRxopghpNQLPqMLGK4oDIey5prT6RTkExljOfRrid0bkTr5v9NXYntBOwhEMmHjrmdsxY/g2/eKAJZpg==",
+      "dev": true,
+      "requires": {
+        "@types/jquery": "3.2.16"
+      }
+    },
     "@types/webpack-env": {
       "version": "1.13.0",
       "resolved": "https://registry.npmjs.org/@types/webpack-env/-/webpack-env-1.13.0.tgz",
@@ -3609,6 +3618,14 @@
       "resolved": "https://registry.npmjs.org/to-arraybuffer/-/to-arraybuffer-1.0.1.tgz",
       "integrity": "sha1-fSKbH8xjfkZsoIEYCDanqr/4P0M=",
       "dev": true
+    },
+    "toastr": {
+      "version": "2.1.4",
+      "resolved": "https://registry.npmjs.org/toastr/-/toastr-2.1.4.tgz",
+      "integrity": "sha1-i0O+ZPudDEFIcURvLbjoyk6V8YE=",
+      "requires": {
+        "jquery": "3.2.1"
+      }
     },
     "ts-loader": {
       "version": "2.3.7",

@@ -5,6 +5,7 @@ import { ValidationRules, ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI } from '../../services/api/daas-api';
 import { Database, DatabaseServerKind, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-models';
+import { ToastService } from '../../services/toast/toast-service';
 
 import { ConfirmDialog } from '../dialogs/confirm';
 import { ViewModel } from '../common/view-model';
@@ -12,7 +13,7 @@ import { ViewModel } from '../common/view-model';
 /**
  * Component for the Database detail view.
  */
-@inject(DaaSAPI, Router)
+@inject(DaaSAPI, Router, ToastService)
 export class DatabaseDetail extends ViewModel {
     private databaseId: string;
 
@@ -24,9 +25,10 @@ export class DatabaseDetail extends ViewModel {
      * 
      * @param api The DaaS API client.
      * @param router The Aurelia router service.
+     * @param toastService The toast-display service.
      */
-    constructor(private api: DaaSAPI, private router: Router) {
-        super()
+    constructor(private api: DaaSAPI, private router: Router, toastService: ToastService) {
+        super(toastService)
     }
 
     /**
@@ -58,14 +60,6 @@ export class DatabaseDetail extends ViewModel {
             return `http://${this.database.serverPublicFQDN}:${this.database.serverPublicPort}/`;
         else
             return null;
-    }
-
-    /**
-     * Has an error occurred?
-     */
-    @computedFrom('errorMessage')
-    public get hasError(): boolean {
-        return this.errorMessage !== null;
     }
 
     /**
@@ -123,7 +117,9 @@ export class DatabaseDetail extends ViewModel {
         
         if (!this.database) {
             this.routeConfig.title = 'Database not found';
-            this.errorMessage = `Database not found with Id ${this.databaseId}.`;
+            this.toastService.showWarning(
+                `Database not found with Id ${this.databaseId}.`
+            );
         } else {
             this.routeConfig.title = this.database.name;
         }

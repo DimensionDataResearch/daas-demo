@@ -12,41 +12,33 @@
             <i class="refresh icon"></i>
         </button>
 
-        <div if.bind="!hasError">
-            <h1 class="ui header">Database</h1>
+        <h1 class="ui header">Database</h1>
+        
+        <div if.bind="hasDatabase">
+            <strong>Name</strong>: ${ database.name }
+            <br/>
+            <br/>
+            <strong>Status</strong>: <database-provisioning-status database.bind="database"></database-provisioning-status>
+            <br/>
+            <br/>
+            <div if.bind="isDatabaseReady">
+                <h3 class="ui dividing header">Connectivity</h3>
 
-            <div if.bind="hasDatabase">
-                <strong>Name</strong>: ${ database.name }
-                <br/>
-                <br/>
-                <strong>Status</strong>: <database-provisioning-status database.bind="database"></database-provisioning-status>
-                <br/>
-                <br/>
-                <div if.bind="isDatabaseReady">
-                    <h3 class="ui dividing header">Connectivity</h3>
+                <strong>Connection String</strong>: ${ connectionString }
+            </div>
 
-                    <strong>Connection String</strong>: ${ connectionString }
-                </div>
-
-                <div class="ui grid">
-                    <div class="thirteen wide column"></div>
-                    <div class="three wide column">
-                        <database-actions-menu database.bind="database"
-                            label="Actions"
-                            disabled.bind="!isBusy && !isDatabaseReady"
-                            
-                            destroy-clicked.call="destroyDatabase()"
-                        >
-                        </database-actions-menu>
-                    </div>
+            <div class="ui grid">
+                <div class="thirteen wide column"></div>
+                <div class="three wide column">
+                    <database-actions-menu database.bind="database"
+                        label="Actions"
+                        disabled.bind="!isBusy && !isDatabaseReady"
+                        
+                        destroy-clicked.call="destroyDatabase()"
+                    >
+                    </database-actions-menu>
                 </div>
             </div>
-        </div>
-
-        <div if.bind="hasError" class="ui error message">
-            <p>
-                ${ errorMessage }
-            </p>
         </div>
     </div>
 

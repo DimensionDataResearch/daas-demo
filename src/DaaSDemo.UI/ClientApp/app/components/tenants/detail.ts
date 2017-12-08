@@ -4,6 +4,7 @@ import { Router, RouteConfig } from 'aurelia-router';
 import { bindable } from 'aurelia-templating';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
+import { ToastService } from '../../services/toast/toast-service';
 import { DaaSAPI } from '../../services/api/daas-api';
 import { Tenant, DatabaseServer, DatabaseServerKind, ProvisioningAction } from '../../services/api/daas-models';
 
@@ -16,7 +17,7 @@ import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning
 /**
  * Component for the Tenant detail view.
  */
-@inject(DaaSAPI, Router, NewInstance.of(ValidationController))
+@inject(DaaSAPI, ToastService, Router, NewInstance.of(ValidationController))
 export class TenantDetail extends ViewModel {
     private tenantId: string;
 
@@ -31,9 +32,10 @@ export class TenantDetail extends ViewModel {
      * Create a new Tenant detail view model.
      * 
      * @param api The DaaS API client.
+     * @param toastService The toast-display service.
      */
-    constructor(private api: DaaSAPI, private router: Router, public validationController: ValidationController) {
-        super();
+    constructor(private api: DaaSAPI, toastService: ToastService, private router: Router, public validationController: ValidationController) {
+        super(toastService);
     }
 
     /**
@@ -185,7 +187,7 @@ export class TenantDetail extends ViewModel {
      * Reconfigure / repair a server.
      */
     public async reconfigureServer(server: DatabaseServer): Promise<void> {
-        this.clearError();
+        this.toastService.dismissAll();
         
         try {
             const confirm = await this.confirmDialog.show('Repair Server',
@@ -211,7 +213,7 @@ export class TenantDetail extends ViewModel {
      * Destroy a server.
      */
     public async destroyServer(server: DatabaseServer): Promise<void> {
-        this.clearError();
+        this.toastService.dismissAll();
         
         try {
             const confirm = await this.confirmDialog.show('Destroy Server',
@@ -253,7 +255,7 @@ export class TenantDetail extends ViewModel {
      * Load tenant and server details.
      */
     private async load(): Promise<void> {
-        this.clearError();
+        this.toastService.dismissAll();
         
         const tenantRequest = this.api.getTenant(this.tenantId);
         const serversRequest = this.api.getTenantServers(this.tenantId);

@@ -13,11 +13,13 @@
     "babel-polyfill": "^6.26.0",
     "isomorphic-fetch": "^2.2.1",
     "jquery": "^3.2.1",
-    "oidc-client": "^1.4.1"
+    "oidc-client": "^1.4.1",
+    "toastr": "^2.1.4"
   },
   "devDependencies": {
     "@types/jquery": "^3.2.16",
     "@types/semantic-ui": "^2.2.6",
+    "@types/toastr": "^2.1.35",
     "@types/webpack-env": "^1.13.0",
     "aspnet-webpack": "^2.0.1",
     "aurelia-webpack-plugin": "^2.0.0-rc.2",
