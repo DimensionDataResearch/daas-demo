@@ -1,4 +1,5 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
+import { Logger, getLogger } from 'aurelia-logging';
 import { Router, RouteConfig } from 'aurelia-router';
 
 import { dateDiff, DatePart } from '../../utilities/date-and-time';
@@ -7,6 +8,8 @@ import { DaaSAPI } from '../../services/api/daas-api';
 import { DatabaseServer, DatabaseServerEvent } from '../../services/api/daas-models';
 
 // TODO: Create separate components to render various event types.
+
+const Log: Logger = getLogger('ServerEvents');
 
 /**
  * View model for the server events view.
@@ -144,7 +147,7 @@ export class ServerEvents {
      * @param error The error to show.
      */
     private showError(error: Error): void {
-        console.log(error);
+        Log.error('Unexpected error: ', error);
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }

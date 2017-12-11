@@ -3,23 +3,21 @@ import { Router, RouteConfig } from 'aurelia-router';
 
 import { DaaSAPI } from '../../services/api/daas-api';
 import { DatabaseServer, Database, ProvisioningAction } from '../../services/api/daas-models';
+import { ToastService } from '../../services/toast/toast-service';
 
+import { ViewModel } from '../common/view-model';
 import { ConfirmDialog } from '../dialogs/confirm';
 import { sortByName } from '../../utilities/sorting';
 
 import { NewDatabase } from './forms/new';
 
-@inject(DaaSAPI, Router)
-export class DatabaseListForServer {
-    private routeConfig: RouteConfig;
+@inject(DaaSAPI, Router, ToastService)
+export class DatabaseListForServer extends ViewModel {
     private serverId: string;
-    private pollHandle: number = 0;
 
     @bindable public server: DatabaseServer;
     @bindable public databases: Database[] = [];
     @bindable public newDatabase: NewDatabase | null = null;
-    @bindable public errorMessage: string | null = null;
-    public isLoading: boolean = false;
 
     @bindable private confirmDialog: ConfirmDialog
 
@@ -29,7 +27,9 @@ export class DatabaseListForServer {
      * @param api The DaaS API client.
      * @param router The router service.
      */
-    constructor(private api: DaaSAPI, private router: Router) { }
+    constructor(private api: DaaSAPI, private router: Router, toastService: ToastService) {
+        super(toastService);
+    }
 
     /**
      * Servers for the add-database form.
@@ -55,31 +55,17 @@ export class DatabaseListForServer {
     }
 
     /**
-     * Has an error occurred?
-     */
-    @computedFrom('errorMessage')
-    public get hasError(): boolean {
-        return this.errorMessage !== null;
-    }
-
-    /**
      * Refresh the database list.
      */
     public async refreshDatabaseList(): Promise<void> {
-        this.clearError();
+        this.databases = sortByName(
+            await this.api.getServerDatabases(this.serverId)
+        );
 
-        try {
-            this.databases = sortByName(
-                await this.api.getServerDatabases(this.serverId)
-            );
-
-            if (this.databases.find(database => database.action !== ProvisioningAction.None)) {
-                this.pollHandle = window.setTimeout(() => this.refreshDatabaseList(), 2000);
-            } else {
-                this.pollHandle = 0;
-            }
-        } catch (error) {
-            this.showError(error as Error);
+        if (this.databases.find(database => database.action !== ProvisioningAction.None)) {
+            this.pollHandle = window.setTimeout(() => this.refreshDatabaseList(), 2000);
+        } else {
+            this.pollHandle = 0;
         }
     }
 
@@ -101,31 +87,23 @@ export class DatabaseListForServer {
      * Request creation of a new database.
      */
     public async createDatabase(): Promise<void> {
-        if (this.newDatabase === null)
-            return;
+        await this.runBusyAsync(async () => {
+            if (this.newDatabase === null)
+                return;
 
-        if (this.newDatabase.serverId == null || this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
-            return;
+            if (this.newDatabase.serverId == null || this.newDatabase.name == null || this.newDatabase.user == null || this.newDatabase.password == null)
+                return;
 
-        this.clearError();
-
-        try {
             await this.api.createDatabase(
                 this.newDatabase.serverId,
                 this.newDatabase.name,
                 this.newDatabase.user,
                 this.newDatabase.password
             );
-        }
-        catch (error) {
-            this.showError(error as Error);
-            
-            return;
-        }
 
-        await this.refreshDatabaseList();
-
-        this.hideCreateDatabaseForm();
+            await this.refreshDatabaseList();
+            this.hideCreateDatabaseForm();
+        });
     }
 
     /**
@@ -134,9 +112,7 @@ export class DatabaseListForServer {
      * @param database The database to destroy.
      */
     public async destroyDatabase(database: Database): Promise<void> {
-        this.clearError();
-
-        try {
+        await this.runBusyAsync(async () => {
             if (!this.confirmDialog)
                 return;
 
@@ -147,14 +123,8 @@ export class DatabaseListForServer {
                 return;
 
             await this.api.deleteDatabase(database.id);
-        }
-        catch (error) {
-            this.showError(error as Error);
-
-            return;
-        }
-
-        await this.refreshDatabaseList();
+            await this.refreshDatabaseList();
+        });
     }
 
     /**
@@ -176,21 +146,11 @@ export class DatabaseListForServer {
         this.load();
     }
 
-    public deactivate(): void {
-        if (this.pollHandle !== 0) {
-            window.clearTimeout(this.pollHandle);
-            this.pollHandle = 0;
-        }
-    }
-
     /**
      * Load tenant details.
      */
     private async load(): Promise<void> {
-        this.isLoading = true;
-
-        try
-        {
+        await this.runLoadingAsync(async () => {
             const serverRequest = this.api.getServer(this.serverId);
             const databasesRequest = this.serverId ? this.api.getServerDatabases(this.serverId) : this.api.getDatabases();
 
@@ -204,31 +164,13 @@ export class DatabaseListForServer {
             this.databases = sortByName(
                 await databasesRequest
             );
-        }
-        catch (error) {
-            this.showError(error);
-        }
-        finally {
-            this.isLoading = false;
-        }
-    }
 
-    /**
-     * Clear the current error message (if any).
-     */
-    private clearError(): void {
-        this.errorMessage = null;
-    }
-
-    /**
-     * Show an error message.
-     * 
-     * @param error The error to show.
-     */
-    private showError(error: Error): void {
-        console.log(error);
-        
-        this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
+            if (this.databases.find(database => database.action !== ProvisioningAction.None)) {
+                this.pollHandle = window.setTimeout(() => this.refreshDatabaseList(), 2000);
+            } else {
+                this.pollHandle = 0;
+            }
+        });
     }
 }
 

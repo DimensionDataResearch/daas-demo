@@ -3,10 +3,13 @@ import 'semantic';
 
 import { inject, bindable, bindingBehavior } from 'aurelia-framework';
 import { EventAggregator } from 'aurelia-event-aggregator';
+import { Logger, getLogger } from 'aurelia-logging';
 import { Router, NavModel } from 'aurelia-router';
 import { User } from 'oidc-client';
 
 import { AuthService } from '../../services/authx/auth-service';
+
+const log: Logger = getLogger('NavMenu');
 
 /**
  * Model for the navigation menu.
@@ -25,12 +28,12 @@ export class NavMenu {
      */
     constructor(private eventAggregator: EventAggregator, private authService: AuthService) {
         this.eventAggregator.subscribe('AuthX.UserLoaded', (user: User) => {
-            console.log('User loaded.', user);
+            log.debug('User loaded.', user);
 
             this.user = user;
         });
         this.eventAggregator.subscribe('AuthX.UserUnloaded', () => {
-            console.log('User unloaded.');
+            log.debug('User unloaded.');
 
             this.user = null;
         });

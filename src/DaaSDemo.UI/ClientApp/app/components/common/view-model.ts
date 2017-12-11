@@ -1,7 +1,10 @@
 import { computedFrom, bindable } from 'aurelia-framework';
+import { Logger, getLogger } from 'aurelia-logging';
 import { RouteConfig } from 'aurelia-router';
 
 import { ToastService } from '../../services/toast/toast-service';
+
+const log: Logger = getLogger('ViewModel');
 
 /**
  * The base class for view models.
@@ -147,7 +150,7 @@ export abstract class ViewModel {
      * @param error The error to show.
      */
     protected showError(error: Error): void {
-        console.log(error);
+        log.error('Unexpected error: ', error);
         
         this.hasError = true;
         this.toastService.showError(

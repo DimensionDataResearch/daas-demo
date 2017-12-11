@@ -69,10 +69,6 @@
             cancel-clicked.call="hideCreateDatabaseForm()"
         >
         </new-database-form>
-
-        <div if.bind="hasError" class="ui error message">
-            <p innerhtml.bind="errorMessage | sanitizeHTML"></p>
-        </div>
     </div>
 
     <confirm-dialog view-model.ref="confirmDialog"></confirm-dialog>

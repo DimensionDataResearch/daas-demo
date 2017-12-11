@@ -1,13 +1,14 @@
-import { inject, NewInstance } from 'aurelia-framework';
-import { computedFrom } from 'aurelia-binding';
+import { inject, NewInstance, bindable, computedFrom } from 'aurelia-framework';
 import { RouteConfig } from 'aurelia-router';
-import { bindable } from 'aurelia-templating';
+import { Logger, getLogger } from 'aurelia-logging';
 import { ValidationController } from 'aurelia-validation';
 
 import { DaaSAPI } from '../../services/api/daas-api';
 import { User } from '../../services/api/daas-models';
 
 import { NewUser } from './forms/new';
+
+const log: Logger = getLogger('TenantList');
 
 /**
  * View model for the user list view.
@@ -147,7 +148,7 @@ export class UserList {
      * @param error The error to show.
      */
     private showError(error: Error): void {
-        console.log(error);
+        log.error('Unexpected error: ', error);
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }

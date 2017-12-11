@@ -1,5 +1,6 @@
 import { inject, computedFrom, PLATFORM, bindable, factory } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
+import { Logger, getLogger } from 'aurelia-logging';
 import { RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
@@ -8,6 +9,8 @@ import { Tenant, DatabaseServer, Database, ProvisioningAction } from '../../../s
 
 import { ConfirmDialog } from '../../dialogs/confirm';
 import { NewDatabase } from './forms/new';
+
+const log: Logger = getLogger('TenantDatabaseList');
 
 @inject(DaaSAPI, NewInstance.of(ValidationController))
 export class TenantDatabaseList {
@@ -244,7 +247,7 @@ export class TenantDatabaseList {
      * @param error The error to show.
      */
     private showError(error: Error): void {
-        console.log(error);
+        log.error('Unexpected error: ', error);
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }

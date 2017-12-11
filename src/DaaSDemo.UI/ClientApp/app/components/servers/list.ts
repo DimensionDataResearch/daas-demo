@@ -1,4 +1,5 @@
 import { inject, computedFrom, bindable } from 'aurelia-framework';
+import { Logger, getLogger } from 'aurelia-logging';
 import { Router, RouteConfig } from 'aurelia-router';
 
 import { DaaSAPI } from '../../services/api/daas-api';
@@ -7,6 +8,8 @@ import { DatabaseServer, ProvisioningAction } from '../../services/api/daas-mode
 import { sortByName } from '../../utilities/sorting';
 
 import { ConfirmDialog } from '../dialogs/confirm';
+
+const log: Logger = getLogger('ServerList');
 
 @inject(DaaSAPI, Router)
 export class ServerList {
@@ -189,7 +192,7 @@ export class ServerList {
      * @param error The error to show.
      */
     private showError(error: Error): void {
-        console.log(error);
+        log.error('Unexpected error: ', error);
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }

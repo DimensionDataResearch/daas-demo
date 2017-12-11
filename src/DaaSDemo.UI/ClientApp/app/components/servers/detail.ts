@@ -1,18 +1,22 @@
 /// <reference types="semantic-ui" />
 
+import * as $ from 'jquery';
+import 'semantic';
+
 import { inject, factory, transient, computedFrom, bindable } from 'aurelia-framework';
 import { NewInstance } from 'aurelia-dependency-injection';
+import { Logger, getLogger } from 'aurelia-logging';
 import { Router, RouteConfig } from 'aurelia-router';
 import { ValidationRules, ValidationController } from 'aurelia-validation';
 
-import * as $ from 'jquery';
-import 'semantic';
 
 import { DaaSAPI } from '../../services/api/daas-api';
 import { DatabaseServer, DatabaseServerKind, ProvisioningAction, ProvisioningStatus } from '../../services/api/daas-models';
 
 import { ConfirmDialog } from '../dialogs/confirm';
 import { ServerProvisioningPhaseProgress } from '../progress/server-provisioning-phase';
+
+const log: Logger = getLogger('ServerDetail');
 
 /**
  * Component for the Server detail view.
@@ -177,7 +181,7 @@ export class ServerDetail {
      * @param error The error to show.
      */
     public showError(error: Error): void {
-        console.log(error);
+        log.error('Unexpected error: ', error);
         
         this.errorMessage = (error.message as string || 'Unknown error.').split('\n').join('<br/>');
     }
@@ -228,9 +232,7 @@ export class ServerDetail {
                 }
             }
         } catch (error) {
-            console.log(error);
-
-            this.errorMessage = error.message;
+            this.showError(error as Error);
         }
         finally {
             if (!isReload)

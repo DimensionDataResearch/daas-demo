@@ -5,7 +5,7 @@ import * as $ from 'jquery';
 import * as toastr from 'toastr';
 import { EventAggregator } from 'aurelia-event-aggregator';
 
-const logger: Logger = getLogger('ToastService');
+const log: Logger = getLogger('ToastService');
 
 export interface ToastOptions {
     message: string;

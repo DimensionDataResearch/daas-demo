@@ -1,6 +1,9 @@
 import { bindingBehavior } from 'aurelia-framework';
+import { getLogger, log } from 'aurelia-logging';
 
 import { isPromise } from '../utilities/promises';
+
+const log: log = getLogger('AsyncBindingBehavior');
 
 /**
  * Asynchronous binding behaviour.
@@ -22,15 +25,15 @@ export class AsyncBindingBehavior {
         // Override the binding-update function.
         binding.updateTarget = (value: any) => {
             if (isPromise(value)) {
-                console.log('AsyncBindingBehavior: busyUpdateTarget', busyValue);
+                log.debug('AsyncBindingBehavior: busyUpdateTarget', busyValue);
                 binding.originalupdateTarget(busyValue || null);
                 
                 value.then(resolvedValue => {
-                    console.log('AsyncBindingBehavior: resolvedUpdateTarget', resolvedValue)
+                    log.debug('AsyncBindingBehavior: resolvedUpdateTarget', resolvedValue)
                     binding.originalupdateTarget(resolvedValue);
                 });
             } else {
-                console.log('AsyncBindingBehavior: originalUpdateTarget', busyValue);
+                log.debug('AsyncBindingBehavior: originalUpdateTarget', busyValue);
                 binding.originalupdateTarget(value);
             }
         };
