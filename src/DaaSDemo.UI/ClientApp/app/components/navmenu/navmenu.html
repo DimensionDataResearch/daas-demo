@@ -1,22 +1,41 @@
 <template>
+    <require from="../../converters/array-not-empty"></require>
     <require from="../../converters/nav-auth-filter"></require>
 
     <div class="ui fixed inverted menu">
         <a href="#" class="header item">Database-as-a-Service</a>
         <a href="#" class="item">Home</a>
-        <a repeat.for = "row of router.navigation | navAuthFilter:user" class="${ row.isActive ? 'active ' : '' }item" href.bind = "row.href">
+
+        <!-- Main menu -->
+        <a repeat.for = "row of mainNavigation | navAuthFilter:user" class="${ row.isActive ? 'active' : '' } item" href.bind = "row.href">
             <i if.bind="row.settings.icon" class="${ row.settings.icon } icon"></i>
             ${ row.title }
         </a>
-        <div if.bind="isSignedIn" class="right menu">
-            <div class="item">
+        
+        <div class="right menu">
+            <!-- Administration menu -->
+            <div class="ui dropdown item" element.ref="adminDropDown" if.bind="adminNavigation | navAuthFilter:user | arrayNotEmpty">
+                Administration <i class="dropdown icon"></i>
+    
+                <div class="menu">
+                    <a repeat.for="row of adminNavigation | navAuthFilter:user" class="${ row.isActive ? 'active' : '' } item" href.bind = "row.href">
+                        <i if.bind="row.settings.icon" class="${ row.settings.icon } icon"></i>
+                        ${ row.title }
+                    </a>
+                </div>
+            </div>
+
+            <!-- Identity panel -->
+            <div class="item" if.bind="isSignedIn">
                 ${ user.profile.name }
             </div>
-            <a class="item" click.delegate="signout()">
+            <a class="item" click.delegate="signout()" if.bind="isSignedIn" >
                 <i class="lock icon"></i> Log out
             </a>
         </div>
+
         <div if.bind="!isSignedIn" class="right menu">
+            <!-- Identity panel -->
             <a class="item" click.delegate="signin()">
                 <i class="open lock icon"></i> Log in
             </a>
