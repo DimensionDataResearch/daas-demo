@@ -1,5 +1,7 @@
 import 'isomorphic-fetch';
 import { Aurelia, PLATFORM } from 'aurelia-framework';
+import { setLevel, logLevel, addAppender } from 'aurelia-logging';
+import { ConsoleAppender } from 'aurelia-logging-console'; 
 import { HttpClient } from 'aurelia-fetch-client';
 
 import { AuthService } from './app/services/authx/auth-service';
@@ -16,6 +18,11 @@ export function configure(aurelia: Aurelia) {
 
     if (IS_DEV_BUILD) {
         aurelia.use.developmentLogging();
+    } else {
+        setLevel(logLevel.info);
+        addAppender(
+            new ConsoleAppender()
+        );
     }
 
     new HttpClient().configure(config => {
