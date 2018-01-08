@@ -1,9 +1,9 @@
 import { bindingBehavior } from 'aurelia-framework';
-import { getLogger, log } from 'aurelia-logging';
+import { getLogger, Logger } from 'aurelia-logging';
 
 import { isPromise } from '../utilities/promises';
 
-const log: log = getLogger('AsyncBindingBehavior');
+const log: Logger = getLogger('AsyncBindingBehavior');
 
 /**
  * Asynchronous binding behaviour.
