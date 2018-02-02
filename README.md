@@ -4,7 +4,10 @@ A quick-and-dirty PaaS implementation using SQL Server in Linux containers on Ku
 
 ### Requirements
 
-* .NET Core 2.0
+* Terraform v0.11.1 or newer
+  * `ddcloud` provider for Terraform v1.3.2 or newer
+* Ansible v2.4 or newer
+* .NET Core v2.0 or newer
 * A private Docker registry  
   e.g. Azure Container Registry, or quay.io
 * A Kubernetes cluster  

@@ -6,7 +6,7 @@ resource "ddcloud_server" "kube_storage_host" {
     name                    = "kube-storage-${format("%02d", count.index + 1)}"
     description				= "Kubernetes storage host ${format("%02d", count.index + 1)}."
 	admin_password			= "${var.ssh_bootstrap_password}"
-    auto_start				= true
+    power_state				= "autostart"
 
     networkdomain           = "${data.ddcloud_networkdomain.primary.id}"
 

@@ -8,7 +8,7 @@ resource "ddcloud_server" "storage_host" {
     name                    = "storage-host-${format("%02d", count.index + 1)}"
     description				= "Kubernetes storage host ${format("%02d", count.index + 1)} for Adam's ITaaS RancherLab environment."
 	admin_password			= "${var.ssh_bootstrap_password}"
-    auto_start				= true
+    power_state				= "autostart"
 
     networkdomain           = "${data.ddcloud_networkdomain.primary.id}"
 

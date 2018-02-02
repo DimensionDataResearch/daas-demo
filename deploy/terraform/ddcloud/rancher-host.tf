@@ -6,7 +6,7 @@ resource "ddcloud_server" "rancher_host" {
     name                    = "rancher-host"
     description				= "Rancher server for Adam's ITaaS RancherLab environment."
 	admin_password			= "${var.ssh_bootstrap_password}"
-    auto_start				= true
+    power_state				= "autostart"
 
     networkdomain           = "${data.ddcloud_networkdomain.primary.id}"
 
