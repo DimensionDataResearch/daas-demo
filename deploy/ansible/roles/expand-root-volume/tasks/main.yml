@@ -1,9 +1,9 @@
 ---
-- name: Add free space to /dev/sda3
+- name: Ensure /dev/sda3 exists
   parted:
     device: /dev/sda
-    number: 3,
+    number: 3
     state: present
-    part_type: primary,
+    part_type: primary
     part_start: 0%
     part_end: 100%
