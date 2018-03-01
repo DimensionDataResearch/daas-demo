@@ -22,7 +22,7 @@
     nfs_volume_size: "110g"
     nfs_allow_network: "192.168.5.0/24" # The private IPv4 network on which the worker nodes are located
     nfs_exports:
-      - "/data/nfs {{ nfs_allow_network }}(rw,fsid=0,insecure,no_subtree_check,async)"
+      - "/data/nfs {{ nfs_allow_network }}(rw,fsid=0,insecure,no_subtree_check,no_root_squash,async)"
   roles:
     - storage-volume
     - nfs
