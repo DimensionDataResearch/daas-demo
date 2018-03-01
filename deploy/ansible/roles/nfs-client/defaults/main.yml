@@ -1,0 +1,4 @@
+---
+
+# The private IP of the NFS server
+nfs_server_ip: 192.168.5.30

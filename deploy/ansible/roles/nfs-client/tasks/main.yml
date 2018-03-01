@@ -1,0 +1,17 @@
+---
+- name: NFS client
+  apt:
+    name: nfs-common
+    state: present
+
+- name: NFS mount point
+  file:
+    path: /shared
+    state: directory
+
+- name: NFS mount
+  mount:
+    fstype: nfs
+    src: "{{nfs_server_ip}}:/data/nfs"
+    path: /shared
+    state: mounted
