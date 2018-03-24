@@ -1,0 +1,24 @@
+apiVersion: rook.io/v1alpha1
+kind: Filesystem
+metadata:
+  name: shared
+  namespace: rook
+spec:
+  metadataPool:
+    replicated:
+      size: 3
+
+  dataPools:
+    - erasureCoded:
+        dataChunks: 2
+        codingChunks: 1
+
+  metadataServer:
+    activeCount: 1
+    activeStandby: true
+
+    placement:
+      tolerations:
+        - key: role
+          value: storage
+          effect: NoSchedule
