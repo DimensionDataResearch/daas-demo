@@ -1,5 +1,47 @@
 ---
 - hosts: all
-  roles:
-    - expand-root-volume
+  tasks:
+    - name: copy fdisk script
+      copy:
+        src:  ../roles/expand-root-volume/files/fdisk-script
+        dest: /root/fdisk-script
+      tags:
+        - partition
 
+    - name: create partition
+      shell: fdisk /dev/sda < /root/fdisk-script ; exit 0
+      tags:
+        - partition
+
+    - name: remove fdisk script
+      file:
+        dest:  /root/fdisk-script
+        state: absent
+      tags:
+        - partition
+
+    - name: probe partitions
+      command: partprobe /dev/sda
+      tags:
+        - partition
+        - probe
+
+    - name: create physical volume
+      command: pvcreate /dev/sda3
+      tags:
+        - pv
+
+    - name: extend root volume group
+      command: vgextend ubuntu-cloud-vg /dev/sda3
+      tags:
+        - vg
+
+    - name: extend root logical volume
+      command: lvextend -l +100%FREE /dev/ubuntu-cloud-vg/ubuntu-main
+      tags:
+        - lv
+
+    - name: expand root file-system
+      command: resize2fs /dev/ubuntu-cloud-vg/ubuntu-main
+      tags:
+        - fs
